@@ -6,6 +6,11 @@ export function usd(cents: number, locale: Locale = 'en'): string {
   return new Intl.NumberFormat(tag(locale), { style: 'currency', currency: 'USD' }).format(cents / 100)
 }
 
+/** Dollars without the cents, for round figures such as a monthly volume. */
+export function usdWhole(cents: number, locale: Locale = 'en'): string {
+  return new Intl.NumberFormat(tag(locale), { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(cents / 100)
+}
+
 export function brl(cents: number, locale: Locale = 'en'): string {
   return new Intl.NumberFormat(tag(locale), { style: 'currency', currency: 'BRL' }).format(cents / 100)
 }

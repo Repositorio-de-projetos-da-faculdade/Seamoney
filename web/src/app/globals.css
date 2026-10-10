@@ -7,6 +7,14 @@
 @theme {
   --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-display: "Plus Jakarta Sans Variable", "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  /* landing page only (fonts are imported by src/app/page.tsx). Lettered like a nautical chart, where land is set in
+     roman and water in italics: Funnel Display states the facts, Instrument Serif italic carries what crosses the
+     sea (the *starred* words in the copy, tinted aqua), Geist Mono reads out the bytes, Newsreader (a text serif with
+     optical sizes) is the running text. Buttons and the nav use Funnel Display, so the text serif stays prose only. */
+  --font-grotesk: "Funnel Display Variable", "Plus Jakarta Sans Variable", ui-sans-serif, sans-serif;
+  --font-accent: "Instrument Serif", ui-serif, Georgia, serif;
+  --font-text: "Newsreader Variable", ui-serif, Georgia, serif;
+  --font-data: "Geist Mono Variable", ui-monospace, "Cascadia Mono", monospace;
 
   /* navy surfaces */
   --color-navy-950: #000f1f;
@@ -32,6 +40,17 @@
   --color-line: #e1ebf1;
   --color-ink: #06182c;
   --color-muted: #55687a;
+
+  /* landing: night water, moonlit foam for text, warm paper for the documents chapter, amber for anything simulated */
+  --color-abyss: #020810;
+  --color-night: #06121f;
+  --color-tide: #0c2136;
+  --color-foam: #e3ebee;
+  --color-paper: #ebe7dd;
+  --color-paper-hi: #f7f5ef;
+  --color-paper-line: #d2ccbe;
+  --color-signal: #ffb547;
+  --color-steel: #12324f;
 
   /* data */
   --color-bank: #4088b8;
@@ -90,12 +109,15 @@ body {
   min-height: 100dvh;
 }
 
-h1,
-h2,
-h3,
-.font-display {
-  font-family: var(--font-display);
-  letter-spacing: -0.02em;
+/* in the base layer, so utility classes (font-*, tracking-*) on a heading still win */
+@layer base {
+  h1,
+  h2,
+  h3,
+  .font-display {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
 }
 
 ::selection {
@@ -262,10 +284,189 @@ select:focus-visible {
   }
 }
 
+/* ---------- landing page (src/app/page.tsx) ---------- */
+.lp {
+  --font-display: var(--font-grotesk);
+  --font-sans: var(--font-text);
+  font-family: var(--font-text);
+  font-feature-settings: normal;
+  background: var(--color-abyss);
+  color: var(--color-foam);
+  /* the 3D and the paper sheets bleed past the edges; never scroll sideways */
+  overflow-x: clip;
+}
+.lp ::selection {
+  background: var(--color-mint);
+  color: var(--color-abyss);
+}
+/* the app's focus ring rounds every corner to 8px; on the landing each element keeps its own shape */
+.lp :focus-visible {
+  border-radius: revert-layer;
+}
+@layer base {
+  .lp h1,
+  .lp h2,
+  .lp h3,
+  .lp .font-display {
+    letter-spacing: normal;
+  }
+}
+/* Headlines: the starred words of the copy switch to the italic serif (Rich in components/landing/type.tsx), in the
+   app's aqua (on the paper chapter, the action green). Its x-height is smaller than Funnel Display's, so it is set a
+   touch larger to sit on the same line. */
+.lp-display em {
+  font-family: var(--font-accent);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.08em;
+  letter-spacing: -0.01em;
+  color: var(--color-aqua);
+}
+.lp-paper .lp-display em {
+  color: var(--color-brand-600);
+}
+/* Headline lines rise out of masks (Reveal.tsx, GSAP SplitText). The mask is padded so descenders and the italic
+   overhang are not clipped, and the padding is taken back so the layout does not move. */
+.lp-line-mask {
+  padding: 0.04em 0.12em 0.16em 0;
+  margin: -0.04em -0.12em -0.16em 0;
+}
+/* The rest of the opening fades in once the loader has lifted (Loader.tsx sets lp-revealed on <html>). */
+.lp-fade {
+  opacity: 0;
+  transform: translateY(16px);
+  transition:
+    opacity 1s ease var(--d, 0.6s),
+    transform 1.4s cubic-bezier(0.19, 1, 0.22, 1) var(--d, 0.6s);
+}
+.lp-revealed .lp-fade {
+  opacity: 1;
+  transform: none;
+}
+/* Scroll cue: a hairline with a bead of light running down it. */
+.lp-cue {
+  animation: cue 2.4s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+@keyframes cue {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(260%);
+  }
+}
+/* Pulse running along the Seamoney arc on the route map (routemap/RouteFx.tsx): a short dash on a pathLength of 1. */
+.lp-flow {
+  animation: flow 3.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+@keyframes flow {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+/* A payment running along the route between the two ports in the footer (footer/VoyageLine.tsx). */
+.lp-rail {
+  animation: rail 4.8s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+@keyframes rail {
+  0% {
+    left: 0;
+    opacity: 0;
+  }
+  10%,
+  90% {
+    opacity: 1;
+  }
+  100% {
+    left: 100%;
+    opacity: 0;
+  }
+}
+/* Ticker of memo bytes: two identical runs, the strip slides by one run. */
+.lp-marquee {
+  animation: marquee var(--t, 60s) linear infinite;
+}
+@keyframes marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+/* Laid paper for the documents chapter: a faint fibre, never animated. */
+.lp-paper {
+  background-color: var(--color-paper);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.35 0 0 0 0 0.3 0 0 0 0 0.22 0 0 0 0.07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)'/%3E%3C/svg%3E");
+}
+/* Range input for the savings chapter: a hairline track filled up to the thumb (--pct). */
+.lp-range {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 44px;
+  background: transparent;
+  cursor: grab;
+}
+.lp-range:active {
+  cursor: grabbing;
+}
+.lp-range::-webkit-slider-runnable-track {
+  height: 2px;
+  background: linear-gradient(to right, var(--color-mint) var(--pct, 0%), rgb(227 235 238 / 0.16) var(--pct, 0%));
+}
+.lp-range::-moz-range-track {
+  height: 2px;
+  background: rgb(227 235 238 / 0.16);
+}
+.lp-range::-moz-range-progress {
+  height: 2px;
+  background: var(--color-mint);
+}
+.lp-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  margin-top: -11px;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--color-abyss);
+  border: 2px solid var(--color-mint);
+  box-shadow: 0 0 0 6px rgb(36 228 180 / 0.12);
+  transition: box-shadow 0.3s ease;
+}
+.lp-range::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--color-abyss);
+  border: 2px solid var(--color-mint);
+  box-shadow: 0 0 0 6px rgb(36 228 180 / 0.12);
+}
+.lp-range:hover::-webkit-slider-thumb {
+  box-shadow: 0 0 0 10px rgb(36 228 180 / 0.16);
+}
+.lp-range:focus-visible {
+  outline: 2px solid var(--color-mint);
+  outline-offset: 4px;
+}
+/* Lenis smooth scrolling */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  html:not(.motion-full) *,
+  html:not(.motion-full) *::before,
+  html:not(.motion-full) *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;

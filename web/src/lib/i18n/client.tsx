@@ -1,5 +1,6 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { createContext, useCallback, useContext, useMemo, type ReactNode } from 'react'
 import { translate, type Key, type Locale } from './dict'
 
@@ -18,4 +19,16 @@ export function useT() {
     [locale],
   )
   return useMemo(() => ({ t, locale }), [t, locale])
+}
+
+/** Switches the interface language. A plain cookie is enough: the server reads it on every request. */
+export function useSwitchLocale() {
+  const router = useRouter()
+  return useCallback(
+    (next: Locale) => {
+      document.cookie = `lang=${next}; path=/; max-age=31536000; samesite=lax`
+      router.refresh()
+    },
+    [router],
+  )
 }

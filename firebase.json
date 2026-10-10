@@ -1,0 +1,19 @@
+{
+  "hosting": {
+    "public": "web/landing-static/dist",
+    "predeploy": ["npm --prefix web run build:landing"],
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "cleanUrls": true,
+    "headers": [
+      {
+        "source": "/assets/**",
+        "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+      }
+    ]
+  },
+  "apphosting": {
+    "backendId": "seamoney-web",
+    "rootDir": "web",
+    "ignore": ["node_modules", ".next", ".git", "landing-static/dist", "firebase-debug.log", "firebase-debug.*.log"]
+  }
+}

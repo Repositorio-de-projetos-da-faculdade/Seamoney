@@ -69,8 +69,83 @@ const en = {
   'how.4.title': 'Reconcile automatically',
   'how.4.desc': 'We find the payment on the blockchain by its reference, check it and close the invoice.',
 
+  // landing page (src/app/page.tsx, src/components/landing)
+  'lp.loader': 'Loading the memo',
+  'lp.hero.title': 'The payment that carries *its own invoice.*',
+  'lp.hero.sub':
+    'Brazilian importers pay suppliers in Asia {route} in *stablecoins* on Tempo or Solana. The invoice number {memo} travels *inside the transfer*, so every payment reconciles itself {check}.',
+  'lp.cta': 'Create a payment order',
+  'lp.cta2': 'Estimate your savings',
+  'lp.live': 'Live on Tempo testnet and Solana devnet',
+  'lp.sim': 'Reais-to-dollar leg simulated',
+  'lp.scroll': 'Scroll to load the cargo',
+  'lp.clock': 'Local time',
+  'lp.ch.1': 'Loading',
+  'lp.ch.2': 'Crossing',
+  'lp.ch.3': 'The old route',
+  'lp.ch.4': 'Arrival',
+  'lp.ch.5': 'Savings',
+  'lp.rail': 'Chapters of the voyage',
+
+  'lp.cargo.title': 'The cargo *is the invoice.*',
+  'lp.cargo.body':
+    'Every payment carries a *32-byte memo* {bytes}, on Tempo or on Solana. We load your invoice number into it, byte by byte, before the money leaves.',
+  'lp.cargo.bytes': '{n} of 32 bytes',
+  'lp.cargo.over': '{n} of 32 bytes. Too long for the memo.',
+  'lp.cargo.try': 'Load your own invoice number',
+  'lp.cargo.public': 'The memo is public on the blockchain. It carries the invoice number, never customer data.',
+
+  'lp.speed.title': 'Seconds, *not days.*',
+  'lp.speed.bank': 'Bank wire',
+  'lp.speed.sea': 'Seamoney on Tempo · Solana',
+  'lp.speed.time': 'Settlement',
+  'lp.speed.fee': 'Fees',
+  'lp.speed.recon': 'Reconciliation',
+  'lp.speed.time.bank': '1–5 business days',
+  'lp.speed.time.sea': 'Seconds',
+  'lp.speed.fee.bank': '2–5% in fees',
+  'lp.speed.fee.sea': 'About 1%',
+  'lp.speed.recon.bank': 'Reconciled by hand',
+  'lp.speed.recon.sea': 'Reconciles itself',
+  'lp.speed.axis.time': '5 business days',
+  'lp.speed.note':
+    'Estimates for a typical bank wire. Seamoney settles on the Tempo testnet and Solana devnet.',
+
+  'lp.map.title': 'The old route *makes port calls.*',
+  'lp.map.body':
+    'A dollar wire from Brazil to China usually clears through *correspondent banks* {hops}. Each one takes a fee and some time, and at the end someone matches the statement to the invoice *by hand*.',
+  'lp.map.stop.origin': 'Your bank, São Paulo',
+  'lp.map.stop.ny': 'Correspondent bank, New York',
+  'lp.map.stop.hk': 'Intermediary bank, Hong Kong',
+  'lp.map.stop.dest': 'Supplier’s bank, Shenzhen',
+  'lp.map.sea.dest': 'Supplier’s wallet, Shenzhen',
+  'lp.map.toll': 'Fee + wait',
+  'lp.map.note': 'Illustrative route. Real paths, fees and times vary by bank.',
+
+  'lp.recon.title': 'The payment *reconciles itself.*',
+  'lp.recon.body':
+    'Seamoney finds the {event} event by recipient and memo, then checks *five things* {five} before it closes the invoice.',
+  'lp.recon.stamp': 'Reconciled',
+  'lp.recon.invoice': 'Commercial invoice',
+  'lp.recon.event': 'On-chain event',
+  'lp.recon.proof': 'A proof page for your supplier',
+  'lp.recon.csv': 'A CSV line for your accountant',
+
+  'lp.save.title': 'What stays *in your company*',
+  'lp.save.body':
+    'Drag to your monthly volume. The numbers come from *the same rules engine* that prices real orders.',
+  'lp.save.year': 'saved per year',
+  'lp.save.month': 'per month',
+
+
+  'lp.close.cta2': 'Open the dashboard',
+  'lp.code': 'View the source code',
+  'lp.code.nav': 'Code',
+  'lp.save.static':
+    'In the full demo the Java rules engine answers here, with the same numbers it uses to price real orders. This page is a static preview with no backend behind it, so the calculator is switched off.',
+
   'disclaimer.demo':
-    'Demo on the Tempo testnet. The reais-to-dollar leg is simulated and no real money moves. Figures are estimates, not quotes, and taxes such as IOF are not included.',
+    'Demo on the Tempo testnet and Solana devnet. The reais-to-dollar leg is simulated and no real money moves. Figures are estimates, not quotes, and taxes such as IOF are not included.',
   'footer.built': 'Built for the Colosseum Crypto World’s Fair hackathon.',
 
   'calc.title': 'Savings calculator',
@@ -357,8 +432,83 @@ const pt: Dict = {
   'how.4.title': 'Concilie automaticamente',
   'how.4.desc': 'Achamos o pagamento na blockchain pela referência, conferimos e fechamos a fatura.',
 
+  // landing page (src/app/page.tsx, src/components/landing)
+  'lp.loader': 'Carregando o memo',
+  'lp.hero.title': 'O pagamento que leva *a própria fatura.*',
+  'lp.hero.sub':
+    'Importadores brasileiros pagam fornecedores na Ásia {route} em *stablecoin* no Tempo ou na Solana. O número da fatura {memo} viaja *dentro da transferência*, e cada pagamento se concilia sozinho {check}.',
+  'lp.cta': 'Criar ordem de pagamento',
+  'lp.cta2': 'Estimar sua economia',
+  'lp.live': 'Ao vivo na testnet do Tempo e na devnet da Solana',
+  'lp.sim': 'Perna reais–dólar simulada',
+  'lp.scroll': 'Role para carregar a carga',
+  'lp.clock': 'Hora local',
+  'lp.ch.1': 'Carregamento',
+  'lp.ch.2': 'Travessia',
+  'lp.ch.3': 'A rota antiga',
+  'lp.ch.4': 'Chegada',
+  'lp.ch.5': 'Economia',
+  'lp.rail': 'Capítulos da viagem',
+
+  'lp.cargo.title': 'A carga *é a fatura.*',
+  'lp.cargo.body':
+    'Todo pagamento leva um *memo de 32 bytes* {bytes}, no Tempo ou na Solana. Carregamos nele o número da sua fatura, byte a byte, antes do dinheiro sair.',
+  'lp.cargo.bytes': '{n} de 32 bytes',
+  'lp.cargo.over': '{n} de 32 bytes. Grande demais para o memo.',
+  'lp.cargo.try': 'Carregue o número da sua fatura',
+  'lp.cargo.public': 'O memo é público na blockchain. Leva o número da fatura, nunca dados de clientes.',
+
+  'lp.speed.title': 'Segundos, *não dias.*',
+  'lp.speed.bank': 'Transferência bancária',
+  'lp.speed.sea': 'Seamoney no Tempo · Solana',
+  'lp.speed.time': 'Liquidação',
+  'lp.speed.fee': 'Taxas',
+  'lp.speed.recon': 'Conciliação',
+  'lp.speed.time.bank': '1–5 dias úteis',
+  'lp.speed.time.sea': 'Segundos',
+  'lp.speed.fee.bank': '2–5% em taxas',
+  'lp.speed.fee.sea': 'Cerca de 1%',
+  'lp.speed.recon.bank': 'Conciliado na mão',
+  'lp.speed.recon.sea': 'Concilia sozinho',
+  'lp.speed.axis.time': '5 dias úteis',
+  'lp.speed.note':
+    'Estimativas para uma transferência bancária típica. A Seamoney liquida na testnet do Tempo e na devnet da Solana.',
+
+  'lp.map.title': 'A rota antiga *faz escalas.*',
+  'lp.map.body':
+    'Uma transferência em dólar do Brasil para a China costuma passar por *bancos correspondentes* {hops}. Cada um cobra uma taxa e leva um tempo, e no fim alguém casa o extrato com a fatura *na mão*.',
+  'lp.map.stop.origin': 'Seu banco, São Paulo',
+  'lp.map.stop.ny': 'Banco correspondente, Nova York',
+  'lp.map.stop.hk': 'Banco intermediário, Hong Kong',
+  'lp.map.stop.dest': 'Banco do fornecedor, Shenzhen',
+  'lp.map.sea.dest': 'Carteira do fornecedor, Shenzhen',
+  'lp.map.toll': 'Taxa + espera',
+  'lp.map.note': 'Rota ilustrativa. Caminhos, taxas e prazos reais variam por banco.',
+
+  'lp.recon.title': 'O pagamento *se concilia sozinho.*',
+  'lp.recon.body':
+    'A Seamoney acha o evento {event} por destinatário e memo e confere *cinco coisas* {five} antes de fechar a fatura.',
+  'lp.recon.stamp': 'Conciliado',
+  'lp.recon.invoice': 'Fatura comercial',
+  'lp.recon.event': 'Evento on-chain',
+  'lp.recon.proof': 'Uma página de prova para o fornecedor',
+  'lp.recon.csv': 'Uma linha de CSV para o contador',
+
+  'lp.save.title': 'O que fica *na sua empresa*',
+  'lp.save.body':
+    'Arraste até o seu volume mensal. Os números vêm *do mesmo motor de regras* que precifica as ordens.',
+  'lp.save.year': 'economizados por ano',
+  'lp.save.month': 'por mês',
+
+
+  'lp.close.cta2': 'Abrir o painel',
+  'lp.code': 'Ver o código-fonte',
+  'lp.code.nav': 'Código',
+  'lp.save.static':
+    'Na demo completa, o motor de regras em Java responde aqui, com os mesmos números que precificam as ordens. Esta página é uma prévia estática, sem backend por trás, então a calculadora fica desligada.',
+
   'disclaimer.demo':
-    'Demo na testnet do Tempo. A etapa de reais para dólar é simulada e nenhum dinheiro real se move. Os valores são estimativas, não cotações, e tributos como o IOF não estão incluídos.',
+    'Demo na testnet do Tempo e na devnet da Solana. A etapa de reais para dólar é simulada e nenhum dinheiro real se move. Os valores são estimativas, não cotações, e tributos como o IOF não estão incluídos.',
   'footer.built': 'Feito para o hackathon Crypto World’s Fair da Colosseum.',
 
   'calc.title': 'Calculadora de economia',

@@ -20,7 +20,8 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = await getLocale()
   return (
-    <html lang={locale === 'pt' ? 'pt-BR' : 'en'}>
+    // suppressHydrationWarning: the landing page may add a class to <html> before hydration (?motion=full)
+    <html lang={locale === 'pt' ? 'pt-BR' : 'en'} suppressHydrationWarning>
       <body>
         <I18nProvider locale={locale}>{children}</I18nProvider>
       </body>
