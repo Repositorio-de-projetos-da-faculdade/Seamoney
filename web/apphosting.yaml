@@ -1,0 +1,8 @@
+# Firebase App Hosting (Cloud Run). Only the web app is deployed: without RULES_API_URL the calculator and the
+# dashboard have no backend, and no testnet payment can be triggered from the public site.
+runConfig:
+  minInstances: 0
+  maxInstances: 2
+  concurrency: 80
+  cpu: 1
+  memoryMiB: 512

@@ -1,9 +1,7 @@
 {
-  "hosting": {
-    "source": "web",
-    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
-    "frameworksBackend": {
-      "region": "us-central1"
-    }
+  "apphosting": {
+    "backendId": "seamoney-web",
+    "rootDir": "web",
+    "ignore": ["node_modules", ".next", ".git", "firebase-debug.log", "firebase-debug.*.log"]
   }
 }
