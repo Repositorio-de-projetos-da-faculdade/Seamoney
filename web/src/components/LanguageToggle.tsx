@@ -2,23 +2,17 @@
 
 import clsx from 'clsx'
 import { Globe } from 'lucide-react'
-import { useRouter } from 'next/navigation'
-import { useLocale, useT } from '@/lib/i18n/client'
+import { useLocale, useSwitchLocale, useT } from '@/lib/i18n/client'
 
 export function LanguageToggle({ onDark = false }: { onDark?: boolean }) {
-  const router = useRouter()
   const locale = useLocale()
+  const switchLocale = useSwitchLocale()
   const { t } = useT()
-  const next = locale === 'en' ? 'pt' : 'en'
 
   return (
     <button
       type="button"
-      onClick={() => {
-        // A plain cookie is enough: the server reads it on every request.
-        document.cookie = `lang=${next}; path=/; max-age=31536000; samesite=lax`
-        router.refresh()
-      }}
+      onClick={() => switchLocale(locale === 'en' ? 'pt' : 'en')}
       className={clsx(
         'inline-flex min-h-10 items-center gap-2 rounded-full px-3.5 text-sm font-semibold transition-colors',
         onDark

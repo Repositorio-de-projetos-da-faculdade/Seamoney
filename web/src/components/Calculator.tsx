@@ -3,10 +3,10 @@
 import clsx from 'clsx'
 import { ArrowRight, CalendarRange, TrendingDown } from 'lucide-react'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { usd } from '@/lib/format'
 import { useT } from '@/lib/i18n/client'
-import type { Comparison } from '@/lib/types'
+import { useComparison } from '@/lib/useComparison'
 import { btnPrimary, Card, Field, input, Notice } from './ui'
 
 const num = (v: string) => (v === '' || Number.isNaN(Number(v)) ? 0 : Math.max(0, Number(v)))
@@ -15,38 +15,12 @@ const pct = (v: number, min: number, max: number) => `${Math.min(100, Math.max(0
 const MONTHLY = { min: 5_000, max: 500_000, step: 5_000 }
 const BANK = { min: 0.5, max: 6, step: 0.1 }
 
-/** The savings math lives in the Java rules API (single source of truth); the UI just asks it. */
-function useComparison(monthly: string, bankPct: string) {
-  const [result, setResult] = useState<Comparison | null>(null)
-  useEffect(() => {
-    const controller = new AbortController()
-    const timer = setTimeout(async () => {
-      try {
-        const res = await fetch('/api/compare', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ monthlyUsd: num(monthly), bankFeePct: Math.min(num(bankPct), 100) }),
-          signal: controller.signal,
-        })
-        if (res.ok) setResult((await res.json()) as Comparison)
-      } catch {
-        // aborted or offline: keep showing the last result
-      }
-    }, 200)
-    return () => {
-      clearTimeout(timer)
-      controller.abort()
-    }
-  }, [monthly, bankPct])
-  return result
-}
-
 export function Calculator({ variant = 'page' }: { variant?: 'page' | 'teaser' }) {
   const { t, locale } = useT()
   const [monthly, setMonthly] = useState('80000')
   const [country, setCountry] = useState('cn')
   const [bankPct, setBankPct] = useState('3')
-  const result = useComparison(monthly, bankPct)
+  const result = useComparison(num(monthly), num(bankPct))
 
   const bank = result?.bankCents ?? 0
   const route = result?.routeCents ?? 0
