@@ -5,7 +5,6 @@ import { Finale } from './Finale'
 import { LandingFooter } from './LandingFooter'
 import { LandingNav } from './LandingNav'
 import { Loader } from './Loader'
-import { Manifest } from './Manifest'
 import { Reconcile } from './Reconcile'
 import { RouteMap } from './RouteMap'
 import { Savings } from './Savings'
@@ -13,8 +12,8 @@ import { SmoothScroll } from './SmoothScroll'
 import { Voyage } from './Voyage'
 
 // The landing page is one voyage: a WebGL ship carries the 32-byte memo (Voyage), the old route is drawn on a map
-// (RouteMap), the payment reconciles itself on paper (Reconcile), the calculator (Savings), the honesty section
-// (Manifest) and the ship sails off (Finale). Rendered by src/app/page.tsx (Next) and by landing-static/ (the
+// (RouteMap), the payment reconciles itself on paper (Reconcile), the calculator (Savings) and the ship sails
+// off (Finale). Rendered by src/app/page.tsx (Next) and by landing-static/ (the
 // static build for Firebase Hosting), so it takes the translations as props and imports nothing server-only.
 export function LandingPage({ t, locale }: { t: T; locale: Locale }) {
   return (
@@ -34,7 +33,6 @@ export function LandingPage({ t, locale }: { t: T; locale: Locale }) {
         <RouteMap t={t} />
         <Reconcile t={t} locale={locale} />
         <Savings />
-        <Manifest t={t} />
         <Finale t={t} />
       </main>
       <LandingFooter t={t} />

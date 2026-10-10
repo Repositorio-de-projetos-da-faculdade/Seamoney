@@ -4,7 +4,7 @@ import { encodeMemo, memoHex } from '@/lib/memo'
 import { mono } from './type'
 
 const REFERENCE = 'INV-2026-0845'
-const RUN = [REFERENCE, memoHex(encodeMemo(REFERENCE)), 'TransferWithMemo', 'AlphaUSD · TIP-20', 'Tempo Moderato · 42431']
+const RUN = [REFERENCE, memoHex(encodeMemo(REFERENCE)), 'TransferWithMemo', 'AlphaUSD · TIP-20', 'Tempo Moderato · 42431', 'Solana devnet · Memo program']
 
 function Run() {
   return (

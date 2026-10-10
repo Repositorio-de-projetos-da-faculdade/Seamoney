@@ -82,16 +82,12 @@ const five = (
   </span>
 )
 
-/** The amber diamond the whole site uses for anything simulated. */
-const sim = <span data-g="sim" aria-hidden="true" className="mx-[0.2em] inline-block size-[0.36em] -translate-y-[0.1em] rotate-45 bg-signal align-middle" />
-
 export const GLYPHS: Record<string, ReactNode> = {
   route,
   hops,
   check,
   bytes,
   five,
-  sim,
   memo: <Chip name="memo">{SAMPLE}</Chip>,
   event: <Chip name="event">TransferWithMemo</Chip>,
 }

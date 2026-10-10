@@ -355,15 +355,6 @@ select:focus-visible {
     transform: translateY(260%);
   }
 }
-/* Slow turn of the circular seals (Seal.tsx). */
-.lp-spin {
-  animation: spin 28s linear infinite;
-}
-@keyframes spin {
-  to {
-    transform: rotate(1turn);
-  }
-}
 /* Pulse running along the Seamoney arc on the route map (routemap/RouteFx.tsx): a short dash on a pathLength of 1. */
 .lp-flow {
   animation: flow 3.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
@@ -376,7 +367,7 @@ select:focus-visible {
     stroke-dashoffset: 0;
   }
 }
-/* A payment running along the stack rail of the declaration (manifest/StackRail.tsx). */
+/* A payment running along the route between the two ports in the footer (footer/VoyageLine.tsx). */
 .lp-rail {
   animation: rail 4.8s cubic-bezier(0.65, 0, 0.35, 1) infinite;
 }

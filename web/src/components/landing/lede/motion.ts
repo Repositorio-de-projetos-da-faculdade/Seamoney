@@ -34,10 +34,6 @@ function glyph(g: typeof gsap, el: Element): gsap.core.Timeline {
     case 'five':
       tl.fromTo(q('[data-cell="used"]'), { opacity: 0.15, scaleY: 0.3 }, { opacity: 1, scaleY: 1, duration: BEAT, stagger: BEAT * 0.6 }, 0)
       break
-    case 'sim':
-      // GSAP takes over the CSS rotate, so the turn to a diamond ends at 45 degrees
-      tl.fromTo(el, { scale: 0, rotation: 0 }, { scale: 1, rotation: 45, duration: BEAT * 4, ease: 'back.out(3)' }, 0)
-      break
   }
   return tl
 }

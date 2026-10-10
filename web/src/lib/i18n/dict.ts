@@ -73,10 +73,10 @@ const en = {
   'lp.loader': 'Loading the memo',
   'lp.hero.title': 'The payment that carries *its own invoice.*',
   'lp.hero.sub':
-    'Brazilian importers pay suppliers in Asia {route} in *stablecoins* on Tempo. The invoice number {memo} travels *inside the transfer*, so every payment reconciles itself {check}.',
+    'Brazilian importers pay suppliers in Asia {route} in *stablecoins* on Tempo or Solana. The invoice number {memo} travels *inside the transfer*, so every payment reconciles itself {check}.',
   'lp.cta': 'Create a payment order',
   'lp.cta2': 'Estimate your savings',
-  'lp.live': 'Live on the Tempo testnet',
+  'lp.live': 'Live on Tempo testnet and Solana devnet',
   'lp.sim': 'Reais-to-dollar leg simulated',
   'lp.scroll': 'Scroll to load the cargo',
   'lp.clock': 'Local time',
@@ -85,12 +85,11 @@ const en = {
   'lp.ch.3': 'The old route',
   'lp.ch.4': 'Arrival',
   'lp.ch.5': 'Savings',
-  'lp.ch.6': 'Declaration',
   'lp.rail': 'Chapters of the voyage',
 
   'lp.cargo.title': 'The cargo *is the invoice.*',
   'lp.cargo.body':
-    'Every Tempo transfer can carry a *32-byte memo* {bytes}. We load your invoice number into it, byte by byte, before the money leaves.',
+    'Every payment carries a *32-byte memo* {bytes}, on Tempo or on Solana. We load your invoice number into it, byte by byte, before the money leaves.',
   'lp.cargo.bytes': '{n} of 32 bytes',
   'lp.cargo.over': '{n} of 32 bytes. Too long for the memo.',
   'lp.cargo.try': 'Load your own invoice number',
@@ -98,7 +97,7 @@ const en = {
 
   'lp.speed.title': 'Seconds, *not days.*',
   'lp.speed.bank': 'Bank wire',
-  'lp.speed.sea': 'Seamoney on Tempo',
+  'lp.speed.sea': 'Seamoney on Tempo · Solana',
   'lp.speed.time': 'Settlement',
   'lp.speed.fee': 'Fees',
   'lp.speed.recon': 'Reconciliation',
@@ -109,7 +108,8 @@ const en = {
   'lp.speed.recon.bank': 'Reconciled by hand',
   'lp.speed.recon.sea': 'Reconciles itself',
   'lp.speed.axis.time': '5 business days',
-  'lp.speed.note': 'Estimates for a typical bank wire. Seamoney settles on the Tempo testnet.',
+  'lp.speed.note':
+    'Estimates for a typical bank wire. Seamoney settles on the Tempo testnet and Solana devnet.',
 
   'lp.map.title': 'The old route *makes port calls.*',
   'lp.map.body':
@@ -137,32 +137,6 @@ const en = {
   'lp.save.year': 'saved per year',
   'lp.save.month': 'per month',
 
-  'lp.manifest.title': 'Cargo *declaration*',
-  'lp.manifest.sub': 'What runs *for real* in this demo {check}, and what is *simulated* {sim}.',
-  'lp.manifest.real': 'Real, on the Tempo testnet',
-  'lp.manifest.real.1': 'Stablecoin payments in AlphaUSD (TIP-20)',
-  'lp.manifest.real.2': 'The invoice number in the 32-byte memo',
-  'lp.manifest.real.3': 'Reconciliation by the on-chain event, five checks',
-  'lp.manifest.real.4': 'Pays once; a second attempt is blocked',
-  'lp.manifest.real.5': 'A proof page for the supplier, a CSV for the accountant',
-  'lp.manifest.sim': 'Simulated',
-  'lp.manifest.sim.1': 'Reais to dollars at a fixed R$ 5.40',
-  'lp.manifest.sim.2': 'Licensed FX partner: none yet, so no real money moves',
-  'lp.manifest.sim.3': 'Fees and savings, IOF not included',
-  'lp.manifest.st.real': 'Real',
-  'lp.manifest.st.sim': 'Simulated',
-  'lp.manifest.st.none': 'Not yet',
-  'lp.manifest.st.est': 'Estimate',
-  'lp.manifest.law':
-    'In production the conversion has to go through an authorized partner. Brazil’s Central Bank Resolution 561 (in force since 1 October 2026, art. 50) bars virtual assets in the settlement between an eFX provider and its counterparty abroad, so this route depends on a licensed partner and legal review.',
-  'lp.manifest.law.short': 'Going live needs a licensed FX partner and legal review: BCB Resolution 561 bars virtual assets from eFX settlement abroad.',
-  'lp.manifest.law.more': 'Read the rule',
-  'lp.manifest.stack': 'How it is built',
-  'lp.stack.web': 'Interface and invoice reading',
-  'lp.stack.rules': 'Pricing, orders and reconciliation',
-  'lp.stack.chain': 'Payments and event lookup',
-  'lp.stack.net': 'Tempo Moderato testnet',
-  'lp.stack.netId': 'Chain 42431',
 
   'lp.close.cta2': 'Open the dashboard',
   'lp.code': 'View the source code',
@@ -171,7 +145,7 @@ const en = {
     'In the full demo the Java rules engine answers here, with the same numbers it uses to price real orders. This page is a static preview with no backend behind it, so the calculator is switched off.',
 
   'disclaimer.demo':
-    'Demo on the Tempo testnet. The reais-to-dollar leg is simulated and no real money moves. Figures are estimates, not quotes, and taxes such as IOF are not included.',
+    'Demo on the Tempo testnet and Solana devnet. The reais-to-dollar leg is simulated and no real money moves. Figures are estimates, not quotes, and taxes such as IOF are not included.',
   'footer.built': 'Built for the Colosseum Crypto World’s Fair hackathon.',
 
   'calc.title': 'Savings calculator',
@@ -462,10 +436,10 @@ const pt: Dict = {
   'lp.loader': 'Carregando o memo',
   'lp.hero.title': 'O pagamento que leva *a própria fatura.*',
   'lp.hero.sub':
-    'Importadores brasileiros pagam fornecedores na Ásia {route} em *stablecoin* na rede Tempo. O número da fatura {memo} viaja *dentro da transferência*, e cada pagamento se concilia sozinho {check}.',
+    'Importadores brasileiros pagam fornecedores na Ásia {route} em *stablecoin* no Tempo ou na Solana. O número da fatura {memo} viaja *dentro da transferência*, e cada pagamento se concilia sozinho {check}.',
   'lp.cta': 'Criar ordem de pagamento',
   'lp.cta2': 'Estimar sua economia',
-  'lp.live': 'Ao vivo na testnet do Tempo',
+  'lp.live': 'Ao vivo na testnet do Tempo e na devnet da Solana',
   'lp.sim': 'Perna reais–dólar simulada',
   'lp.scroll': 'Role para carregar a carga',
   'lp.clock': 'Hora local',
@@ -474,12 +448,11 @@ const pt: Dict = {
   'lp.ch.3': 'A rota antiga',
   'lp.ch.4': 'Chegada',
   'lp.ch.5': 'Economia',
-  'lp.ch.6': 'Declaração',
   'lp.rail': 'Capítulos da viagem',
 
   'lp.cargo.title': 'A carga *é a fatura.*',
   'lp.cargo.body':
-    'Toda transferência na Tempo pode levar um *memo de 32 bytes* {bytes}. Carregamos nele o número da sua fatura, byte a byte, antes do dinheiro sair.',
+    'Todo pagamento leva um *memo de 32 bytes* {bytes}, no Tempo ou na Solana. Carregamos nele o número da sua fatura, byte a byte, antes do dinheiro sair.',
   'lp.cargo.bytes': '{n} de 32 bytes',
   'lp.cargo.over': '{n} de 32 bytes. Grande demais para o memo.',
   'lp.cargo.try': 'Carregue o número da sua fatura',
@@ -487,7 +460,7 @@ const pt: Dict = {
 
   'lp.speed.title': 'Segundos, *não dias.*',
   'lp.speed.bank': 'Transferência bancária',
-  'lp.speed.sea': 'Seamoney na rede Tempo',
+  'lp.speed.sea': 'Seamoney no Tempo · Solana',
   'lp.speed.time': 'Liquidação',
   'lp.speed.fee': 'Taxas',
   'lp.speed.recon': 'Conciliação',
@@ -498,7 +471,8 @@ const pt: Dict = {
   'lp.speed.recon.bank': 'Conciliado na mão',
   'lp.speed.recon.sea': 'Concilia sozinho',
   'lp.speed.axis.time': '5 dias úteis',
-  'lp.speed.note': 'Estimativas para uma transferência bancária típica. A Seamoney liquida na testnet do Tempo.',
+  'lp.speed.note':
+    'Estimativas para uma transferência bancária típica. A Seamoney liquida na testnet do Tempo e na devnet da Solana.',
 
   'lp.map.title': 'A rota antiga *faz escalas.*',
   'lp.map.body':
@@ -526,32 +500,6 @@ const pt: Dict = {
   'lp.save.year': 'economizados por ano',
   'lp.save.month': 'por mês',
 
-  'lp.manifest.title': 'Declaração *de carga*',
-  'lp.manifest.sub': 'O que roda *de verdade* nesta demo {check}, e o que é *simulado* {sim}.',
-  'lp.manifest.real': 'Real, na testnet do Tempo',
-  'lp.manifest.real.1': 'Pagamentos na stablecoin AlphaUSD (TIP-20)',
-  'lp.manifest.real.2': 'O número da fatura no memo de 32 bytes',
-  'lp.manifest.real.3': 'Conciliação pelo evento on-chain, cinco verificações',
-  'lp.manifest.real.4': 'Paga uma vez; a segunda tentativa é bloqueada',
-  'lp.manifest.real.5': 'Página de prova para o fornecedor, CSV para o contador',
-  'lp.manifest.sim': 'Simulado',
-  'lp.manifest.sim.1': 'Reais para dólar a R$ 5,40 fixos',
-  'lp.manifest.sim.2': 'Parceiro de câmbio autorizado: nenhum ainda, então nenhum dinheiro real se move',
-  'lp.manifest.sim.3': 'Taxas e economia, sem IOF',
-  'lp.manifest.st.real': 'Real',
-  'lp.manifest.st.sim': 'Simulado',
-  'lp.manifest.st.none': 'Ainda não',
-  'lp.manifest.st.est': 'Estimativa',
-  'lp.manifest.law':
-    'Em produção, a conversão precisa passar por um parceiro autorizado. A Resolução BCB 561 (em vigor desde 1º de outubro de 2026, art. 50) proíbe ativos virtuais na liquidação entre o provedor de eFX e a contraparte no exterior, então esta rota depende de parceiro autorizado e validação jurídica.',
-  'lp.manifest.law.short': 'Para ir a produção, é preciso parceiro de câmbio autorizado e validação jurídica: a Resolução BCB 561 proíbe ativos virtuais na liquidação de eFX com o exterior.',
-  'lp.manifest.law.more': 'Ler a regra',
-  'lp.manifest.stack': 'Como é construído',
-  'lp.stack.web': 'Interface e leitura de fatura',
-  'lp.stack.rules': 'Preço, ordens e conciliação',
-  'lp.stack.chain': 'Pagamentos e busca de eventos',
-  'lp.stack.net': 'Testnet Tempo Moderato',
-  'lp.stack.netId': 'Chain 42431',
 
   'lp.close.cta2': 'Abrir o painel',
   'lp.code': 'Ver o código-fonte',
@@ -560,7 +508,7 @@ const pt: Dict = {
     'Na demo completa, o motor de regras em Java responde aqui, com os mesmos números que precificam as ordens. Esta página é uma prévia estática, sem backend por trás, então a calculadora fica desligada.',
 
   'disclaimer.demo':
-    'Demo na testnet do Tempo. A etapa de reais para dólar é simulada e nenhum dinheiro real se move. Os valores são estimativas, não cotações, e tributos como o IOF não estão incluídos.',
+    'Demo na testnet do Tempo e na devnet da Solana. A etapa de reais para dólar é simulada e nenhum dinheiro real se move. Os valores são estimativas, não cotações, e tributos como o IOF não estão incluídos.',
   'footer.built': 'Feito para o hackathon Crypto World’s Fair da Colosseum.',
 
   'calc.title': 'Calculadora de economia',
