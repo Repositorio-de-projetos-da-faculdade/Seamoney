@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import com.seamoney.rules.AppProperties;
+import com.seamoney.rules.domain.Network;
 import java.math.BigInteger;
 import java.net.http.HttpClient;
 import java.time.Duration;
@@ -30,8 +31,13 @@ public class HttpChainClient implements ChainClient {
     @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
     record TxDto(String status, long blockNumber, String timestamp) {}
 
+    /** The per-network health block of the chain service; only the fields used here. */
     @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
-    record HealthDto(boolean configured, String partnerAddress, long latestBlock) {}
+    record NetworkHealthDto(Boolean configured) {}
+
+    /** The top-level Tempo fields are kept by the chain service for older callers. */
+    @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
+    record HealthDto(boolean configured, String partnerAddress, long latestBlock, Map<String, NetworkHealthDto> networks) {}
 
     private final RestClient http;
     private final ObjectMapper mapper;
@@ -52,10 +58,10 @@ public class HttpChainClient implements ChainClient {
     }
 
     @Override
-    public SentPayment sendPayment(String to, long amountCents, String reference) {
+    public SentPayment sendPayment(Network network, String to, long amountCents, String reference) {
         SentDto dto = call(() -> http.post()
                 .uri("/payments")
-                .body(Map.of("to", to, "amount_cents", amountCents, "reference", reference))
+                .body(Map.of("to", to, "amount_cents", amountCents, "reference", reference, "network", network.value()))
                 .retrieve()
                 .onStatus(s -> s.isError(), (req, res) -> {
                     throw error(res.getStatusCode().value(), res.getBody().readAllBytes());
@@ -65,9 +71,10 @@ public class HttpChainClient implements ChainClient {
     }
 
     @Override
-    public List<FoundTransfer> findTransfers(String to, String reference, long fromBlock) {
+    public List<FoundTransfer> findTransfers(Network network, String to, String reference, long fromBlock) {
         List<TransferDto> dtos = call(() -> http.get()
                 .uri(b -> b.path("/transfers")
+                        .queryParam("network", network.value())
                         .queryParam("to", to)
                         .queryParam("reference", reference)
                         .queryParam("from_block", Math.max(0, fromBlock))
@@ -84,10 +91,10 @@ public class HttpChainClient implements ChainClient {
     }
 
     @Override
-    public Optional<TxInfo> transaction(String txHash) {
+    public Optional<TxInfo> transaction(Network network, String txHash) {
         try {
             TxDto dto = http.get()
-                    .uri("/transactions/{hash}", txHash)
+                    .uri("/transactions/{hash}?network={network}", txHash, network.value())
                     .retrieve()
                     .onStatus(s -> s.value() == HttpStatus.NOT_FOUND.value(), (req, res) -> {})
                     .onStatus(s -> s.isError() && s.value() != HttpStatus.NOT_FOUND.value(), (req, res) -> {
@@ -105,7 +112,8 @@ public class HttpChainClient implements ChainClient {
     @Override
     public ChainHealth health() {
         HealthDto dto = call(() -> http.get().uri("/health").retrieve().body(HealthDto.class));
-        return new ChainHealth(dto.configured(), dto.partnerAddress(), dto.latestBlock());
+        NetworkHealthDto solana = dto.networks() == null ? null : dto.networks().get("solana");
+        return new ChainHealth(dto.configured(), dto.partnerAddress(), dto.latestBlock(), solana != null && Boolean.TRUE.equals(solana.configured()));
     }
 
     private <T> T call(java.util.function.Supplier<T> request) {

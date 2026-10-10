@@ -2,6 +2,7 @@ package com.seamoney.rules.store;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.seamoney.rules.domain.Network;
 import com.seamoney.rules.domain.Order;
 import com.seamoney.rules.domain.OrderStatus;
 import com.seamoney.rules.domain.Pricing;
@@ -34,6 +35,7 @@ public class OrderRepository {
             String supplierName,
             String supplierCountry,
             String supplierWallet,
+            Network network,
             String invoiceNumber,
             long amountCents,
             String dueDate,
@@ -52,7 +54,7 @@ public class OrderRepository {
             String reconciledAt,
             String createdAt) {}
 
-    public record Supplier(String id, String name, String country, String walletAddress) {}
+    public record Supplier(String id, String name, String country, String walletAddress, Network network) {}
 
     private final JdbcTemplate jdbc;
     private final ObjectMapper mapper;
@@ -60,6 +62,14 @@ public class OrderRepository {
     public OrderRepository(JdbcTemplate jdbc, ObjectMapper mapper) {
         this.jdbc = jdbc;
         this.mapper = mapper;
+        // databases created before settlement on a second network have no "network" column yet
+        addNetworkColumnIfMissing("orders");
+        addNetworkColumnIfMissing("suppliers");
+    }
+
+    private void addNetworkColumnIfMissing(String table) {
+        boolean present = jdbc.queryForList("PRAGMA table_info(" + table + ")").stream().anyMatch(col -> "network".equals(col.get("name")));
+        if (!present) jdbc.execute("ALTER TABLE " + table + " ADD COLUMN network TEXT NOT NULL DEFAULT 'tempo'");
     }
 
     // ---------- reads ----------
@@ -145,20 +155,20 @@ public class OrderRepository {
     public Optional<Supplier> findSupplierByName(String name) {
         return jdbc.query(
                         "SELECT * FROM suppliers WHERE name = ?",
-                        (rs, i) -> new Supplier(rs.getString("id"), rs.getString("name"), rs.getString("country"), rs.getString("wallet_address")),
+                        (rs, i) -> new Supplier(rs.getString("id"), rs.getString("name"), rs.getString("country"), rs.getString("wallet_address"), Network.fromValue(rs.getString("network"))),
                         name)
                 .stream()
                 .findFirst();
     }
 
-    public void insertSupplier(String id, String name, String country, String wallet, String createdAt) {
+    public void insertSupplier(String id, String name, String country, String wallet, Network network, String createdAt) {
         jdbc.update(
-                "INSERT INTO suppliers (id, name, country, wallet_address, created_at) VALUES (?,?,?,?,?)",
-                id, name, country, wallet, createdAt);
+                "INSERT INTO suppliers (id, name, country, wallet_address, network, created_at) VALUES (?,?,?,?,?,?)",
+                id, name, country, wallet, network.value(), createdAt);
     }
 
-    public void updateSupplier(String id, String wallet, String country) {
-        jdbc.update("UPDATE suppliers SET wallet_address = ?, country = COALESCE(?, country) WHERE id = ?", wallet, country, id);
+    public void updateSupplier(String id, String wallet, Network network, String country) {
+        jdbc.update("UPDATE suppliers SET wallet_address = ?, network = ?, country = COALESCE(?, country) WHERE id = ?", wallet, network.value(), country, id);
     }
 
     // ---------- writes ----------
@@ -166,13 +176,13 @@ public class OrderRepository {
     public void insert(NewOrder o) {
         jdbc.update(
                 """
-                INSERT INTO orders (id, reference, supplier_id, supplier_name, supplier_country, supplier_wallet,
+                INSERT INTO orders (id, reference, supplier_id, supplier_name, supplier_country, supplier_wallet, network,
                   invoice_number, amount_cents, currency, due_date, fee_bps, fee_cents, total_cents, bank_fee_pct,
                   fx_rate, total_brl_cents, status, extraction_source, invoice_filename, confirm_ms, paid_at,
                   reconciled_at, is_demo, created_at, updated_at)
-                VALUES (?,?,?,?,?,?,?,?,'USD',?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                VALUES (?,?,?,?,?,?,?,?,?,'USD',?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 """,
-                o.id(), o.reference(), o.supplierId(), o.supplierName(), o.supplierCountry(), o.supplierWallet(),
+                o.id(), o.reference(), o.supplierId(), o.supplierName(), o.supplierCountry(), o.supplierWallet(), o.network().value(),
                 o.invoiceNumber(), o.amountCents(), o.dueDate(), o.feeBps(), o.feeCents(), o.totalCents(), o.bankFeePct(),
                 o.fxRate(), o.totalBrlCents(), o.status().value(), o.extractionSource(), o.invoiceFilename(), o.confirmMs(),
                 o.paidAt(), o.reconciledAt(), o.demo() ? 1 : 0, o.createdAt(), o.createdAt());
@@ -231,7 +241,8 @@ public class OrderRepository {
             long bankCost = Pricing.bankCostCents(amount, bankPct);
             return new Order(
                     rs.getString("id"), rs.getString("reference"), rs.getString("supplier_id"), rs.getString("supplier_name"),
-                    rs.getString("supplier_country"), rs.getString("supplier_wallet"), rs.getString("invoice_number"),
+                    rs.getString("supplier_country"), rs.getString("supplier_wallet"), Network.fromValue(rs.getString("network")),
+                    rs.getString("invoice_number"),
                     amount, rs.getString("currency"), rs.getString("due_date"), rs.getInt("fee_bps"), fee,
                     rs.getLong("total_cents"), bankPct, nullableDouble(rs, "fx_rate"), nullableLong(rs, "total_brl_cents"),
                     OrderStatus.fromValue(rs.getString("status")), rs.getString("extraction_source"),

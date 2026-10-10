@@ -28,6 +28,7 @@ public final class Views {
             long amountCents,
             String supplierName,
             String reference,
+            Network network,
             String txHash,
             String paidAt) {}
 }
