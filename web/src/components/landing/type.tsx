@@ -8,8 +8,8 @@ import { Scramble } from './Scramble'
 
 /** Headline face. Words wrapped in *stars* in the copy switch to the italic serif (.lp-display em). */
 export const display = 'lp-display font-grotesk font-normal leading-[0.94] tracking-[-0.045em] text-balance'
-/** Opening and closing lines. */
-export const displayXL = `${display} text-[clamp(3.25rem,8.6vw,9.75rem)]`
+/** Opening and closing lines, capped by the viewport height too so three lines never run into the copy below. */
+export const displayXL = `${display} text-[clamp(3.25rem,min(8.6vw,13.5svh),9.75rem)]`
 /** Chapter titles. */
 export const displayL = `${display} text-[clamp(2.6rem,5.4vw,6rem)]`
 /** A chapter's running line (lede/Lede.tsx): the display face, light, at the size of a subhead. */

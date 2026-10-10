@@ -33,7 +33,7 @@ export function RouteStops({ points, labels, toll }: { points: Record<StopKey, P
           {labels[key]}
         </span>
         {calls && (
-          <span data-toll className="flex items-center gap-1.5 text-bank-soft">
+          <span data-toll className="flex items-center gap-1.5 text-bank-soft max-md:hidden">
             <span className="size-1.5 rotate-45 bg-bank" aria-hidden="true" />
             {toll}
           </span>

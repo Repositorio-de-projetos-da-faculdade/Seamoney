@@ -36,6 +36,8 @@ export function VoyageStage() {
         )}
         {/* keeps the type legible over bright water and lights: a soft shade from the left and from the bottom */}
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgb(2_8_16/0.6),transparent_58%),linear-gradient(0deg,rgb(2_8_16/0.7),transparent_38%)]" />
+        {/* on phones the copy runs over the moon path on the water, so the shade from the bottom goes deeper */}
+        <div className="absolute inset-0 bg-[linear-gradient(0deg,rgb(2_8_16/0.9)_10%,rgb(2_8_16/0.55)_48%,transparent_72%)] md:hidden" />
         {!failed && <MemoFrame ref={frame} memo={memo} />}
       </div>
 

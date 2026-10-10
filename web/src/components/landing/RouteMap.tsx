@@ -26,7 +26,7 @@ export function RouteMap({ t }: { t: T }) {
     <section id="route" data-chapter="route" className="relative z-10 bg-abyss text-foam">
       <MemoTicker className="bg-abyss" />
       <RouteScene>
-        <div className="absolute inset-0 flex items-center justify-center max-md:items-start max-md:pt-[44svh]">
+        <div className="absolute inset-0 flex items-center justify-center max-md:items-start max-md:pt-[47svh]">
           <div className="w-[min(94%,150vh)] shrink-0 md:w-[min(78vw,122vh)] md:translate-x-[27%] md:translate-y-[3%]">
             <RouteChart geo={geo} labels={labels} />
           </div>
@@ -40,7 +40,7 @@ export function RouteMap({ t }: { t: T }) {
           <div className="max-w-[34rem] md:max-w-[max(34rem,42vw)]">
             <ChapterTag n={3} name={t('lp.ch.3')} className="text-foam/60" />
             <Reveal text={t('lp.map.title')} className={clsx(displayL, 'mt-5 text-white')} />
-            <Lede text={t('lp.map.body')} className="mt-6" />
+            <Lede size="md" text={t('lp.map.body')} className="mt-6" />
           </div>
 
           <div className="grid gap-6 md:grid-cols-[1fr_auto] md:items-end">

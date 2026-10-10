@@ -14,7 +14,7 @@ export function HeroCopy() {
   const { t } = useT()
 
   return (
-    <section className="relative z-10 flex h-[100svh] min-h-[640px] flex-col justify-between px-5 pb-6 pt-28 md:px-10 md:pb-9 md:pt-32 lg:pl-24">
+    <section className="relative z-10 flex min-h-[max(100svh,640px)] flex-col justify-between gap-10 px-5 pb-6 pt-28 md:px-10 md:pb-9 md:pt-32 lg:pl-24">
       <Reveal as="h1" on="load" text={t('lp.hero.title')} className={clsx(displayXL, 'max-w-[8em] text-white')} />
 
       <div className="grid gap-10 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">

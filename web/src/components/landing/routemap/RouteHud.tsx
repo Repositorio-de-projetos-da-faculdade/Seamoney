@@ -7,7 +7,7 @@ function Readout({ title, rows, tone, className }: { title: string; rows: string
   return (
     <div className={clsx('border-t pt-3', mint ? 'border-mint' : 'border-bank/60', className)}>
       <p className={clsx(label, mint ? 'text-mint' : 'text-bank')}>{title}</p>
-      <ul className={clsx('mt-3 space-y-1 font-grotesk text-[1.15rem] leading-tight tracking-[-0.02em] md:text-[1.4rem]', mint ? 'text-white' : 'font-light text-foam/60')}>
+      <ul className={clsx('mt-2 space-y-0.5 font-grotesk text-[0.95rem] leading-tight tracking-[-0.02em] md:mt-3 md:space-y-1 md:text-[1.4rem]', mint ? 'text-white' : 'font-light text-foam/60')}>
         {rows.map((row) => (
           <li key={row}>{row}</li>
         ))}
