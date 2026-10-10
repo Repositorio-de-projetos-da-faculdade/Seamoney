@@ -1,0 +1,45 @@
+# Seamoney: three services. Only the web app is published; the others are reachable inside the compose network.
+#
+#   cp .env.example .env     # then set TEMPO_PARTNER_PRIVATE_KEY (see chain-service/scripts/setup_wallets.py)
+#   docker compose up --build
+#   open http://localhost:3000
+name: seamoney
+
+services:
+  chain-service:
+    build: ./chain-service
+    environment:
+      TEMPO_PARTNER_PRIVATE_KEY: ${TEMPO_PARTNER_PRIVATE_KEY:?Set TEMPO_PARTNER_PRIVATE_KEY in .env (testnet key only)}
+      TEMPO_GAS_LIMIT: ${TEMPO_GAS_LIMIT:-500000}
+      CHAIN_SERVICE_TOKEN: ${CHAIN_SERVICE_TOKEN:-dev-internal-token}
+    restart: unless-stopped
+
+  rules-api:
+    build: ./rules-api
+    environment:
+      CHAIN_SERVICE_URL: http://chain-service:8000
+      CHAIN_SERVICE_TOKEN: ${CHAIN_SERVICE_TOKEN:-dev-internal-token}
+      DATA_DIR: /data
+      DEMO_USD_BRL: ${DEMO_USD_BRL:-5.40}
+      SEED_DEMO: ${SEED_DEMO:-true}
+    volumes:
+      - rules-data:/data
+    depends_on:
+      chain-service:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build: ./web
+    environment:
+      RULES_API_URL: http://rules-api:8080
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    depends_on:
+      rules-api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  rules-data:
