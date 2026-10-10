@@ -1,0 +1,273 @@
+@import "tailwindcss";
+
+/*
+ * Seamoney design system. Colours are sampled from the approved mockup (navy header band, teal accents,
+ * green actions) and the supplied logo (mint #24e4b4). Display type is Plus Jakarta Sans, text is Inter.
+ */
+@theme {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Plus Jakarta Sans Variable", "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+
+  /* navy surfaces */
+  --color-navy-950: #000f1f;
+  --color-navy-900: #001d38;
+  --color-navy-800: #02223e;
+  --color-navy-700: #06355a;
+  --color-navy-600: #0b4a78;
+  --color-navy-500: #155ba1;
+
+  /* brand */
+  --color-brand-800: #05583f;
+  --color-brand-700: #066a50;
+  --color-brand-600: #078060;
+  --color-brand-500: #0aa37e;
+  --color-brand-100: #d5f5ea;
+  --color-brand-50: #ecfaf5;
+  --color-mint: #24e4b4;
+  --color-aqua: #46ded6;
+
+  /* light surfaces and text */
+  --color-page: #f3f8fb;
+  --color-tint: #f1f8fa;
+  --color-line: #e1ebf1;
+  --color-ink: #06182c;
+  --color-muted: #55687a;
+
+  /* data */
+  --color-bank: #4088b8;
+  --color-bank-soft: #9bb3cd;
+
+  /* status */
+  --color-ok-bg: #def7ee;
+  --color-ok-ink: #066a50;
+  --color-warn-bg: #fff1dd;
+  --color-warn-ink: #8a5000;
+  --color-info-bg: #e4f0fa;
+  --color-info-ink: #1b5b92;
+  --color-bad-bg: #fde8e8;
+  --color-bad-ink: #a12626;
+
+  --radius-card: 18px;
+  --shadow-card: 0 1px 2px rgb(0 29 56 / 0.04), 0 10px 28px -12px rgb(0 29 56 / 0.12);
+  --shadow-pop: 0 24px 60px -24px rgb(0 15 31 / 0.55);
+  --shadow-button: 0 1px 0 rgb(255 255 255 / 0.18) inset, 0 6px 16px -6px rgb(7 128 96 / 0.55);
+
+  --animate-float: float 7s ease-in-out infinite;
+  --animate-rise: rise 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+html {
+  background: var(--color-page);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  min-height: 100dvh;
+}
+
+h1,
+h2,
+h3,
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+::selection {
+  background: rgb(36 228 180 / 0.35);
+}
+
+/* Visible keyboard focus everywhere */
+:focus-visible {
+  outline: 2px solid var(--color-mint);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+input:focus-visible,
+select:focus-visible {
+  outline: none;
+}
+
+/* range sliders (calculator) */
+.range {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  cursor: pointer;
+  background: linear-gradient(to right, var(--color-brand-500) var(--pct, 0%), rgb(120 150 175 / 0.35) var(--pct, 0%));
+}
+.range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: #fff;
+  border: 3px solid var(--color-brand-500);
+  box-shadow: 0 2px 8px rgb(0 29 56 / 0.3);
+}
+.range::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: #fff;
+  border: 3px solid var(--color-brand-500);
+  box-shadow: 0 2px 8px rgb(0 29 56 / 0.3);
+}
+.range:focus-visible {
+  outline: 2px solid var(--color-mint);
+  outline-offset: 6px;
+}
+
+/* ---------- the ship scene (see ShipScene.tsx) ---------- */
+.ship-bob {
+  transform-origin: 760px 556px;
+  animation: bob 7.5s ease-in-out infinite alternate;
+}
+@keyframes bob {
+  from {
+    transform: translateY(0) rotate(0deg);
+  }
+  to {
+    transform: translateY(-3px) rotate(-0.35deg);
+  }
+}
+
+.wave {
+  animation: drift linear infinite;
+}
+@keyframes drift {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(calc(var(--wave-dist) * -2));
+  }
+}
+
+.beacon {
+  animation: beacon 2.4s ease-in-out infinite;
+}
+@keyframes beacon {
+  0%,
+  60%,
+  100% {
+    opacity: 0.25;
+  }
+  30% {
+    opacity: 1;
+  }
+}
+
+.stars circle {
+  animation: twinkle 4.5s ease-in-out infinite;
+}
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+.glints ellipse {
+  animation: glint 5s ease-in-out infinite;
+}
+@keyframes glint {
+  0%,
+  100% {
+    opacity: 0.08;
+  }
+  50% {
+    opacity: 0.26;
+  }
+}
+
+.clouds {
+  animation: cloud 60s ease-in-out infinite alternate;
+}
+@keyframes cloud {
+  from {
+    transform: translateX(-30px);
+  }
+  to {
+    transform: translateX(30px);
+  }
+}
+
+.foam path {
+  animation: foam 3s linear infinite;
+}
+@keyframes foam {
+  to {
+    stroke-dashoffset: -54;
+  }
+}
+
+.radar {
+  animation: radar 3.2s ease-in-out infinite alternate;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+@keyframes radar {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(-1);
+  }
+}
+
+/* route loader used while a payment is being sent */
+.route-ship {
+  animation: sail 2.6s ease-in-out infinite;
+}
+@keyframes sail {
+  from {
+    left: 0%;
+  }
+  to {
+    left: calc(100% - 32px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
