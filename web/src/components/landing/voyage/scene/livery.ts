@@ -1,5 +1,4 @@
 import * as THREE from 'three'
-import { MARK } from '@/lib/brand-paths'
 import { deckAt, HULL } from './hull'
 
 // The hull livery, painted on a canvas with the same proportions as the hull side, so lettering is not stretched.
@@ -76,17 +75,18 @@ export function hullLivery() {
   g.font = `800 ${Math.round(1.5 * PX)}px ${FONTS.display}`
   g.letterSpacing = `${Math.round(0.08 * PX)}px`
   g.fillText('SEAMONEY', cx(70), cy(HULL.deck - 3.4))
-  g.fillText('SEAMONEY', cx(-84), cy(HULL.deck - 3.4))
+  g.fillText('SEAMONEY', cx(-78), cy(HULL.deck - 3.4))
   g.font = `600 ${Math.round(0.9 * PX)}px ${FONTS.data}`
-  g.fillText('SANTOS', cx(-84), cy(HULL.deck - 5))
+  g.fillText('SANTOS', cx(-78), cy(HULL.deck - 5))
 
   // draft marks at bow and stern, every two metres above the keel
   g.font = `600 ${Math.round(0.75 * PX)}px ${FONTS.data}`
   g.textAlign = 'left'
-  for (const x of [82, -88]) {
+  // kept clear of the names: forward of the bow name, aft of the stern name
+  for (const x of [82, -92]) {
     for (let d = 12; d <= 22; d += 2) {
       const y = HULL.keel + d
-      if (y > deckAt(x) - 2.2) break
+      if (y > deckAt(x) - 4.4) break
       g.fillText(`${d}M`, cx(x), cy(y))
     }
   }
@@ -114,32 +114,5 @@ export function hullLivery() {
   const t = new THREE.CanvasTexture(c)
   t.colorSpace = THREE.SRGBColorSpace
   t.anisotropy = 16
-  return t
-}
-
-/** Funnel side: navy, a mint band and the brand mark. */
-export function funnelLivery() {
-  const c = document.createElement('canvas')
-  c.width = 512
-  c.height = 768
-  const g = c.getContext('2d')!
-  g.fillStyle = '#0a2643'
-  g.fillRect(0, 0, 512, 768)
-  g.fillStyle = '#101418'
-  g.fillRect(0, 0, 512, 70)
-  g.fillStyle = '#24e4b4'
-  g.fillRect(0, 110, 512, 26)
-  const scale = 300 / MARK.height
-  g.save()
-  g.translate(256 - (MARK.width * scale) / 2, 220)
-  g.scale(scale, scale)
-  g.fillStyle = '#24e4b4'
-  g.fill(new Path2D(MARK.green), 'evenodd')
-  g.fillStyle = '#eef5f8'
-  g.fill(new Path2D(MARK.white), 'evenodd')
-  g.restore()
-  const t = new THREE.CanvasTexture(c)
-  t.colorSpace = THREE.SRGBColorSpace
-  t.anisotropy = 8
   return t
 }

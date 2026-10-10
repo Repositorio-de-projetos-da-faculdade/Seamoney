@@ -11,6 +11,8 @@ export const BAY_PITCH = 13
 
 /** Deckhouse footprint along the length. */
 export const DECKHOUSE = { x0: -17, x1: -5 }
+/** The accommodation block on it: storeys, storey height and width across the ship. */
+export const ACCOMMODATION = { storeys: 8, storey: 2.95, width: 22 }
 /** Funnel and engine casing, aft. */
 export const FUNNEL_X = -80
 

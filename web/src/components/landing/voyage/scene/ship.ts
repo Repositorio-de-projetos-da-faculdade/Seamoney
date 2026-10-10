@@ -1,7 +1,13 @@
 import * as THREE from 'three'
 import { createDeckhouse } from './deckhouse'
+import { addDeckGear } from './detail/deckGear'
+import { addFunnelDetail } from './detail/funnel'
+import { addNightLights } from './detail/nightLights'
+import { hullPlating } from './detail/plating'
+import { addSuperstructureDetail } from './detail/superstructure'
 import { deckAt, deckGeometry, hullGeometry, transomGeometry } from './hull'
 import { hullLivery } from './livery'
+import { mergeStatic } from './mergeStatic'
 import { doorTexture, roofTexture, sideTextures } from './steel'
 import { BAYS, BOX40, FORWARD_BAYS, MEMO_ROWS, rowZ, tierY, type Bay } from './stowage'
 
@@ -18,7 +24,10 @@ function rand(seed: number) {
 
 const memoBays = new Set(FORWARD_BAYS.slice(0, 4))
 
-export function createShip(quality: 'high' | 'low') {
+/** 'low' for phones, 'high' for a live desktop page, 'offline' for the pre-rendered frames (every lamp is a real light). */
+export type ShipQuality = 'low' | 'high' | 'offline'
+
+export function createShip(quality: ShipQuality) {
   const group = new THREE.Group()
   const disposables: { dispose(): void }[] = []
   const keep = <T extends { dispose(): void }>(x: T) => (disposables.push(x), x)
@@ -28,6 +37,10 @@ export function createShip(quality: 'high' | 'low') {
   const hullMat = keep(
     new THREE.MeshPhysicalMaterial({ map: keep(hullLivery()), roughness: 0.5, metalness: 0.25, clearcoat: 0.6, clearcoatRoughness: 0.35 }),
   )
+  if (quality !== 'low') {
+    hullMat.normalMap = keep(hullPlating(quality === 'offline' ? 4096 : 2048))
+    hullMat.normalScale.set(1.2, 1.2)
+  }
   group.add(shadowed(new THREE.Mesh(keep(hullGeometry()), hullMat)))
   group.add(shadowed(new THREE.Mesh(keep(transomGeometry()), hullMat)))
   const deckMat = keep(new THREE.MeshStandardMaterial({ color: '#27322f', roughness: 0.92, metalness: 0.15 }))
@@ -110,6 +123,20 @@ export function createShip(quality: 'high' | 'low') {
   }
 
   const deckhouse = createDeckhouse(group, keep)
+
+  // deck gear, railings, walkways, the funnel top and the walkway lamps (detail/)
+  const rails = quality !== 'low'
+  const rail = keep(new THREE.MeshStandardMaterial({ color: '#aebdc4', roughness: 0.55, metalness: 0.5 }))
+  const drum = keep(new THREE.MeshStandardMaterial({ color: '#4a5a52', roughness: 0.6, metalness: 0.4 }))
+  addDeckGear(group, keep, { rail, steel, hull: hullMat, drum }, { rails })
+  const white = keep(new THREE.MeshStandardMaterial({ color: '#cfd9de', roughness: 0.6, metalness: 0.1 }))
+  const boat = keep(new THREE.MeshStandardMaterial({ color: '#f26b1d', roughness: 0.45 }))
+  addSuperstructureDetail(group, keep, { rail, steel, white, boat }, { rails })
+  const soot = keep(new THREE.MeshStandardMaterial({ color: '#0b0d0f', roughness: 0.9 }))
+  addFunnelDetail(group, keep, deckhouse.funnel, { rail, steel, soot }, { rails })
+  addNightLights(group, keep, { lit: quality === 'offline' })
+
+  mergeStatic(group, new Set(deckhouse.moving), keep)
 
   return {
     group,

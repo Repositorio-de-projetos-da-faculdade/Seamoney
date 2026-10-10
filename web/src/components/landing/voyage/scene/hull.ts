@@ -42,6 +42,9 @@ export function halfBreadth(x: number, s: number) {
     plan = Math.max(1 - t ** 2.1, 0) ** 0.62
   } else if (x < -64) {
     plan = 1 - 0.16 * clamp01((-64 - x) / 32) ** 1.6
+    // the stern rounds off in plan, so the transom is narrower than the beam and the quarters curve into it
+    const round = clamp01((-80 - x) / 16)
+    plan *= Math.sqrt(1 - 0.5 * round * round)
   }
 
   // flat bottom with a round bilge midships, a V forward
