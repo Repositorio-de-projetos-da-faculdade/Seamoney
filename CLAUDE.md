@@ -1,0 +1,98 @@
+﻿# Seamoney: contexto para o Claude Code
+
+Leia este arquivo antes de mexer em qualquer coisa. Ele resume o que o projeto é, o que é real e o que é simulado, e as regras que o time já decidiu.
+
+## O que é
+
+Importadoras brasileiras pequenas e médias pagam fornecedores na Ásia com stablecoins na rede **Tempo** (testnet Moderato). O sistema calcula o custo, lê a fatura (IA), envia o pagamento com a referência da fatura no memo de 32 bytes, concilia sozinho pelo evento on-chain, gera a página de prova para o fornecedor e o relatório CSV.
+
+Feito para o hackathon Crypto World's Fair (Colosseum, trilha Tempo). Prazo: 12/10/2026 23:59 PT (03:59 de 13/10 em Brasília).
+
+## Regra de honestidade (não negociável)
+
+A perna reais para dólar é **simulada** (não há parceiro licenciado integrado). Isso precisa estar rotulado em toda tela, README e vídeo. Não invente números, parcerias ou estatísticas. Não afirme que o produto "move dinheiro real". A Resolução BCB 561 (em vigor desde 1/10/2026, art. 50) proíbe ativos virtuais na liquidação entre o provedor de eFX e a contraparte no exterior; a rota só vale com parceiro autorizado e validação jurídica.
+
+## Arquitetura: três serviços
+
+| Pasta | Linguagem | Responsabilidade |
+|---|---|---|
+| `web/` | TypeScript, Next.js 16, Tailwind v4, React 19 | Só interface e leitura de fatura por IA. Sem banco, sem chaves. Proxy `/api/*` com lista de rotas permitidas. |
+| `rules-api/` | Java 21, Spring Boot 3.5, JdbcTemplate, SQLite | **Regras de negócio**: preço, ciclo de vida da ordem, reserva atômica do pagamento, conciliação, relatórios. Todo SQL fica em `store/OrderRepository`. |
+| `chain-service/` | Python 3.12, FastAPI, pytempo, web3 | **Blockchain**: envia o pagamento com memo, busca transferências por memo, lê transações. Sem estado. Guarda a chave de teste. |
+
+Fluxo: Navegador → web → rules-api (Java) → chain-service (Python) → Tempo. Só o `web` é publicado pelo `docker-compose.yml`. O Java chama o Python com o cabeçalho `X-Internal-Token`.
+
+Regra da separação: **nenhuma regra de negócio no Python, nenhuma chamada de rede blockchain no Java.**
+
+## Decisões técnicas que já foram tomadas
+
+- Dinheiro sempre em **centavos inteiros**. Tarifa de 1% (100 bps, arredondamento half-up). Custo bancário assumido de 3%. Unidades do token = centavos x 10.000 (tokens TIP-20 têm 6 casas). Câmbio simulado 5,40 (`DEMO_USD_BRL`).
+- Memo de 32 **bytes** (não caracteres). O memo é público na rede.
+- Ordem: `quoted -> sending (reserva atômica) -> sent -> reconciled`. Conciliação independente: achar o evento `TransferWithMemo` por destinatário e memo, e checar token, destinatário, valor, memo e recibo. O par (hash da transação, índice do log) só concilia uma ordem.
+- `amount_units` volta como **string** da API Python (passa do inteiro seguro do JavaScript).
+- O cliente HTTP do Java usa **HTTP/1.1 forçado**: o upgrade h2c padrão do JDK é rejeitado pelo uvicorn e quebra todo POST.
+- Rede: Tempo Moderato, chain id 42431, RPC `https://rpc.moderato.tempo.xyz`, explorer `https://explore.testnet.tempo.xyz/tx/<hash>`. Token de teste AlphaUSD `0x20c0000000000000000000000000000000000001`. A carteira se reabastece pelo faucet (`tempo_fundAddress`).
+- Interface em inglês por padrão, português pelo seletor (cookie `lang`). Textos em `web/src/lib/i18n/dict.ts`.
+
+## Interface e identidade visual
+
+O visual segue o mockup do time (azul-marinho profundo, acentos teal e menta, ações em verde). Não simplifique: a interface precisa manter a identidade do mockup (fontes, navios, logo e slogan).
+
+- Fontes: **Plus Jakarta Sans** (títulos, números, botões) e **Inter** (texto), empacotadas com `@fontsource-variable/*` (nada de CDN em runtime).
+- Tokens (cores, raios, sombras, animações) em `web/src/app/globals.css`, bloco `@theme`. Verde de ação `brand-600` (#078060) passa em contraste AA com texto branco; não clareie.
+- Logo e slogan: o logo foi vetorizado dos arquivos do time (`web/src/lib/brand-paths.ts`, componentes `Logo` e `LogoMark` em `ui.tsx`; SVGs em `web/public/brand/`). Slogan, pitch e fechamento em `dict.ts` (`brand.tagline`, `brand.pitch`, `brand.closing`); o slogan em português é do time, a tradução em inglês é nossa.
+- Navios: `ShipScene.tsx` é uma cena vetorial feita à mão (navio com a marca no funil, guindastes, porto ao fundo, reflexo na água). Substitui fotografia; se o time trouxer fotos com licença, troque por `next/image` mantendo os gradientes escuros por cima do texto.
+- Responsivo: sidebar no desktop, barra de abas embaixo no celular (`BottomNav`). Cuidado com `hidden` + `inline-flex` na mesma classe (o `inline-flex` vence): use `max-md:hidden`.
+- Acessibilidade: foco visível, rótulos em todo campo, respeita `prefers-reduced-motion` (as animações do navio e das ondas param).
+- Para mexer na interface sem Java/Python/Docker: `node web/scripts/mock-rules.mjs` (porta 8089) e `RULES_API_URL=http://localhost:8089 npm run dev`. Só para desenvolver, nunca para demonstração.
+
+## Next.js 16
+
+Esta versão tem mudanças que quebram o que você conhece. Leia `web/node_modules/next/dist/docs/` antes de escrever código (veja também `web/AGENTS.md`). `params` e `searchParams` são Promises. `cacheComponents` está desligado. Saída `standalone`.
+
+## Como rodar e testar
+
+```bash
+cp .env.example .env            # preencha TEMPO_PARTNER_PRIVATE_KEY (carteira de TESTNET)
+docker compose up --build       # abre em http://localhost:3000
+node scripts/e2e.mjs            # ponta a ponta contra a testnet real: web -> Java -> Python -> chain
+```
+
+Testes por serviço:
+
+```bash
+cd web && npm run typecheck && npm run lint && npm test
+cd rules-api && mvn verify                  # 27 testes; ou: docker build --target test ./rules-api
+cd chain-service && pytest -q               # 15 testes offline
+cd chain-service && python -m scripts.smoke # testnet real
+```
+
+Estado verificado: Java 27, Python 15, web 2 + tsc + lint passam; a pilha Docker foi testada ponta a ponta na testnet real (criar, pagar, pagar de novo bloqueado com 409, conciliar com 5 verificações, prova, CSV).
+
+## Segredos
+
+- `.env` e `chain-service/.env` guardam uma chave de **testnet**. Estão no `.gitignore`. **Nunca imprima, cole em chat nem faça commit.**
+- `ANTHROPIC_API_KEY` é opcional (leitura de fatura por IA). Sem ela a tela entra em modo demo, rotulado. Modelo padrão: `claude-opus-5-5`. Nunca coloque a chave em arquivo versionado.
+
+## O que ainda não foi verificado
+
+- Leitura de fatura por IA com chave real.
+- `mvn spring-boot:run` fora do Docker (a máquina só tinha Java 8; o Dockerfile usa JDK 21).
+- Qualquer deploy em nuvem real e a execução do GitHub Actions (`.github/workflows/ci.yml`).
+- Não há login: a demo pública precisa de senha ou lista de IPs, porque qualquer pessoa poderia disparar pagamentos de testnet.
+
+## Próximo passo do produto: protótipo real
+
+O plano completo (módulos, mapa de entidades, estrutura da chain, acesso individual, segurança, fases) está no documento "Plano do backend real" do time, que fica fora do repositório.
+
+Resumo: monólito modular em Java com Postgres, migrações versionadas e isolamento por empresa; login por OIDC com papéis (Dono, Aprovador, Operador, Contador, Admin da plataforma); aprovação de quem não criou a ordem, presa ao hash dos dados; fila com outbox; no Python, chave de acesso com expiração e limite e leitor de eventos; memo = código opaco da ordem, nunca o número da fatura. Só começar depois da entrega do hackathon.
+
+O documento de apresentação do time (hackathon, projeto, roteiro) também fica fora do repositório.
+
+## Convenções ao mexer no código
+
+- Imite o estilo do arquivo ao redor: densidade de comentários, nomes e idioma.
+- Mudou regra de dinheiro? Atualize `Pricing` e o `PricingTest`, e confira o texto da UI e do README.
+- Mudou contrato entre Java e Python? Os testes com chain falsa não pegam problemas de transporte: rode `scripts/e2e.mjs`.
+- Mantenha tudo o que é simulado rotulado como simulado.
+- Antes de qualquer commit, confirme que nenhum `.env` entrou.
