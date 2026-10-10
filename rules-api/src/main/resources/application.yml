@@ -1,0 +1,27 @@
+server:
+  port: ${PORT:8080}
+
+spring:
+  application:
+    name: seamoney-rules-api
+  datasource:
+    # SQLite file. DATA_DIR is created on startup (see RulesApplication).
+    url: jdbc:sqlite:${DATA_DIR:./data}/seamoney.db
+    driver-class-name: org.sqlite.JDBC
+    hikari:
+      # SQLite allows one writer; a single connection keeps things simple and safe.
+      maximum-pool-size: 1
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+
+seamoney:
+  chain-service-url: ${CHAIN_SERVICE_URL:http://localhost:8000}
+  chain-service-token: ${CHAIN_SERVICE_TOKEN:}
+  # SIMULATED USD/BRL rate shown in quotes. No real FX happens.
+  usd-brl: ${DEMO_USD_BRL:5.40}
+  seed-demo: ${SEED_DEMO:true}
+  fee-bps: 100
+  bank-fee-pct: 3.0
+  max-amount-cents: 100000000
