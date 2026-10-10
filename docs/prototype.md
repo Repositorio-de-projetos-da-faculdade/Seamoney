@@ -36,6 +36,22 @@ Only `web` is published by `docker-compose.yml`. The Java service is the only ca
 
 Regulatory note: Brazil's central bank Resolution BCB 561 (in force since 2026-10-01) prohibits virtual assets in settlement between an eFX provider and its foreign counterparty. Whether a software layer plus an authorized partner can route an importer's payment this way must be confirmed with a lawyer or the partner before any real use. This repository does not move or convert real funds.
 
+## SaaS demo (`/app`)
+
+A browser-only version of the product for demos and judging. It needs no Java, Python, Docker or keys: every visitor gets a private sandbox with a fictitious importer (Porto Claro Importadora), four people with different roles, six suppliers and seven months of payments, stored in their own browser.
+
+What it shows, following the team's backend plan: role-based permissions (owner, approver, operator, accountant, switched from the sidebar; operators create orders and propose wallets but do not send), supplier wallets versioned per network (Tempo or Solana) that a second person approves, one active order per invoice, AI-read invoices that a person must confirm, approval by someone other than the creator bound to a SHA-256 of the payment data (approve a new wallet and the payment needs approval again), an opaque order reference as the memo (never the invoice number), a single atomic claim before sending, automatic reconciliation with five checks that opens a review case when one fails, cancellation before sending, the supplier's proof, CSV export, the audit trail, team and settings.
+
+| Part | Status |
+|---|---|
+| Business data (company, people, suppliers, payments) | **Fictitious**, labelled on every screen |
+| Fee, savings and BRL figures | Same integer-cent rules as the Java `Pricing` (tested); BRL **simulated** |
+| Transfer, by default | **Simulated**: a random hash, labelled, with no explorer link |
+| Transfer with Settings > Tempo testnet | **Real testnet** payment through the Java and Python services (needs `docker compose up`), with the opaque reference as memo |
+| Payments on Solana | Always **simulated** in the demo; the Solana adapter is not wired to the rules service yet |
+
+Code: data and rules in `web/src/lib/demo/`, chart geometry in `web/src/lib/chart/`, UI in `web/src/components/app/`. The chart coastline comes from Natural Earth 1:50m (public domain) and is regenerated with `node web/scripts/build-chart.mjs`.
+
 ## Run everything with Docker
 
 ```bash

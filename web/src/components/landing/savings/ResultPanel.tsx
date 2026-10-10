@@ -53,7 +53,7 @@ export function ResultPanel({
         {t('calc.note')}
       </p>
 
-      <Cta href="/dashboard/orders/new" className="mt-10">
+      <Cta href="/app" className="mt-10">
         {t('lp.cta')}
       </Cta>
     </div>

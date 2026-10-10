@@ -1,0 +1,38 @@
+// SaaS demo: copy added in the payNew page pass. Keys are owned by that page only.
+export const en = {
+  'app.pnew.or': 'Or start from a supplier',
+  'app.pnew.or.hint': 'Suppliers with an approved wallet. The order opens with that supplier chosen.',
+  'app.pnew.file.label': 'Invoice file',
+  'app.pnew.file.ai': 'Read by AI',
+  'app.pnew.file.sample': 'Sample',
+  'app.pnew.file.replace': 'Replace',
+  'app.pnew.amount.prefix': 'US$',
+  'app.pnew.amount.reads': 'Reads as {value}',
+  'app.pnew.amount.invalid': 'Type an amount such as 12,500.00.',
+  'app.pnew.amount.zero': 'The amount must be more than zero.',
+  'app.pnew.due.past': 'This date has already passed. Check it against the invoice.',
+  'app.pnew.due.soon': 'Due today or within 3 days. Check that the send can still happen in time.',
+  'app.pnew.sum.ghost': 'Your order appears here as you fill it in.',
+  'app.pnew.sum.port': 'Port',
+  'app.pnew.sum.receives': 'Receives on',
+  'app.pnew.sum.noNetwork': 'Network not chosen yet',
+}
+
+export const pt: Record<keyof typeof en, string> = {
+  'app.pnew.or': 'Ou comece por um fornecedor',
+  'app.pnew.or.hint': 'Fornecedores com carteira aprovada. A ordem abre com o fornecedor já escolhido.',
+  'app.pnew.file.label': 'Arquivo da fatura',
+  'app.pnew.file.ai': 'Lido por IA',
+  'app.pnew.file.sample': 'Exemplo',
+  'app.pnew.file.replace': 'Trocar',
+  'app.pnew.amount.prefix': 'US$',
+  'app.pnew.amount.reads': 'Lido como {value}',
+  'app.pnew.amount.invalid': 'Digite um valor como 12.500,00.',
+  'app.pnew.amount.zero': 'O valor precisa ser maior que zero.',
+  'app.pnew.due.past': 'Esta data já passou. Confira com a fatura.',
+  'app.pnew.due.soon': 'Vence hoje ou em até 3 dias. Confira se o envio ainda dá tempo.',
+  'app.pnew.sum.ghost': 'Sua ordem aparece aqui conforme você preenche.',
+  'app.pnew.sum.port': 'Porto',
+  'app.pnew.sum.receives': 'Recebe em',
+  'app.pnew.sum.noNetwork': 'Rede ainda não escolhida',
+}

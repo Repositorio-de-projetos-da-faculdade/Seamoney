@@ -1,0 +1,36 @@
+// SaaS demo: copy added in the supDoc page pass. Keys are owned by that page only.
+export const en = {
+  'app.sdoc.act.pay': 'New payment to {name}',
+  'app.sdoc.clock': 'Local time {time}',
+  'app.sdoc.fig.paid': 'Paid to date',
+  'app.sdoc.fig.count': 'Payments',
+  'app.sdoc.fig.average': 'Average payment',
+  'app.sdoc.fig.averageNote': 'All orders, divided by their number',
+  'app.sdoc.fig.last': 'Last payment',
+  'app.sdoc.fig.none': 'None yet',
+  'app.sdoc.fig.open': 'Open orders',
+  'app.sdoc.route.title': 'Route',
+  'app.sdoc.route.caption': 'Santos to {place}',
+  'app.sdoc.route.chart': 'Shipping route from Santos to {place}',
+  'app.sdoc.route.empty.title': 'No route yet',
+  'app.sdoc.route.empty.body': 'Orders to this supplier are drawn here as soon as they exist.',
+  'app.sdoc.pay.total': 'Total of {count} orders',
+}
+
+export const pt: Record<keyof typeof en, string> = {
+  'app.sdoc.act.pay': 'Novo pagamento para {name}',
+  'app.sdoc.clock': 'Hora local {time}',
+  'app.sdoc.fig.paid': 'Pago até hoje',
+  'app.sdoc.fig.count': 'Pagamentos',
+  'app.sdoc.fig.average': 'Pagamento médio',
+  'app.sdoc.fig.averageNote': 'Todas as ordens, divididas pelo número delas',
+  'app.sdoc.fig.last': 'Último pagamento',
+  'app.sdoc.fig.none': 'Nenhum ainda',
+  'app.sdoc.fig.open': 'Ordens em aberto',
+  'app.sdoc.route.title': 'Rota',
+  'app.sdoc.route.caption': 'De Santos para {place}',
+  'app.sdoc.route.chart': 'Rota marítima de Santos para {place}',
+  'app.sdoc.route.empty.title': 'Nenhuma rota ainda',
+  'app.sdoc.route.empty.body': 'As ordens para este fornecedor aparecem aqui assim que forem criadas.',
+  'app.sdoc.pay.total': 'Total de {count} ordens',
+}

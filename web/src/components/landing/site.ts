@@ -12,13 +12,13 @@ export interface SiteLink {
   label: string
 }
 
-/** The main way in: a new payment order in the app, or the source code on the static site. */
+/** The main way in: the SaaS demo at /app (it opens on the persona picker), or the source code on the static site. */
 export const primaryCta = (t: T): SiteLink =>
-  STATIC_SITE ? { href: REPO_URL, label: t('lp.code') } : { href: '/dashboard/orders/new', label: t('lp.cta') }
+  STATIC_SITE ? { href: REPO_URL, label: t('lp.code') } : { href: '/app', label: t('lp.cta') }
 
-/** The app's dashboard in the menus; the source code on the static site. */
+/** The app in the menus: the SaaS demo; the source code on the static site. The live testnet prototype stays at /dashboard. */
 export const appLink = (t: T): SiteLink =>
-  STATIC_SITE ? { href: REPO_URL, label: t('lp.code.nav') } : { href: '/dashboard', label: t('nav.dashboard') }
+  STATIC_SITE ? { href: REPO_URL, label: t('lp.code.nav') } : { href: '/app', label: t('nav.dashboard') }
 
 /** Links that leave the site open in a new tab. */
 export const isExternal = (href: string) => /^https?:\/\//.test(href)
