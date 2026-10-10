@@ -1,5 +1,6 @@
 import clsx from 'clsx'
 import Link from 'next/link'
+import { externalProps } from './site'
 
 // Calls to action on the landing page. On hover the label rolls up (the same words come in from below) and the arrow
 // sails out of its disc while the next one sails in. Pure CSS, so these stay server components.
@@ -73,7 +74,7 @@ export function Cta({
       {inner}
     </a>
   ) : (
-    <Link href={href} className={classes}>
+    <Link href={href} className={classes} {...externalProps(href)}>
       {inner}
     </Link>
   )

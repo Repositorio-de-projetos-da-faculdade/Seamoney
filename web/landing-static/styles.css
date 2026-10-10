@@ -1,0 +1,4 @@
+/* The app's design system, plus where Tailwind should look for classes: the Vite root here is landing-static/, so
+   the components in src/ have to be named. */
+@import "../src/app/globals.css";
+@source "../src";

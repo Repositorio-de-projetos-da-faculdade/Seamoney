@@ -4,6 +4,7 @@ import type { T } from '@/lib/i18n/server'
 import { Logo } from '../ui'
 import { PortClock } from './PortClock'
 import { RiseIn } from './RiseIn'
+import { appLink, externalProps } from './site'
 import { label, Rich, starLast } from './type'
 
 /** The slogan, where to go next and the disclosure; the wordmark across the full width; the two ports' clocks. */
@@ -11,7 +12,7 @@ export function LandingFooter({ t }: { t: T }) {
   const links = [
     ['#cargo', t('nav.how')],
     ['#savings', t('nav.calculator')],
-    ['/dashboard', t('nav.dashboard')],
+    [appLink(t).href, appLink(t).label],
   ]
   return (
     <footer className="relative z-10 overflow-hidden border-t border-foam/10 bg-abyss px-5 pt-20 md:px-10 md:pt-28 lg:pl-24">
@@ -26,7 +27,7 @@ export function LandingFooter({ t }: { t: T }) {
           <ul className="space-y-1">
             {links.map(([href, text]) => (
               <li key={href}>
-                <Link href={href} className="group inline-flex min-h-11 items-center gap-3 font-grotesk text-[1.6rem] tracking-[-0.03em] text-foam/80 transition-colors duration-300 hover:text-white">
+                <Link href={href} {...externalProps(href)} className="group inline-flex min-h-11 items-center gap-3 font-grotesk text-[1.6rem] tracking-[-0.03em] text-foam/80 transition-colors duration-300 hover:text-white">
                   <span className="h-px w-0 bg-mint transition-[width] duration-500 ease-[cubic-bezier(0.19,1,0.22,1)] group-hover:w-6" aria-hidden="true" />
                   {text}
                 </Link>

@@ -5,6 +5,7 @@ import { Logo } from '../ui'
 import { Cta } from './Cta'
 import { LangSwitch } from './LangSwitch'
 import { NavShell } from './NavShell'
+import { appLink, externalProps, primaryCta } from './site'
 import { fadeDelay } from './type'
 
 /** The landing header: the mark, three links with a drawn underline, the language and the way in. */
@@ -12,9 +13,9 @@ export function LandingNav({ t }: { t: T }) {
   const links = [
     { href: '#cargo', label: t('nav.how') },
     { href: '#savings', label: t('nav.calculator') },
-    { href: '/dashboard', label: t('nav.dashboard') },
+    appLink(t),
   ]
-  const cta = { href: '/dashboard/orders/new', label: t('lp.cta') }
+  const cta = primaryCta(t)
   const linkClass = 'group relative py-2 font-text text-[14px] text-foam/70 transition-colors duration-300 hover:text-foam'
   const underline = (
     <span
@@ -38,7 +39,7 @@ export function LandingNav({ t }: { t: T }) {
                 {underline}
               </a>
             ) : (
-              <Link key={l.href} href={l.href} className={linkClass}>
+              <Link key={l.href} href={l.href} className={linkClass} {...externalProps(l.href)}>
                 {l.label}
                 {underline}
               </Link>

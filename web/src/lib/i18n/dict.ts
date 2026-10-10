@@ -156,6 +156,10 @@ const en = {
   'lp.stack.netId': 'Chain 42431',
 
   'lp.close.cta2': 'Open the dashboard',
+  'lp.code': 'View the source code',
+  'lp.code.nav': 'Code',
+  'lp.save.static':
+    'In the full demo the Java rules engine answers here, with the same numbers it uses to price real orders. This page is a static preview with no backend behind it, so the calculator is switched off.',
 
   'disclaimer.demo':
     'Demo on the Tempo testnet. The reais-to-dollar leg is simulated and no real money moves. Figures are estimates, not quotes, and taxes such as IOF are not included.',
@@ -532,6 +536,10 @@ const pt: Dict = {
   'lp.stack.netId': 'Chain 42431',
 
   'lp.close.cta2': 'Abrir o painel',
+  'lp.code': 'Ver o código-fonte',
+  'lp.code.nav': 'Código',
+  'lp.save.static':
+    'Na demo completa, o motor de regras em Java responde aqui, com os mesmos números que precificam as ordens. Esta página é uma prévia estática, sem backend por trás, então a calculadora fica desligada.',
 
   'disclaimer.demo':
     'Demo na testnet do Tempo. A etapa de reais para dólar é simulada e nenhum dinheiro real se move. Os valores são estimativas, não cotações, e tributos como o IOF não estão incluídos.',

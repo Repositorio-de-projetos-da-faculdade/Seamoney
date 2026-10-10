@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // static landing build output (npm run build:landing)
+    "landing-static/dist/**",
   ]),
 ]);
 

@@ -5,6 +5,7 @@ import { useT } from '@/lib/i18n/client'
 import { Cta } from '../Cta'
 import { PortClock } from '../PortClock'
 import { Reveal } from '../Reveal'
+import { primaryCta } from '../site'
 import { displayXL, fadeDelay, label, lede } from '../type'
 
 /** Over the opening shot: the promise, what is live and what is simulated, the two ways in and the two ports' clocks. */
@@ -19,7 +20,7 @@ export function HeroCopy() {
         <div className="lp-fade" style={fadeDelay(0.7)}>
           <p className={clsx(lede, 'max-w-[38ch] text-foam/75')}>{t('lp.hero.sub')}</p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
-            <Cta href="/dashboard/orders/new">{t('lp.cta')}</Cta>
+            <Cta href={primaryCta(t).href}>{primaryCta(t).label}</Cta>
             <Cta href="#savings" tone="ghost">
               {t('lp.cta2')}
             </Cta>
