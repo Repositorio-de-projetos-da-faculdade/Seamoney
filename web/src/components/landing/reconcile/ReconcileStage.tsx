@@ -2,6 +2,7 @@
 
 import clsx from 'clsx'
 import { useRef } from 'react'
+import { Lede } from '../lede/Lede'
 import { useScrollScene, type SceneTools } from '../motion'
 import { Reveal } from '../Reveal'
 import { ChapterTag, displayL } from '../type'
@@ -68,7 +69,7 @@ export function ReconcileStage({ copy }: { copy: ReconcileCopy }) {
             <ChapterTag n={4} name={copy.chapter} className="text-ink/55 [&>span:first-child]:text-brand-600" />
             <Reveal id="recon-title" text={copy.title} className={clsx(displayL, 'mt-5 !text-[clamp(2.4rem,4.6vw,5rem)]')} />
           </div>
-          <p className="max-w-[42ch] font-text text-[1.0625rem] leading-[1.6] text-ink/70 md:text-[1.125rem]">{copy.body}</p>
+          <Lede tone="paper" size="md" text={copy.body} />
           <Checks copy={copy} />
           <Outcomes copy={copy} />
         </div>

@@ -4,7 +4,7 @@ import { Scramble } from './Scramble'
 
 // Shared type treatments for the landing chapters, so every section speaks with the same voice. Lettered like a
 // nautical chart: Funnel Display (roman) states the facts, Instrument Serif italic carries what crosses the sea,
-// Geist Mono reads out bytes, coordinates and labels, Funnel Sans is the running text.
+// Geist Mono reads out bytes, coordinates and labels, Newsreader (a text serif) is the running text.
 
 /** Headline face. Words wrapped in *stars* in the copy switch to the italic serif (.lp-display em). */
 export const display = 'lp-display font-grotesk font-normal leading-[0.94] tracking-[-0.045em] text-balance'
@@ -12,8 +12,12 @@ export const display = 'lp-display font-grotesk font-normal leading-[0.94] track
 export const displayXL = `${display} text-[clamp(3.25rem,8.6vw,9.75rem)]`
 /** Chapter titles. */
 export const displayL = `${display} text-[clamp(2.6rem,5.4vw,6rem)]`
-/** Running text. */
-export const lede = 'max-w-[44ch] font-text text-[1.0625rem] leading-[1.6] text-foam/70 md:text-[1.1875rem]'
+/** A chapter's running line (lede/Lede.tsx): the display face, light, at the size of a subhead. */
+export const lede = 'font-grotesk font-light leading-[1.34] tracking-[-0.02em]'
+export const ledeSize = {
+  lg: 'max-w-[34ch] text-[1.3rem] md:text-[clamp(1.35rem,1.65vw,1.7rem)]',
+  md: 'max-w-[34ch] text-[1.15rem] md:text-[clamp(1.12rem,1.25vw,1.3rem)]',
+}
 /** Bytes and hashes, kept in their own case. */
 export const mono = 'font-data text-[11px] font-medium leading-[1.4] tracking-[0.08em]'
 /** Coordinates and small labels. */

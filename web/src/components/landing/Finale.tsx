@@ -3,7 +3,8 @@ import type { T } from '@/lib/i18n/server'
 import { Cta } from './Cta'
 import { Reveal } from './Reveal'
 import { primaryCta, STATIC_SITE } from './site'
-import { displayXL, label, lede, starLast } from './type'
+import { Lede } from './lede/Lede'
+import { displayXL, label, starLast } from './type'
 
 /**
  * The ship sails off towards the moon (the WebGL scene comes back behind this transparent section) under the
@@ -15,7 +16,7 @@ export function Finale({ t }: { t: T }) {
       <div className="sticky top-0 flex h-[100svh] flex-col justify-end px-5 pb-10 md:px-10 md:pb-14 lg:pl-24">
         <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_top,rgb(2_8_16/0.85),transparent_55%)]" aria-hidden="true" />
         <div className="relative">
-          <p className={clsx(lede, 'max-w-[34ch]')}>{t('brand.tagline')}</p>
+          <Lede size="md" text={t('brand.tagline')} />
           <Reveal as="p" start="top 5%" text={starLast(t('brand.closing'))} className={clsx(displayXL, 'mt-6 max-w-[9em] text-white')} />
           <div className="mt-10 flex flex-wrap items-center gap-3">
             <Cta href={primaryCta(t).href}>{primaryCta(t).label}</Cta>

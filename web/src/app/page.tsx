@@ -1,6 +1,6 @@
 import '@fontsource-variable/funnel-display'
-import '@fontsource-variable/funnel-sans'
 import '@fontsource-variable/geist-mono'
+import '@fontsource-variable/newsreader/opsz.css'
 import '@fontsource/instrument-serif/400.css'
 import '@fontsource/instrument-serif/400-italic.css'
 import { LandingPage } from '@/components/landing/LandingPage'

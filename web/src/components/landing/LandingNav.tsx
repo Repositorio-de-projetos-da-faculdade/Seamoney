@@ -16,7 +16,7 @@ export function LandingNav({ t }: { t: T }) {
     appLink(t),
   ]
   const cta = primaryCta(t)
-  const linkClass = 'group relative py-2 font-text text-[14px] text-foam/70 transition-colors duration-300 hover:text-foam'
+  const linkClass = 'group relative py-2 font-grotesk text-[14px] text-foam/70 transition-colors duration-300 hover:text-foam'
   const underline = (
     <span
       aria-hidden="true"

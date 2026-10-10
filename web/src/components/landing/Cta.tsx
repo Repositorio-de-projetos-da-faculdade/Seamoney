@@ -55,7 +55,7 @@ export function Cta({
 }) {
   const small = size === 'sm'
   const classes = clsx(
-    'group inline-flex shrink-0 items-center whitespace-nowrap rounded-full font-text font-medium tracking-[-0.005em] transition-colors duration-300',
+    'group inline-flex shrink-0 items-center whitespace-nowrap rounded-full font-grotesk font-medium tracking-[-0.01em] transition-colors duration-300',
     small ? 'h-10 text-[14px]' : 'h-13 text-[15px]',
     tone === 'primary'
       ? clsx('bg-brand-600 text-white hover:bg-brand-700', small ? 'gap-3 pl-4 pr-1' : 'gap-4 pl-6 pr-1.5')

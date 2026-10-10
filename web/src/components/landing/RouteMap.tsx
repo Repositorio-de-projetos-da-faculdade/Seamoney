@@ -6,7 +6,8 @@ import { buildRouteGeometry } from './routemap/geometry'
 import { RouteChart } from './routemap/RouteChart'
 import { RouteHud } from './routemap/RouteHud'
 import { RouteScene } from './RouteScene'
-import { ChapterTag, displayL, label, lede } from './type'
+import { Lede } from './lede/Lede'
+import { ChapterTag, displayL, label } from './type'
 
 // Chapter 03: the bank wire against the direct Seamoney arc, on a night chart that fills the stage. The projection
 // runs on the server; the client only animates.
@@ -18,6 +19,7 @@ export function RouteMap({ t }: { t: T }) {
     hk: t('lp.map.stop.hk'),
     dest: t('lp.map.stop.dest'),
     sea: t('lp.map.sea.dest'),
+    toll: t('lp.map.toll'),
   }
 
   return (
@@ -38,7 +40,7 @@ export function RouteMap({ t }: { t: T }) {
           <div className="max-w-[34rem] md:max-w-[max(34rem,42vw)]">
             <ChapterTag n={3} name={t('lp.ch.3')} className="text-foam/60" />
             <Reveal text={t('lp.map.title')} className={clsx(displayL, 'mt-5 text-white')} />
-            <p className={clsx(lede, 'mt-6 text-[1rem] md:text-[1.08rem]')}>{t('lp.map.body')}</p>
+            <Lede text={t('lp.map.body')} className="mt-6" />
           </div>
 
           <div className="grid gap-6 md:grid-cols-[1fr_auto] md:items-end">

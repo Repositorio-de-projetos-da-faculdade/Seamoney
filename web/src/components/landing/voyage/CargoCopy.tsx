@@ -5,7 +5,8 @@ import { useId } from 'react'
 import { useT } from '@/lib/i18n/client'
 import { MEMO_SIZE, type Memo } from '@/lib/memo'
 import { Reveal } from '../Reveal'
-import { ChapterTag, displayL, lede } from '../type'
+import { Lede } from '../lede/Lede'
+import { ChapterTag, displayL } from '../type'
 import { ByteStrip } from './cargo/ByteStrip'
 import { MemoInput } from './cargo/MemoInput'
 import { Readout } from './cargo/Readout'
@@ -37,7 +38,7 @@ export function CargoCopy({ reference, memo, landed, onChange }: Props) {
           <Reveal text={t('lp.cargo.title')} className={clsx(displayL, 'mt-5 text-white')} />
         </div>
         <div className="space-y-5 md:space-y-7 md:pt-10">
-          <p className={clsx(lede, 'text-[0.98rem] md:text-[1.02rem]')}>{t('lp.cargo.body')}</p>
+          <Lede size="md" text={t('lp.cargo.body')} />
           <Readout memo={memo} shown={shown} ready={ready} countId={countId} />
         </div>
       </div>

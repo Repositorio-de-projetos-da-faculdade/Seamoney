@@ -7,7 +7,8 @@ import { useComparison } from '@/lib/useComparison'
 import { Cta } from './Cta'
 import { Reveal } from './Reveal'
 import { REPO_URL, STATIC_SITE } from './site'
-import { ChapterTag, displayL, lede } from './type'
+import { Lede } from './lede/Lede'
+import { ChapterTag, displayL } from './type'
 import { FeeInput } from './savings/FeeInput'
 import { ResultPanel } from './savings/ResultPanel'
 import { VolumeSlider } from './savings/VolumeSlider'
@@ -29,7 +30,7 @@ export function Savings() {
           <ChapterTag n={5} name={t('lp.ch.5')} className="text-foam/60" />
           <Reveal text={t('lp.save.title')} className={clsx(displayL, 'mt-5 text-white')} />
         </div>
-        {!STATIC_SITE && <p className={clsx(lede, 'text-[1rem] md:pb-3 md:text-[1.06rem]')}>{t('lp.save.body')}</p>}
+        {!STATIC_SITE && <Lede size="md" text={t('lp.save.body')} className="md:pb-3" />}
       </div>
 
       {STATIC_SITE ? <StaticNote /> : <Calculator />}

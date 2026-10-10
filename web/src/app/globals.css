@@ -9,10 +9,11 @@
   --font-display: "Plus Jakarta Sans Variable", "Inter Variable", ui-sans-serif, system-ui, sans-serif;
   /* landing page only (fonts are imported by src/app/page.tsx). Lettered like a nautical chart, where land is set in
      roman and water in italics: Funnel Display states the facts, Instrument Serif italic carries what crosses the
-     sea (the *starred* words in the copy), Geist Mono reads out the bytes, Funnel Sans is the running text. */
+     sea (the *starred* words in the copy, tinted aqua), Geist Mono reads out the bytes, Newsreader (a text serif with
+     optical sizes) is the running text. Buttons and the nav use Funnel Display, so the text serif stays prose only. */
   --font-grotesk: "Funnel Display Variable", "Plus Jakarta Sans Variable", ui-sans-serif, sans-serif;
   --font-accent: "Instrument Serif", ui-serif, Georgia, serif;
-  --font-text: "Funnel Sans Variable", "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-text: "Newsreader Variable", ui-serif, Georgia, serif;
   --font-data: "Geist Mono Variable", ui-monospace, "Cascadia Mono", monospace;
 
   /* navy surfaces */
@@ -310,14 +311,19 @@ select:focus-visible {
     letter-spacing: normal;
   }
 }
-/* Headlines: the starred words of the copy switch to the italic serif (Rich in components/landing/type.tsx). Its
-   x-height is smaller than Funnel Display's, so it is set a touch larger to sit on the same line. */
+/* Headlines: the starred words of the copy switch to the italic serif (Rich in components/landing/type.tsx), in the
+   app's aqua (on the paper chapter, the action green). Its x-height is smaller than Funnel Display's, so it is set a
+   touch larger to sit on the same line. */
 .lp-display em {
   font-family: var(--font-accent);
   font-style: italic;
   font-weight: 400;
   font-size: 1.08em;
   letter-spacing: -0.01em;
+  color: var(--color-aqua);
+}
+.lp-paper .lp-display em {
+  color: var(--color-brand-600);
 }
 /* Headline lines rise out of masks (Reveal.tsx, GSAP SplitText). The mask is padded so descenders and the italic
    overhang are not clipped, and the padding is taken back so the layout does not move. */
@@ -356,6 +362,36 @@ select:focus-visible {
 @keyframes spin {
   to {
     transform: rotate(1turn);
+  }
+}
+/* Pulse running along the Seamoney arc on the route map (routemap/RouteFx.tsx): a short dash on a pathLength of 1. */
+.lp-flow {
+  animation: flow 3.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+@keyframes flow {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+/* A payment running along the stack rail of the declaration (manifest/StackRail.tsx). */
+.lp-rail {
+  animation: rail 4.8s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+@keyframes rail {
+  0% {
+    left: 0;
+    opacity: 0;
+  }
+  10%,
+  90% {
+    opacity: 1;
+  }
+  100% {
+    left: 100%;
+    opacity: 0;
   }
 }
 /* Ticker of memo bytes: two identical runs, the strip slides by one run. */
