@@ -158,3 +158,13 @@ out/
 
 # TypeScript cache
 *.tsbuildinfo
+
+# Seamoney additions (Java, Python, local data)
+.venv/
+__pycache__/
+.pytest_cache/
+target/
+data/
+next-env.d.ts
+.DS_Store
+.idea/
