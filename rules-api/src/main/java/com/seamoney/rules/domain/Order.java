@@ -13,6 +13,7 @@ public record Order(
         String supplierName,
         String supplierCountry,
         String supplierWallet,
+        Network network,
         String invoiceNumber,
         long amountCents,
         String currency,

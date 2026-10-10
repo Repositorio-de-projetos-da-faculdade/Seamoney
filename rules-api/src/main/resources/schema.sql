@@ -1,8 +1,10 @@
+-- `network` was added after the first release; OrderRepository adds the column to databases created before it.
 CREATE TABLE IF NOT EXISTS suppliers (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL UNIQUE,
   country TEXT,
   wallet_address TEXT NOT NULL,
+  network TEXT NOT NULL DEFAULT 'tempo',
   created_at TEXT NOT NULL
 );
 
@@ -13,6 +15,7 @@ CREATE TABLE IF NOT EXISTS orders (
   supplier_name TEXT NOT NULL,
   supplier_country TEXT,
   supplier_wallet TEXT NOT NULL,
+  network TEXT NOT NULL DEFAULT 'tempo',
   invoice_number TEXT NOT NULL,
   amount_cents INTEGER NOT NULL,
   currency TEXT NOT NULL DEFAULT 'USD',

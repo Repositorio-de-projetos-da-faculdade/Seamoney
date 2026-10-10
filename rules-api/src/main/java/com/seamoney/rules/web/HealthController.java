@@ -36,6 +36,7 @@ public class HealthController {
             ChainHealth h = chain.health();
             checks.put("chainService", "ok");
             checks.put("partnerWallet", h.configured() ? "configured" : "missing");
+            checks.put("solanaWallet", h.solanaConfigured() ? "configured" : "missing");
         } catch (Exception e) {
             checks.put("chainService", "unreachable");
         }

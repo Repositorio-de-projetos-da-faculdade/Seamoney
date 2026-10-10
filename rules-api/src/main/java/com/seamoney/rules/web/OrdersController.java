@@ -33,7 +33,8 @@ public class OrdersController {
             @Positive long amountCents,
             @Pattern(regexp = "^$|^\\d{4}-\\d{2}-\\d{2}$") String dueDate,
             @NotNull @Pattern(regexp = "ai|demo|manual") String extractionSource,
-            @Size(max = 200) String invoiceFilename) {}
+            @Size(max = 200) String invoiceFilename,
+            @Pattern(regexp = "^(tempo|solana)?$") String network) {}
 
     private final OrderService orders;
 
@@ -50,7 +51,7 @@ public class OrdersController {
     public ResponseEntity<Map<String, Order>> create(@Valid @RequestBody NewOrderRequest body) {
         Order order = orders.create(new NewOrderInput(
                 body.supplierName(), body.supplierCountry(), body.supplierWallet(), body.invoiceNumber(), body.amountCents(),
-                body.dueDate(), body.extractionSource(), body.invoiceFilename()));
+                body.dueDate(), body.extractionSource(), body.invoiceFilename(), body.network()));
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("order", order));
     }
 

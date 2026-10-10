@@ -1,6 +1,7 @@
 package com.seamoney.rules.service;
 
 import com.seamoney.rules.AppProperties;
+import com.seamoney.rules.domain.Network;
 import com.seamoney.rules.domain.OrderStatus;
 import com.seamoney.rules.domain.Pricing;
 import com.seamoney.rules.store.OrderRepository;
@@ -59,8 +60,8 @@ public class DemoSeeder implements ApplicationRunner {
         for (int i = 0; i < SUPPLIERS.size(); i++) {
             Supplier s = SUPPLIERS.get(i);
             supplierIds[i] = "sup_" + Integer.toHexString(s.name().hashCode());
-            wallets[i] = OrderService.randomAddress();
-            repo.insertSupplier(supplierIds[i], s.name(), s.country(), wallets[i], now.minus(Duration.ofDays(200)).toString());
+            wallets[i] = Network.TEMPO.randomAddress();
+            repo.insertSupplier(supplierIds[i], s.name(), s.country(), wallets[i], Network.TEMPO, now.minus(Duration.ofDays(200)).toString());
         }
 
         for (Row r : HISTORY) {
@@ -71,7 +72,7 @@ public class DemoSeeder implements ApplicationRunner {
             String id = "ORD-D" + r.invoice().substring(r.invoice().length() - 4);
             boolean paid = r.status() != OrderStatus.QUOTED;
             repo.insert(new NewOrder(
-                    id, r.invoice(), supplierIds[r.supplier()], s.name(), s.country(), wallets[r.supplier()], r.invoice(),
+                    id, r.invoice(), supplierIds[r.supplier()], s.name(), s.country(), wallets[r.supplier()], Network.TEMPO, r.invoice(),
                     r.usdCents(), now.minus(Duration.ofDays(r.daysAgo() - 14L)).toString().substring(0, 10), props.feeBps(), fee,
                     total, props.bankFeePct(), props.usdBrl(), Pricing.usdToBrlCents(total, props.usdBrl()), r.status(), "demo",
                     null, true, r.confirmMs(), paid ? created : null, r.status() == OrderStatus.RECONCILED ? created : null, created));

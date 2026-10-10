@@ -7,6 +7,7 @@ import com.seamoney.rules.chain.ChainClient.FoundTransfer;
 import com.seamoney.rules.chain.ChainClient.SentPayment;
 import com.seamoney.rules.chain.ChainClient.TxInfo;
 import com.seamoney.rules.chain.ChainException;
+import com.seamoney.rules.domain.Network;
 import com.seamoney.rules.domain.Order;
 import com.seamoney.rules.domain.OrderStatus;
 import com.seamoney.rules.domain.Pricing;
@@ -25,7 +26,6 @@ import java.time.Clock;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
-import java.util.regex.Pattern;
 import org.springframework.stereotype.Service;
 
 /** The order lifecycle: create and quote, pay, reconcile, report. This is where the business rules live. */
@@ -40,7 +40,22 @@ public class OrderService {
             long amountCents,
             String dueDate,
             String extractionSource,
-            String invoiceFilename) {}
+            String invoiceFilename,
+            String network) {
+
+        /** Without a network the order settles on Tempo, the original network. */
+        public NewOrderInput(
+                String supplierName,
+                String supplierCountry,
+                String supplierWallet,
+                String invoiceNumber,
+                long amountCents,
+                String dueDate,
+                String extractionSource,
+                String invoiceFilename) {
+            this(supplierName, supplierCountry, supplierWallet, invoiceNumber, amountCents, dueDate, extractionSource, invoiceFilename, null);
+        }
+    }
 
     /** Outcome of a reconciliation attempt. A mismatch is an expected business result, not an error. */
     @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -54,7 +69,6 @@ public class OrderService {
         }
     }
 
-    private static final Pattern WALLET = Pattern.compile("^0x[0-9a-fA-F]{40}$");
     private static final SecureRandom RANDOM = new SecureRandom();
 
     private final OrderRepository repo;
@@ -95,12 +109,12 @@ public class OrderService {
         if (o.txHash() == null) throw new OrderException("This order has no on-chain payment yet.", Code.NOT_FOUND);
         TxInfo tx;
         try {
-            tx = chain.transaction(o.txHash()).orElse(null);
+            tx = chain.transaction(o.network(), o.txHash()).orElse(null);
         } catch (ChainException e) {
             tx = null; // unverified, and the page says so
         }
         return new Proof(
-                new ProofOrder(o.id(), o.invoiceNumber(), o.amountCents(), o.supplierName(), o.reference(), o.txHash(), o.paidAt()), tx);
+                new ProofOrder(o.id(), o.invoiceNumber(), o.amountCents(), o.supplierName(), o.reference(), o.network(), o.txHash(), o.paidAt()), tx);
     }
 
     // ---------- create + quote ----------
@@ -112,23 +126,34 @@ public class OrderService {
         if (supplierName.isEmpty()) throw invalid("Supplier name is required.");
         if (in.amountCents() <= 0) throw invalid("Amount must be greater than zero.");
         if (in.amountCents() > props.maxAmountCents()) throw invalid("The demo is limited to US$ 1,000,000 per order.");
+        Network network;
+        try {
+            network = Network.orDefault(in.network());
+        } catch (IllegalArgumentException e) {
+            throw invalid("Unknown network. Use tempo or solana.");
+        }
         boolean hasWallet = in.supplierWallet() != null && !in.supplierWallet().isBlank();
-        if (hasWallet && !WALLET.matcher(in.supplierWallet()).matches()) throw invalid("The supplier wallet is not a valid address.");
+        if (hasWallet && !network.isValidAddress(in.supplierWallet())) {
+            throw invalid("The supplier wallet is not a valid " + network.label() + " address.");
+        }
 
         String reference = uniqueReference(invoice);
         String now = now();
 
-        // Supplier: reuse by name. Without a wallet we create a throwaway demo address (public part only).
+        // Supplier: reuse by name. Without a wallet we create a throwaway demo address (public part only);
+        // a wallet saved for another network is of no use here.
         Optional<Supplier> existing = repo.findSupplierByName(supplierName);
-        String wallet = hasWallet ? in.supplierWallet() : existing.map(Supplier::walletAddress).orElseGet(OrderService::randomAddress);
+        String wallet = hasWallet
+                ? in.supplierWallet()
+                : existing.filter(s -> s.network() == network).map(Supplier::walletAddress).orElseGet(network::randomAddress);
         String country = blankToNull(in.supplierCountry());
         String supplierId;
         if (existing.isPresent()) {
             supplierId = existing.get().id();
-            repo.updateSupplier(supplierId, wallet, country);
+            repo.updateSupplier(supplierId, wallet, network, country);
         } else {
             supplierId = "sup_" + randomHex(4);
-            repo.insertSupplier(supplierId, supplierName, country, wallet, now);
+            repo.insertSupplier(supplierId, supplierName, country, wallet, network, now);
         }
 
         int feeBps = props.feeBps();
@@ -137,10 +162,10 @@ public class OrderService {
         String id = "ORD-" + randomHex(3).toUpperCase();
 
         repo.insert(new NewOrder(
-                id, reference, supplierId, supplierName, country, wallet, invoice, in.amountCents(), blankToNull(in.dueDate()),
+                id, reference, supplierId, supplierName, country, wallet, network, invoice, in.amountCents(), blankToNull(in.dueDate()),
                 feeBps, fee, total, props.bankFeePct(), props.usdBrl(), Pricing.usdToBrlCents(total, props.usdBrl()),
                 OrderStatus.QUOTED, in.extractionSource(), blankToNull(in.invoiceFilename()), false, null, null, null, now));
-        event(id, "created", "Invoice " + invoice + ", extraction: " + in.extractionSource());
+        event(id, "created", "Invoice " + invoice + ", extraction: " + in.extractionSource() + ", network: " + network.label());
         event(id, "quoted", "Route fee " + feeBps / 100.0 + "%, simulated USD/BRL " + props.usdBrl());
         return get(id);
     }
@@ -153,9 +178,9 @@ public class OrderService {
             throw new OrderException("Order is " + order.status().value() + "; it cannot be paid now.", Code.BAD_STATE);
         }
         event(id, "fiat_received", "Simulated: authorized partner received the BRL payment and bought USD stablecoin");
-        event(id, "payment_started", "Sending " + order.amountCents() / 100.0 + " USD to " + order.supplierWallet());
+        event(id, "payment_started", "Sending " + order.amountCents() / 100.0 + " USD (" + order.network().token() + ") on " + order.network().label() + " to " + order.supplierWallet());
         try {
-            SentPayment sent = chain.sendPayment(order.supplierWallet(), order.amountCents(), order.reference());
+            SentPayment sent = chain.sendPayment(order.network(), order.supplierWallet(), order.amountCents(), order.reference());
             repo.markSent(id, sent.txHash(), sent.blockNumber(), sent.memoHex(), sent.confirmMs(), now());
             event(id, "payment_confirmed", "Tx " + sent.txHash() + " in block " + sent.blockNumber() + ", " + sent.confirmMs() + " ms");
         } catch (ChainException e) {
@@ -170,7 +195,7 @@ public class OrderService {
 
     /**
      * Independent check against the chain, not against what we stored when sending: find the
-     * TransferWithMemo event for this supplier and memo, then verify token, recipient, amount, memo and
+     * transfer for this supplier and memo on the order's network, then verify token, recipient, amount, memo and
      * receipt before closing the invoice. A transfer (tx hash + log index) can credit only one order.
      */
     public ReconcileResult reconcile(String id) {
@@ -183,31 +208,31 @@ public class OrderService {
         List<FoundTransfer> found;
         try {
             long fromBlock = (order.blockNumber() == null ? 0 : order.blockNumber()) - 5;
-            found = chain.findTransfers(order.supplierWallet(), order.reference(), fromBlock);
+            found = chain.findTransfers(order.network(), order.supplierWallet(), order.reference(), fromBlock);
         } catch (ChainException e) {
             throw new OrderException(e.getMessage(), Code.CHAIN);
         }
 
         BigInteger expected = Pricing.centsToUnits(order.amountCents());
         FoundTransfer match = found.stream()
-                .filter(t -> t.txHash().equalsIgnoreCase(order.txHash()))
+                .filter(t -> order.network().sameHash(t.txHash(), order.txHash()))
                 .findFirst()
                 .or(() -> found.stream().filter(t -> t.amountUnits().equals(expected)).findFirst())
                 .orElse(null);
         if (match == null) {
-            event(id, "reconcile_pending", "No TransferWithMemo event found for this reference yet");
+            event(id, "reconcile_pending", "No matching transfer found on " + order.network().label() + " for this reference yet");
             return ReconcileResult.failed("no_matching_transfer", null);
         }
 
         boolean receiptOk;
         try {
-            receiptOk = chain.transaction(match.txHash()).map(t -> "success".equals(t.status())).orElse(false);
+            receiptOk = chain.transaction(order.network(), match.txHash()).map(t -> "success".equals(t.status())).orElse(false);
         } catch (ChainException e) {
             throw new OrderException(e.getMessage(), Code.CHAIN);
         }
         Recon.Checks checks = new Recon.Checks(
-                true, // the event was read from the AlphaUSD token contract itself
-                match.toAddress().equalsIgnoreCase(order.supplierWallet()),
+                true, // the chain service only returns transfers of this network's own test stablecoin
+                order.network().sameAddress(match.toAddress(), order.supplierWallet()),
                 match.amountUnits().equals(expected),
                 decodeReference(match.memoHex()).equals(order.reference()),
                 receiptOk);
@@ -242,7 +267,7 @@ public class OrderService {
                     o.fxRate() == null ? "" : String.valueOf(o.fxRate()), o.status().value(), csv(o.paidAt()), csv(o.reconciledAt()),
                     csv(o.txHash()), o.blockNumber() == null ? "" : String.valueOf(o.blockNumber()),
                     o.logIndex() == null ? "" : String.valueOf(o.logIndex()),
-                    o.txHash() == null ? "" : "Tempo Moderato (testnet)", o.demo() ? "yes" : "no")).append('\n');
+                    o.txHash() == null ? "" : o.network().label(), o.demo() ? "yes" : "no")).append('\n');
         }
         return sb.toString();
     }
@@ -299,10 +324,6 @@ public class OrderService {
         byte[] b = new byte[bytes];
         RANDOM.nextBytes(b);
         return HexFormat.of().formatHex(b);
-    }
-
-    public static String randomAddress() {
-        return "0x" + randomHex(20);
     }
 
     private static String money(long cents) {
