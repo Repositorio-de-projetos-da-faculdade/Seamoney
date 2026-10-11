@@ -155,5 +155,9 @@ Carteira nova ou trocada é uma proposta (`proposed`) até outra pessoa aprovar;
 * **POST /api/suppliers/{id}/wallets/{walletId}/reject**: recusa (aprovador) ou retira (quem propôs). (OWNER, APPROVER, OPERATOR)
 * **POST /api/suppliers/import-demo**: lista de fornecedores com o histórico de carteiras; importa uma vez num registro vazio, só com o seed de demo ligado (o `/app` usa na primeira sincronização). (OWNER, APPROVER, OPERATOR)
 
+### Configurações da empresa (`/api/settings`)
+* **GET /api/settings**: `{"approvalThresholdCents", "feeBps", "bankFeePct", "usdBrl"}`. O limite é o da empresa; sem valor salvo, vale `APPROVAL_THRESHOLD_CENTS`. (Qualquer autenticado)
+* **PUT /api/settings**: `{"approvalThresholdCents": 5000000}` muda o limite da empresa (0 a US$ 1.000.000). 403 para quem não é dono. (OWNER)
+
 ### [PLANEJADO, NÃO IMPLEMENTADO] Ledger
 * **GET /api/ledger**: Listagem de todas as movimentações on-chain de stablecoin conciliadas (Ledger). (Qualquer Autenticado)

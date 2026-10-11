@@ -100,6 +100,24 @@ class ApprovalApiTest {
     }
 
     @Test
+    void anOwnerSetsTheCompanysThresholdAndNobodyElseCan() throws Exception {
+        jdbc.execute("INSERT INTO organizations (id, name, created_at) VALUES ('org_t', 'Org T', '2026-10-11') ON CONFLICT DO NOTHING");
+        String owner = jwt.createToken("u_own", "org_t", "OWNER");
+        String approverT = jwt.createToken("u_apt", "org_t", "APPROVER");
+        String body = "{\"approvalThresholdCents\": 10000000}"; // US$ 100,000
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/settings").header("Authorization", "Bearer " + approverT)
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isForbidden());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/settings").header("Authorization", "Bearer " + owner)
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.approvalThresholdCents").value(10000000));
+        String id = create(owner, 8_000_000); // US$ 80,000 is now below the company's threshold
+        act(approverT, id, "pay", null).andExpect(status().isOk());
+        create(operator, 8_000_000); // org_a keeps the service default
+    }
+
+    @Test
     void belowTheThresholdThePolicyApprovesAtOnce() throws Exception {
         String id = create(operator, 50_000);
         act(approver, id, "approve", null).andExpect(status().isConflict()); // nothing to approve

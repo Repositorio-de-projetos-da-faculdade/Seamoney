@@ -14,6 +14,7 @@ import {
   createLiveOrder,
   decideLiveWallet,
   goesLive,
+  getLiveSettings,
   importDemoSuppliers,
   listLiveOrders,
   listLiveSuppliers,
@@ -21,6 +22,7 @@ import {
   LiveError,
   matchOnTestnet,
   proposeLiveWallet,
+  putLiveThreshold,
   sendOnTestnet,
   simulateMatch,
   simulateTransfer,
@@ -212,6 +214,11 @@ export const demo = {
       let { suppliers } = await listLiveSuppliers()
       if (suppliers.length === 0 && current.suppliers.length > 0) suppliers = (await importDemoSuppliers(seedSuppliers(current))).suppliers
       commit((s) => mergeLiveSuppliers(s, suppliers, now()))
+      // the approval threshold is the company's, kept by the service: follow it here
+      const { approvalThresholdCents } = await getLiveSettings()
+      if (current.settings.approvalThresholdCents !== approvalThresholdCents) {
+        commit((s) => ({ ...s, settings: { ...s.settings, approvalThresholdCents } }))
+      }
       const { orders } = await listLiveOrders()
       commit((s) => mergeLiveOrders(s, orders, now()))
     } catch {
@@ -323,7 +330,13 @@ export const demo = {
   },
   async updateSettings(patch: Partial<Settings>) {
     await pause(300)
-    commit((s) => rules.updateSettings(s, patch, actor(), now()))
+    const by = actor()
+    rules.updateSettings(current!, patch, by, now())
+    // connected, the approval threshold belongs to the company in the rules service (owners only)
+    if (isLive() && patch.approvalThresholdCents != null && patch.approvalThresholdCents !== current!.settings.approvalThresholdCents) {
+      await putLiveThreshold(patch.approvalThresholdCents)
+    }
+    commit((s) => rules.updateSettings(s, patch, by, now()))
   },
 }
 

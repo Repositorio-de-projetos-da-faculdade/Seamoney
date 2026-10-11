@@ -96,13 +96,15 @@ public class OrderService {
 
     private final OrderRepository repo;
     private final SupplierRepository suppliers;
+    private final SettingsService settings;
     private final ChainClient chain;
     private final AppProperties props;
     private final Clock clock;
 
-    public OrderService(OrderRepository repo, SupplierRepository suppliers, ChainClient chain, AppProperties props, Clock clock) {
+    public OrderService(OrderRepository repo, SupplierRepository suppliers, SettingsService settings, ChainClient chain, AppProperties props, Clock clock) {
         this.repo = repo;
         this.suppliers = suppliers;
+        this.settings = settings;
         this.chain = chain;
         this.props = props;
         this.clock = clock;
@@ -205,7 +207,8 @@ public class OrderService {
         long fee = Pricing.feeCents(in.amountCents(), feeBps);
         long total = in.amountCents() + fee;
         String id = "ORD-" + randomHex(3).toUpperCase();
-        boolean needsApproval = in.amountCents() >= props.approvalThresholdCents();
+        long threshold = settings.approvalThreshold(orgId);
+        boolean needsApproval = in.amountCents() >= threshold;
         Decision policy = needsApproval
                 ? null
                 : new Decision(null, null, now, approvalHash(in.amountCents(), network, wallet, reference), null, true);
@@ -218,7 +221,7 @@ public class OrderService {
         event(orgId, id, "created", "Invoice " + invoice + ", extraction: " + in.extractionSource() + ", network: " + network.label());
         event(orgId, id, "quoted", "Route fee " + feeBps / 100.0 + "%, simulated USD/BRL " + props.usdBrl());
         event(orgId, id, needsApproval ? "approval_requested" : "auto_approved",
-                needsApproval ? "Needs a second person from US$ " + props.approvalThresholdCents() / 100 : "Below the approval threshold: approved by the policy");
+                needsApproval ? "Needs a second person from US$ " + threshold / 100 : "Below the approval threshold: approved by the policy");
         return get(orgId, id);
     }
 

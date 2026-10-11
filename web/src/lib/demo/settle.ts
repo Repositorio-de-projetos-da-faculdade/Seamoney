@@ -76,7 +76,7 @@ export class LiveHttpError extends LiveError {
   }
 }
 
-export async function call<T>(path: string, method: 'GET' | 'POST', body?: unknown): Promise<T> {
+export async function call<T>(path: string, method: 'GET' | 'POST' | 'PUT', body?: unknown): Promise<T> {
   let res: Response
   try {
     res = await fetch(path, {
@@ -118,6 +118,10 @@ async function existingOrder(reference: string): Promise<LiveOrder | null> {
 }
 
 export const listLiveOrders = () => call<{ orders: LiveOrder[] }>('/api/orders?limit=500', 'GET')
+
+/* the company's approval threshold in the rules service (owners change it) */
+export const getLiveSettings = () => call<{ approvalThresholdCents: number }>('/api/settings', 'GET')
+export const putLiveThreshold = (approvalThresholdCents: number) => call<{ approvalThresholdCents: number }>('/api/settings', 'PUT', { approvalThresholdCents })
 
 /* suppliers and wallet versions in the rules service (see live.ts) */
 export const listLiveSuppliers = () => call<{ suppliers: LiveSupplier[] }>('/api/suppliers', 'GET')
