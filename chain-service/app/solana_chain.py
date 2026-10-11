@@ -190,9 +190,12 @@ class SolanaService:
             "token_mint": str(self.mint) if self.mint else None,
             "latest_slot": slot,
         }
-        if self.configured:
+        if self.configured and self._payer and self.mint:
             lamports = self._lamports(self._payer.pubkey())
             out["sol_balance"] = lamports / 1e9
+            out["fee_balance"] = lamports / 1e9
+            ata = get_associated_token_address(self._payer.pubkey(), self.mint)
+            out["token_balance"] = self._token_balance(ata) / 10**DECIMALS
             out["needs_funding"] = lamports < MIN_TO_SEND_LAMPORTS  # fund the payer at https://faucet.solana.com
         return out
 
@@ -215,6 +218,62 @@ class SolanaService:
             if tx is None or (tx.get("meta") or {}).get("err") is not None:
                 continue
             found.extend(self._transfers_in(tx, entry["signature"], reference, memo_bytes, mint, ata, to))
+        return found
+
+    def get_events(self, token: str, from_cursor: str) -> list[FoundTransfer]:
+        mint = _pubkey(token) if token else self._require_mint()
+        options = {"limit": 100, "commitment": "confirmed"}
+        if from_cursor and not from_cursor.isdigit():
+            options["until"] = from_cursor
+
+        entries = self.rpc.call("getSignaturesForAddress", [str(mint), options]) or []
+        found: list[FoundTransfer] = []
+        for entry in entries:
+            if entry.get("err") is not None:
+                continue
+            if from_cursor.isdigit() and int(entry.get("slot", 0)) < int(from_cursor):
+                continue
+            tx = self._get_transaction(entry["signature"])
+            if tx is None or (tx.get("meta") or {}).get("err") is not None:
+                continue
+
+            instructions = tx["transaction"]["message"]["instructions"]
+            memos = [i.get("parsed") for i in instructions if i.get("program") == "spl-memo" or i.get("programId") == str(MEMO_PROGRAM)]
+            if not memos:
+                continue
+            memo = str(memos[-1]) if isinstance(memos[-1], str) else ""
+
+            balances = (tx.get("meta") or {}).get("postTokenBalances") or []
+            ata_to_owner = {}
+            keys = tx["transaction"]["message"]["accountKeys"]
+            for b in balances:
+                idx = b.get("accountIndex")
+                if idx is not None and idx < len(keys):
+                    key = keys[idx]
+                    pubkey = key.get("pubkey") if isinstance(key, dict) else key
+                    ata_to_owner[pubkey] = b.get("owner")
+
+            for index, ins in enumerate(instructions):
+                parsed = ins.get("parsed")
+                if ins.get("program") != "spl-token" or not isinstance(parsed, dict) or parsed.get("type") != "transferChecked":
+                    continue
+                info = parsed["info"]
+                if info.get("mint") != str(mint):
+                    continue
+                dest = info.get("destination") or ""
+                owner = ata_to_owner.get(dest) or dest
+                
+                found.append(
+                    FoundTransfer(
+                        tx_hash=entry["signature"],
+                        log_index=index,
+                        block_number=int(tx["slot"]),
+                        from_address=info.get("authority") or info.get("multisigAuthority") or "",
+                        to_address=owner,
+                        amount_units=int(info["tokenAmount"]["amount"]),
+                        memo_hex="0x" + memo.encode().hex(),
+                    )
+                )
         return found
 
     def transaction_info(self, signature: str) -> TxInfo | None:

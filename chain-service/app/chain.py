@@ -104,12 +104,16 @@ class ChainService:
         return int(token.functions.balanceOf(Web3.to_checksum_address(address)).call())
 
     def health(self) -> dict:
-        return {
+        out = {
             "configured": self.configured,
             "partner_address": self.address,
             "chain_id": int(self.w3.eth.chain_id),
             "latest_block": int(self.w3.eth.block_number),
         }
+        if self.configured and self.address:
+            out["token_balance"] = self.balance_units(self.address) / 1_000_000  # assuming 6 decimals
+            out["fee_balance"] = self.w3.eth.get_balance(self.address) / 10**18
+        return out
 
     def find_transfers(self, to: str, reference: str, from_block: int) -> list[FoundTransfer]:
         """Reconciliation primitive: transfers to `to` that carry exactly this memo."""
@@ -122,6 +126,21 @@ class ChainService:
                 "topics": [TRANSFER_WITH_MEMO_TOPIC, None, address_topic(to), "0x" + memo.hex()],
             }
         )
+        return self._parse_transfer_logs(logs)
+
+    def get_events(self, token: str, from_block: int) -> list[FoundTransfer]:
+        """Fetch all memo transfers for the event worker."""
+        logs = self.w3.eth.get_logs(
+            {
+                "address": Web3.to_checksum_address(token) if token else Web3.to_checksum_address(ALPHA_USD),
+                "fromBlock": max(0, int(from_block)),
+                "toBlock": "latest",
+                "topics": [TRANSFER_WITH_MEMO_TOPIC],
+            }
+        )
+        return self._parse_transfer_logs(logs)
+
+    def _parse_transfer_logs(self, logs) -> list[FoundTransfer]:
         found: list[FoundTransfer] = []
         for log in logs:
             data = log["data"]

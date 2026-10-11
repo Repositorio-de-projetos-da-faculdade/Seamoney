@@ -7,7 +7,7 @@ Everything that touches the Tempo blockchain. **Stateless**: it stores no orders
 |---|---|
 | `app/memo.py` | 32-byte memo encoding (bytes, not characters) and event-topic helpers. Pure, tested. |
 | `app/chain.py` | `ChainService`: `send_payment` (TIP-20 `transferWithMemo` in a `TempoTransaction`, one at a time under a lock, tops up from the faucet when low), `find_transfers` (indexed `TransferWithMemo` event by recipient + memo), `transaction_info`. |
-| `app/main.py` | HTTP API: `POST /payments`, `GET /transfers`, `GET /transactions/{hash}`, `GET /health`. Optional shared secret via `X-Internal-Token`. |
+| `app/main.py` | HTTP API: `POST /payments`, `GET /payments/{key}`, `GET /transfers`, `GET /transactions/{hash}`, `GET /events`, `GET /health`. Optional shared secret via `X-Internal-Token`. |
 
 ## Run and test
 
