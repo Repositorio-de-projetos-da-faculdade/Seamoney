@@ -110,22 +110,30 @@ export function hullGeometry() {
   return geometry
 }
 
-/** The weather deck: a strip between the two deck edges, following the sheer. */
-export function deckGeometry(inset = 0.25) {
+/**
+ * The weather deck from x0 to x1: a strip between the two deck edges, following the sheer. UVs map the plan:
+ * u runs from x0 to x1, v across the full beam from port (0) to starboard (1), for a painted deck.
+ */
+export function deckGeometry(inset = 0.25, x0 = HULL.stern, x1 = HULL.bow) {
   const positions: number[] = []
+  const uvs: number[] = []
   const indices: number[] = []
-  for (let i = 0; i <= STATIONS; i++) {
-    const x = HULL.stern + (i / STATIONS) * (HULL.bow - HULL.stern)
+  const stations = Math.max(8, Math.round((STATIONS * (x1 - x0)) / (HULL.bow - HULL.stern)))
+  for (let i = 0; i <= stations; i++) {
+    const x = x0 + (i / stations) * (x1 - x0)
     const w = Math.max(halfBreadth(x, 1) - inset, 0)
     const y = deckAt(x) - 0.05
     positions.push(x, y, -w, x, y, w)
-    if (i < STATIONS) {
+    const u = i / stations
+    uvs.push(u, 0.5 - w / HULL.beam, u, 0.5 + w / HULL.beam)
+    if (i < stations) {
       const a = i * 2
       indices.push(a, a + 1, a + 2, a + 1, a + 3, a + 2)
     }
   }
   const geometry = new THREE.BufferGeometry()
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2))
   geometry.setIndex(indices)
   geometry.computeVertexNormals()
   return geometry

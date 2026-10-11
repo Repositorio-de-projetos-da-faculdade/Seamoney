@@ -4,8 +4,8 @@ import { ACCOMMODATION, DECKHOUSE } from '../stowage'
 import { railing, rect } from './rail'
 
 // What makes the accommodation read as a ship's and not a building: an open walkway round every storey with its
-// railing, the external stairs zigzagging down the aft face, the braces under the bridge wings, radomes and whip
-// antennas on the compass deck, and the rescue boat on its davit. The railings are left out on phones (`rails`).
+// railing, the external stairs zigzagging down the aft face, the braces under the bridge wings, and the rescue boat
+// on its davit. The railings are left out on phones (`rails`).
 
 type Keep = <T extends { dispose(): void }>(x: T) => T
 
@@ -65,17 +65,6 @@ export function addSuperstructureDetail(group: THREE.Group, keep: Keep, mats: Su
       const brace = add(new THREE.BoxGeometry(0.35, 0.35, len), mats.steel, (from.x + to.x) / 2, (from.y + to.y) / 2, (from.z + to.z) / 2)
       brace.lookAt(to.clone().add(group.position))
     }
-  }
-
-  // compass deck: radomes on short posts, whip antennas, and its railing
-  const top = wingY + 3.1 + 0.35
-  if (rails) railing(group, keep, mats.rail, rect(x0 + 1.6, x1 - 1.4, -half + 0.5, half - 0.5, top), { closed: true, pitch: 1.4 })
-  for (const z of [-5.5, 5.5]) {
-    add(new THREE.CylinderGeometry(0.18, 0.22, 1.6, 8), mats.steel, cx - 4, top + 0.8, z)
-    add(new THREE.SphereGeometry(0.85, 20, 14), mats.white, cx - 4, top + 2.2, z)
-  }
-  for (const [x, z, h] of [[cx + 3, -8, 6], [cx + 3, 8, 6], [cx - 5, 0.5, 4.5]] as [number, number, number][]) {
-    add(new THREE.CylinderGeometry(0.03, 0.05, h, 5), mats.rail, x, top + h / 2, z)
   }
 
   // rescue boat on its davit, starboard side of the accommodation
