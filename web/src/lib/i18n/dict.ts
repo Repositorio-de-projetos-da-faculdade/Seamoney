@@ -31,6 +31,12 @@ const base = {
   'fact.recon': 'Automatic reconciliation',
   'fact.footnote': '* Estimates for a bank wire. Demo on the testnet.',
 
+  'unlock.title': 'Demo access',
+  'unlock.desc': 'This is a private demo. Please enter the access password.',
+  'unlock.password': 'Password',
+  'unlock.submit': 'Enter',
+  'unlock.error': 'Incorrect password.',
+
   'story.title': 'From invoice to reconciled in four steps',
   'story.sub': 'The invoice number travels inside the payment, so the proof is already attached.',
   'story.sample': 'Sample data',
@@ -147,6 +153,7 @@ const base = {
   'lp.save.static':
     'In the full demo the Java rules engine answers here, with the same numbers it uses to price real orders. This page is a static preview with no backend behind it, so the calculator is switched off.',
 
+  'banner.testnet': 'Testnet payments. BRL-to-USD leg is simulated.',
   'disclaimer.demo':
     'Demo on the Tempo testnet and Solana devnet. The reais-to-dollar leg is simulated and no real money moves. Figures are estimates, not quotes, and taxes such as IOF are not included.',
   'footer.built': 'Built for the Colosseum Crypto World’s Fair hackathon.',
@@ -395,6 +402,14 @@ const basePt: Record<keyof typeof base, string> = {
   'fact.speed': 'Liquida em segundos',
   'fact.recon': 'Conciliação automática',
   'fact.footnote': '* Estimativas para uma transferência bancária. Demo na testnet.',
+
+  'unlock.title': 'Acesso à demo',
+  'unlock.desc': 'Esta é uma demo fechada. Por favor, insira a senha de acesso.',
+  'unlock.password': 'Senha',
+  'unlock.submit': 'Entrar',
+  'unlock.error': 'Senha incorreta.',
+
+  'banner.testnet': 'Pagamentos em testnet. Perna BRL-USD é simulada.',
 
   'story.title': 'Da fatura à conciliação em quatro passos',
   'story.sub': 'O número da fatura viaja dentro do pagamento, então a prova já vai junto.',

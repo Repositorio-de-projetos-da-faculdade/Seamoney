@@ -4,6 +4,7 @@ import '@fontsource-variable/plus-jakarta-sans'
 import './globals.css'
 import { I18nProvider } from '@/lib/i18n/client'
 import { getLocale } from '@/lib/i18n/server'
+import { TestnetBanner } from '@/components/TestnetBanner'
 
 export const metadata: Metadata = {
   // Needed to turn the share image into an absolute URL; set SITE_URL to the public address when deploying.
@@ -23,7 +24,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     // suppressHydrationWarning: the landing page may add a class to <html> before hydration (?motion=full)
     <html lang={locale === 'pt' ? 'pt-BR' : 'en'} suppressHydrationWarning>
       <body>
-        <I18nProvider locale={locale}>{children}</I18nProvider>
+        <I18nProvider locale={locale}>
+          <TestnetBanner locale={locale} />
+          {children}
+        </I18nProvider>
       </body>
     </html>
   )

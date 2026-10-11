@@ -123,6 +123,8 @@ The Java suite covers the money rules and the whole order flow against a fake ch
 | `RULES_API_URL` | web | Where the Java service runs (read at request time). |
 | `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | web | Enables AI invoice reading. Optional. Secret. |
 | `SITE_URL` | web | Public address (for example `https://seamoney.example`), used to build absolute links for the share image. Defaults to `http://localhost:3000`. |
+| `DEMO_ACCESS_PASSWORD` | web | Optional. If set, blocks all pages and APIs behind a password wall. |
+| `DEMO_SESSION_SECRET` | web | Secret used to sign the session cookie. Required if password is set. |
 
 ## API
 
