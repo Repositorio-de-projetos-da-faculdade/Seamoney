@@ -5,7 +5,9 @@ import { addFunnelDetail } from './detail/funnel'
 import { addNightLights } from './detail/nightLights'
 import { hullPlating } from './detail/plating'
 import { addSuperstructureDetail } from './detail/superstructure'
-import { deckAt, deckGeometry, hullGeometry, transomGeometry } from './hull'
+import { createForecastle } from './forecastle'
+import { FORECASTLE } from './forecastle/layout'
+import { deckGeometry, hullGeometry, transomGeometry } from './hull'
 import { hullLivery } from './livery'
 import { mergeStatic } from './mergeStatic'
 import { doorTexture, roofTexture, sideTextures } from './steel'
@@ -44,7 +46,8 @@ export function createShip(quality: ShipQuality) {
   group.add(shadowed(new THREE.Mesh(keep(hullGeometry()), hullMat)))
   group.add(shadowed(new THREE.Mesh(keep(transomGeometry()), hullMat)))
   const deckMat = keep(new THREE.MeshStandardMaterial({ color: '#27322f', roughness: 0.92, metalness: 0.15 }))
-  group.add(shadowed(new THREE.Mesh(keep(deckGeometry()), deckMat)))
+  // the forecastle has its own painted deck (forecastle/)
+  group.add(shadowed(new THREE.Mesh(keep(deckGeometry(0.25, undefined, FORECASTLE.paint)), deckMat)))
 
   const steel = keep(new THREE.MeshStandardMaterial({ color: '#34444c', roughness: 0.75, metalness: 0.45 }))
 
@@ -113,20 +116,10 @@ export function createShip(quality: ShipQuality) {
     group.add(new THREE.LineSegments(g, keep(new THREE.LineBasicMaterial({ color: '#4f5d66', transparent: true, opacity: 0.4 }))))
   }
 
-  // breakwater in front of the first bay
-  const bw = FORWARD_BAYS[FORWARD_BAYS.length - 1].x + BOX40.l / 2 + 4
-  for (const s of [1, -1]) {
-    const wall = new THREE.Mesh(keep(new THREE.BoxGeometry(15, 4.2, 0.5)), steel)
-    wall.position.set(bw, deckAt(bw) + 2.1, s * 5.5)
-    wall.rotation.y = s * 0.7
-    group.add(shadowed(wall))
-  }
-
-  const deckhouse = createDeckhouse(group, keep)
-
   // deck gear, railings, walkways, the funnel top and the walkway lamps (detail/)
   const rails = quality !== 'low'
   const rail = keep(new THREE.MeshStandardMaterial({ color: '#aebdc4', roughness: 0.55, metalness: 0.5 }))
+  const deckhouse = createDeckhouse(group, keep, rail, { detail: rails })
   const drum = keep(new THREE.MeshStandardMaterial({ color: '#4a5a52', roughness: 0.6, metalness: 0.4 }))
   addDeckGear(group, keep, { rail, steel, hull: hullMat, drum }, { rails })
   const white = keep(new THREE.MeshStandardMaterial({ color: '#cfd9de', roughness: 0.6, metalness: 0.1 }))
@@ -134,6 +127,7 @@ export function createShip(quality: ShipQuality) {
   addSuperstructureDetail(group, keep, { rail, steel, white, boat }, { rails })
   const soot = keep(new THREE.MeshStandardMaterial({ color: '#0b0d0f', roughness: 0.9 }))
   addFunnelDetail(group, keep, deckhouse.funnel, { rail, steel, soot }, { rails })
+  createForecastle(group, keep, { rail, white }, { detail: rails })
   addNightLights(group, keep, { lit: quality === 'offline' })
 
   mergeStatic(group, new Set(deckhouse.moving), keep)

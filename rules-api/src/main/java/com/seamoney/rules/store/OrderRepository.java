@@ -23,13 +23,12 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 
-/** All SQL lives here. Plain JDBC on SQLite, no ORM. */
 @Repository
 public class OrderRepository {
 
-    /** Columns needed to insert an order. Nullable columns are simply null. */
     public record NewOrder(
             String id,
+            String organizationId,
             String reference,
             String supplierId,
             String supplierName,
@@ -54,7 +53,7 @@ public class OrderRepository {
             String reconciledAt,
             String createdAt) {}
 
-    public record Supplier(String id, String name, String country, String walletAddress, Network network) {}
+    public record Supplier(String id, String organizationId, String name, String country, String walletAddress, Network network) {}
 
     private final JdbcTemplate jdbc;
     private final ObjectMapper mapper;
@@ -62,44 +61,38 @@ public class OrderRepository {
     public OrderRepository(JdbcTemplate jdbc, ObjectMapper mapper) {
         this.jdbc = jdbc;
         this.mapper = mapper;
-        // databases created before settlement on a second network have no "network" column yet
-        addNetworkColumnIfMissing("orders");
-        addNetworkColumnIfMissing("suppliers");
     }
 
-    private void addNetworkColumnIfMissing(String table) {
-        boolean present = jdbc.queryForList("PRAGMA table_info(" + table + ")").stream().anyMatch(col -> "network".equals(col.get("name")));
-        if (!present) jdbc.execute("ALTER TABLE " + table + " ADD COLUMN network TEXT NOT NULL DEFAULT 'tempo'");
+    public List<Order> list(String orgId, int limit) {
+        return jdbc.query("SELECT * FROM orders WHERE organization_id = ? ORDER BY created_at DESC LIMIT ?", orderMapper(), orgId, limit);
     }
 
-    // ---------- reads ----------
-
-    public List<Order> list(int limit) {
-        return jdbc.query("SELECT * FROM orders ORDER BY created_at DESC LIMIT ?", orderMapper(), limit);
+    public Optional<Order> find(String orgId, String id) {
+        return jdbc.query("SELECT * FROM orders WHERE id = ? AND organization_id = ?", orderMapper(), id, orgId).stream().findFirst();
     }
 
-    public Optional<Order> find(String id) {
+    public Optional<Order> findForProof(String id) {
         return jdbc.query("SELECT * FROM orders WHERE id = ?", orderMapper(), id).stream().findFirst();
     }
 
-    public boolean referenceExists(String reference) {
-        Integer n = jdbc.queryForObject("SELECT COUNT(*) FROM orders WHERE reference = ?", Integer.class, reference);
+    public boolean referenceExists(String orgId, String reference) {
+        Integer n = jdbc.queryForObject("SELECT COUNT(*) FROM orders WHERE reference = ? AND organization_id = ?", Integer.class, reference, orgId);
         return n != null && n > 0;
     }
 
-    public long count() {
-        Long n = jdbc.queryForObject("SELECT COUNT(*) FROM orders", Long.class);
+    public long count(String orgId) {
+        Long n = jdbc.queryForObject("SELECT COUNT(*) FROM orders WHERE organization_id = ?", Long.class, orgId);
         return n == null ? 0 : n;
     }
 
-    public List<OrderEvent> events(String orderId) {
+    public List<OrderEvent> events(String orgId, String orderId) {
         return jdbc.query(
-                "SELECT * FROM order_events WHERE order_id = ? ORDER BY id ASC",
+                "SELECT * FROM order_events WHERE order_id = ? AND organization_id = ? ORDER BY id ASC",
                 (rs, i) -> new OrderEvent(rs.getLong("id"), rs.getString("order_id"), rs.getString("ts"), rs.getString("type"), rs.getString("detail")),
-                orderId);
+                orderId, orgId);
     }
 
-    public Stats stats() {
+    public Stats stats(String orgId) {
         return jdbc.queryForObject(
                 """
                 SELECT
@@ -110,11 +103,11 @@ public class OrderRepository {
                   AVG(confirm_ms) AS avg_ms,
                   COALESCE(SUM(CASE WHEN status IN ('sent','reconciled') THEN amount_cents END), 0) AS volume,
                   COALESCE(MAX(is_demo), 0) AS has_demo
-                FROM orders
+                FROM orders WHERE organization_id = ?
                 """,
                 (rs, i) -> {
                     double avg = rs.getDouble("avg_ms");
-                    boolean noAverage = rs.wasNull(); // must be read right after the column it refers to
+                    boolean noAverage = rs.wasNull();
                     return new Stats(
                             rs.getLong("savings"),
                             rs.getLong("in_progress"),
@@ -122,23 +115,22 @@ public class OrderRepository {
                             noAverage ? null : avg,
                             rs.getLong("volume"),
                             rs.getInt("has_demo") == 1);
-                });
+                }, orgId);
     }
 
-    /** Bank cost vs route fee per month, for the last {@code months} months (missing months are zero). */
-    public List<MonthPoint> monthly(int months) {
+    public List<MonthPoint> monthly(String orgId, int months) {
         Map<String, long[]> byMonth = new HashMap<>();
         jdbc.query(
                 """
-                SELECT substr(created_at, 1, 7) AS month,
+                SELECT substr(created_at, 1, 7) AS mth,
                        COALESCE(SUM(CAST(ROUND(amount_cents * bank_fee_pct / 100.0) AS INTEGER)), 0) AS bank,
                        COALESCE(SUM(fee_cents), 0) AS route
-                FROM orders WHERE status IN ('sent','reconciled')
-                GROUP BY month
+                FROM orders WHERE status IN ('sent','reconciled') AND organization_id = ?
+                GROUP BY substr(created_at, 1, 7)
                 """,
                 rs -> {
-                    byMonth.put(rs.getString("month"), new long[] {rs.getLong("bank"), rs.getLong("route")});
-                });
+                    byMonth.put(rs.getString("mth"), new long[] {rs.getLong("bank"), rs.getLong("route")});
+                }, orgId);
         List<MonthPoint> out = new ArrayList<>();
         LocalDate first = LocalDate.now(ZoneOffset.UTC).withDayOfMonth(1);
         for (int i = months - 1; i >= 0; i--) {
@@ -150,88 +142,80 @@ public class OrderRepository {
         return out;
     }
 
-    // ---------- suppliers ----------
-
-    public Optional<Supplier> findSupplierByName(String name) {
+    public Optional<Supplier> findSupplierByName(String orgId, String name) {
         return jdbc.query(
-                        "SELECT * FROM suppliers WHERE name = ?",
-                        (rs, i) -> new Supplier(rs.getString("id"), rs.getString("name"), rs.getString("country"), rs.getString("wallet_address"), Network.fromValue(rs.getString("network"))),
-                        name)
+                        "SELECT * FROM suppliers WHERE name = ? AND organization_id = ?",
+                        (rs, i) -> new Supplier(rs.getString("id"), rs.getString("organization_id"), rs.getString("name"), rs.getString("country"), rs.getString("wallet_address"), Network.fromValue(rs.getString("network"))),
+                        name, orgId)
                 .stream()
                 .findFirst();
     }
 
-    public void insertSupplier(String id, String name, String country, String wallet, Network network, String createdAt) {
+    public void insertSupplier(String orgId, String id, String name, String country, String wallet, Network network, String createdAt) {
         jdbc.update(
-                "INSERT INTO suppliers (id, name, country, wallet_address, network, created_at) VALUES (?,?,?,?,?,?)",
-                id, name, country, wallet, network.value(), createdAt);
+                "INSERT INTO suppliers (id, organization_id, name, country, wallet_address, network, created_at) VALUES (?,?,?,?,?,?,?)",
+                id, orgId, name, country, wallet, network.value(), createdAt);
     }
 
-    public void updateSupplier(String id, String wallet, Network network, String country) {
-        jdbc.update("UPDATE suppliers SET wallet_address = ?, network = ?, country = COALESCE(?, country) WHERE id = ?", wallet, network.value(), country, id);
+    public void updateSupplier(String orgId, String id, String wallet, Network network, String country) {
+        jdbc.update("UPDATE suppliers SET wallet_address = ?, network = ?, country = COALESCE(?, country) WHERE id = ? AND organization_id = ?", wallet, network.value(), country, id, orgId);
     }
-
-    // ---------- writes ----------
 
     public void insert(NewOrder o) {
         jdbc.update(
                 """
-                INSERT INTO orders (id, reference, supplier_id, supplier_name, supplier_country, supplier_wallet, network,
+                INSERT INTO orders (id, organization_id, reference, supplier_id, supplier_name, supplier_country, supplier_wallet, network,
                   invoice_number, amount_cents, currency, due_date, fee_bps, fee_cents, total_cents, bank_fee_pct,
                   fx_rate, total_brl_cents, status, extraction_source, invoice_filename, confirm_ms, paid_at,
                   reconciled_at, is_demo, created_at, updated_at)
-                VALUES (?,?,?,?,?,?,?,?,?,'USD',?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                VALUES (?,?,?,?,?,?,?,?,?,?,'USD',?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 """,
-                o.id(), o.reference(), o.supplierId(), o.supplierName(), o.supplierCountry(), o.supplierWallet(), o.network().value(),
+                o.id(), o.organizationId(), o.reference(), o.supplierId(), o.supplierName(), o.supplierCountry(), o.supplierWallet(), o.network().value(),
                 o.invoiceNumber(), o.amountCents(), o.dueDate(), o.feeBps(), o.feeCents(), o.totalCents(), o.bankFeePct(),
                 o.fxRate(), o.totalBrlCents(), o.status().value(), o.extractionSource(), o.invoiceFilename(), o.confirmMs(),
                 o.paidAt(), o.reconciledAt(), o.demo() ? 1 : 0, o.createdAt(), o.createdAt());
     }
 
-    /** Atomic claim: only one caller can move quoted to sending, so a double click cannot pay twice. */
-    public boolean claimForSending(String id, String now) {
-        return jdbc.update("UPDATE orders SET status = 'sending', error = NULL, updated_at = ? WHERE id = ? AND status = 'quoted'", now, id) == 1;
+    public boolean claimForSending(String orgId, String id, String now) {
+        return jdbc.update("UPDATE orders SET status = 'sending', error = NULL, updated_at = ? WHERE id = ? AND status = 'quoted' AND organization_id = ?", now, id, orgId) == 1;
     }
 
-    public void markSent(String id, String txHash, long blockNumber, String memoHex, long confirmMs, String now) {
+    public void markSent(String orgId, String id, String txHash, long blockNumber, String memoHex, long confirmMs, String now) {
         jdbc.update(
-                "UPDATE orders SET status = 'sent', tx_hash = ?, block_number = ?, memo_hex = ?, confirm_ms = ?, paid_at = ?, updated_at = ? WHERE id = ?",
-                txHash, blockNumber, memoHex, confirmMs, now, now, id);
+                "UPDATE orders SET status = 'sent', tx_hash = ?, block_number = ?, memo_hex = ?, confirm_ms = ?, paid_at = ?, updated_at = ? WHERE id = ? AND organization_id = ?",
+                txHash, blockNumber, memoHex, confirmMs, now, now, id, orgId);
     }
 
-    public void releaseClaim(String id, String error, String now) {
-        jdbc.update("UPDATE orders SET status = 'quoted', error = ?, updated_at = ? WHERE id = ?", error, now, id);
+    public void releaseClaim(String orgId, String id, String error, String now) {
+        jdbc.update("UPDATE orders SET status = 'quoted', error = ?, updated_at = ? WHERE id = ? AND organization_id = ?", error, now, id, orgId);
     }
 
-    public void markReconciled(String id, int logIndex, Recon recon) {
+    public void markReconciled(String orgId, String id, int logIndex, Recon recon) {
         try {
             jdbc.update(
-                    "UPDATE orders SET status = 'reconciled', log_index = ?, reconciled_at = ?, recon_json = ?, updated_at = ? WHERE id = ?",
-                    logIndex, recon.matchedAt(), mapper.writeValueAsString(recon), recon.matchedAt(), id);
+                    "UPDATE orders SET status = 'reconciled', log_index = ?, reconciled_at = ?, recon_json = ?, updated_at = ? WHERE id = ? AND organization_id = ?",
+                    logIndex, recon.matchedAt(), mapper.writeValueAsString(recon), recon.matchedAt(), id, orgId);
         } catch (JsonProcessingException e) {
             throw new IllegalStateException(e);
         }
     }
 
-    /** A transfer (tx hash + log index) may credit only one order. */
-    public boolean alreadyCredited(String txHash, int logIndex, String excludeOrderId) {
+    public boolean alreadyCredited(String orgId, String txHash, int logIndex, String excludeOrderId) {
         Integer n = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM orders WHERE tx_hash = ? AND log_index = ? AND status = 'reconciled' AND id != ?",
-                Integer.class, txHash, logIndex, excludeOrderId);
+                "SELECT COUNT(*) FROM orders WHERE tx_hash = ? AND log_index = ? AND status = 'reconciled' AND id != ? AND organization_id = ?",
+                Integer.class, txHash, logIndex, excludeOrderId, orgId);
         return n != null && n > 0;
     }
 
-    public void addEvent(String orderId, String type, String detail, String ts) {
-        jdbc.update("INSERT INTO order_events (order_id, ts, type, detail) VALUES (?,?,?,?)", orderId, ts, type, detail);
+    public void addEvent(String orgId, String orderId, String type, String detail, String ts) {
+        jdbc.update("INSERT INTO order_events (organization_id, order_id, ts, type, detail) VALUES (?,?,?,?,?)", orgId, orderId, ts, type, detail);
     }
 
-    public void saveLead(String email, Long monthlyUsd, Double bankFeePct, String country, boolean consent, String createdAt) {
+    public void saveLead(String orgId, String email, Long monthlyUsd, Double bankFeePct, String country, boolean consent, String createdAt) {
         jdbc.update(
-                "INSERT INTO leads (email, monthly_usd, bank_fee_pct, country, consent, created_at) VALUES (?,?,?,?,?,?)",
-                email, monthlyUsd, bankFeePct, country, consent ? 1 : 0, createdAt);
+                "INSERT INTO leads (organization_id, email, monthly_usd, bank_fee_pct, country, consent, created_at) VALUES (?,?,?,?,?,?,?)",
+                orgId, email, monthlyUsd, bankFeePct, country, consent ? 1 : 0, createdAt);
     }
-
-    // ---------- mapping ----------
 
     private RowMapper<Order> orderMapper() {
         return (rs, i) -> {
