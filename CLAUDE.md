@@ -1,4 +1,4 @@
-﻿# Seamoney: contexto para o Claude Code
+# Seamoney: contexto para o Claude Code
 
 Leia este arquivo antes de mexer em qualquer coisa. Ele resume o que o projeto é, o que é real e o que é simulado, e as regras que o time já decidiu.
 
@@ -32,6 +32,9 @@ Regra da separação: **nenhuma regra de negócio no Python, nenhuma chamada de 
 - `amount_units` volta como **string** da API Python (passa do inteiro seguro do JavaScript).
 - O cliente HTTP do Java usa **HTTP/1.1 forçado**: o upgrade h2c padrão do JDK é rejeitado pelo uvicorn e quebra todo POST.
 - Rede: Tempo Moderato, chain id 42431, RPC `https://rpc.moderato.tempo.xyz`, explorer `https://explore.testnet.tempo.xyz/tx/<hash>`. Token de teste AlphaUSD `0x20c0000000000000000000000000000000000001`. A carteira se reabastece pelo faucet (`tempo_fundAddress`).
+- Identidade: Multi-tenant implementado com isolamento no nível da aplicação (`organization_id` explícito nas consultas), já que RLS puro pelo Spring JDBC esbarra em complexidade de connection pooling.
+- Segurança: Autenticação via JWT (HS256) próprio com papéis granulares mapeados da demo, limites de tentativa de login (em memória) e auditoria no nível de serviço.
+- Banco de Dados: Migração do SQLite para PostgreSQL via Flyway e Testcontainers para testes de integração.
 - Interface em inglês por padrão, português pelo seletor (cookie `lang`). Textos em `web/src/lib/i18n/dict.ts`.
 
 ## Interface e identidade visual

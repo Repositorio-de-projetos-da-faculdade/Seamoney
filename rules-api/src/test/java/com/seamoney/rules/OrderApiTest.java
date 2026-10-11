@@ -29,11 +29,23 @@ import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import com.seamoney.rules.security.JwtTokenProvider;
+import org.springframework.jdbc.core.JdbcTemplate;
 
-@SpringBootTest(properties = {"spring.datasource.url=jdbc:sqlite::memory:", "seamoney.seed-demo=false"})
+@SpringBootTest(properties = {"seamoney.seed-demo=false"})
 @AutoConfigureMockMvc
 @Import(OrderApiTest.TestChain.class)
 class OrderApiTest {
+
+    @org.springframework.test.context.DynamicPropertySource
+    static void configureProperties(org.springframework.test.context.DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", () -> "jdbc:h2:mem:test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH");
+        registry.add("spring.datasource.driver-class-name", () -> "org.h2.Driver");
+        registry.add("spring.datasource.username", () -> "sa");
+        registry.add("spring.datasource.password", () -> "");
+        registry.add("spring.flyway.enabled", () -> "true");
+        registry.add("seamoney.jwt-secret", () -> "test_jwt_secret_that_needs_to_be_long_enough_for_hs256_alg");
+    }
 
     @TestConfiguration
     static class TestChain {
@@ -49,11 +61,17 @@ class OrderApiTest {
     @Autowired FakeChain chain;
     @Autowired OrderService service;
     @Autowired OrderRepository repo;
+    @Autowired JwtTokenProvider jwt;
+    @Autowired JdbcTemplate jdbc;
+    private String token;
 
     private static final String WALLET = "0x75c0281a3261449901b6a60b0C31c1fdfA8D7ff0";
 
     @BeforeEach
     void reset() {
+        jdbc.execute("INSERT INTO organizations (id, name, created_at) VALUES ('org_test', 'Test Org', '2026-10-10') ON CONFLICT DO NOTHING");
+        token = jwt.createToken("user1", "org_test", "OWNER");
+
         chain.transfers.clear();
         chain.failNextPayment = null;
         chain.tamperNextAmount = null;
@@ -67,7 +85,7 @@ class OrderApiTest {
     }
 
     private JsonNode createOrder(String invoice, long cents) throws Exception {
-        String res = mvc.perform(post("/api/orders").contentType(MediaType.APPLICATION_JSON).content(orderBody(invoice, cents)))
+        String res = mvc.perform(post("/api/orders").header("Authorization", "Bearer " + token).contentType(MediaType.APPLICATION_JSON).content(orderBody(invoice, cents)))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
         return json.readTree(res).get("order");
@@ -75,7 +93,7 @@ class OrderApiTest {
 
     @Test
     void creatingAnOrderQuotesTheRouteAndTheSavings() throws Exception {
-        mvc.perform(post("/api/orders").contentType(MediaType.APPLICATION_JSON).content(orderBody("INV-1", 8_000_000)))
+        mvc.perform(post("/api/orders").header("Authorization", "Bearer " + token).contentType(MediaType.APPLICATION_JSON).content(orderBody("INV-1", 8_000_000)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.order.status").value("quoted"))
                 .andExpect(jsonPath("$.order.reference").value("INV-1"))
@@ -98,13 +116,13 @@ class OrderApiTest {
     void payThenReconcileClosesTheInvoice() throws Exception {
         String id = createOrder("INV-2", 8_000_000).get("id").asText();
 
-        mvc.perform(post("/api/orders/{id}/pay", id))
+        mvc.perform(post("/api/orders/{id}/pay", id).header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.order.status").value("sent"))
                 .andExpect(jsonPath("$.order.txHash").exists())
                 .andExpect(jsonPath("$.order.confirmMs").value(1200));
 
-        mvc.perform(post("/api/orders/{id}/reconcile", id))
+        mvc.perform(post("/api/orders/{id}/reconcile", id).header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.ok").value(true))
                 .andExpect(jsonPath("$.order.status").value("reconciled"))
@@ -115,14 +133,14 @@ class OrderApiTest {
                 .andExpect(jsonPath("$.order.recon.checks.receipt").value(true));
 
         // reconciling again is harmless
-        mvc.perform(post("/api/orders/{id}/reconcile", id)).andExpect(jsonPath("$.ok").value(true));
+        mvc.perform(post("/api/orders/{id}/reconcile", id).header("Authorization", "Bearer " + token)).andExpect(jsonPath("$.ok").value(true));
     }
 
     @Test
     void anOrderCannotBePaidTwice() throws Exception {
         String id = createOrder("INV-3", 50_000).get("id").asText();
-        mvc.perform(post("/api/orders/{id}/pay", id)).andExpect(status().isOk());
-        mvc.perform(post("/api/orders/{id}/pay", id))
+        mvc.perform(post("/api/orders/{id}/pay", id).header("Authorization", "Bearer " + token)).andExpect(status().isOk());
+        mvc.perform(post("/api/orders/{id}/pay", id).header("Authorization", "Bearer " + token))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("bad_state"));
         assertEquals(1, chain.transfers.size(), "only one transfer may reach the chain");
@@ -133,39 +151,39 @@ class OrderApiTest {
         String id = createOrder("INV-4", 50_000).get("id").asText();
         chain.failNextPayment = new ChainException("The chain service is unavailable", 502);
 
-        mvc.perform(post("/api/orders/{id}/pay", id))
+        mvc.perform(post("/api/orders/{id}/pay", id).header("Authorization", "Bearer " + token))
                 .andExpect(status().isBadGateway())
                 .andExpect(jsonPath("$.code").value("chain"));
-        mvc.perform(get("/api/orders/{id}", id))
+        mvc.perform(get("/api/orders/{id}", id).header("Authorization", "Bearer " + token))
                 .andExpect(jsonPath("$.order.status").value("quoted"))
                 .andExpect(jsonPath("$.order.error").value("The chain service is unavailable"));
 
-        mvc.perform(post("/api/orders/{id}/pay", id)).andExpect(status().isOk());
+        mvc.perform(post("/api/orders/{id}/pay", id).header("Authorization", "Bearer " + token)).andExpect(status().isOk());
     }
 
     @Test
     void reconciliationRefusesATransferWithTheWrongAmount() throws Exception {
         String id = createOrder("INV-5", 8_000_000).get("id").asText();
         chain.tamperNextAmount = new BigInteger("79000000000"); // US$ 79,000 on-chain instead of 80,000
-        mvc.perform(post("/api/orders/{id}/pay", id)).andExpect(status().isOk());
+        mvc.perform(post("/api/orders/{id}/pay", id).header("Authorization", "Bearer " + token)).andExpect(status().isOk());
 
-        mvc.perform(post("/api/orders/{id}/reconcile", id))
+        mvc.perform(post("/api/orders/{id}/reconcile", id).header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.ok").value(false))
                 .andExpect(jsonPath("$.reason").value("mismatch"))
                 .andExpect(jsonPath("$.checks.amount").value(false))
                 .andExpect(jsonPath("$.checks.memo").value(true));
         // the invoice stays open: it must not be closed on a payment that does not match
-        mvc.perform(get("/api/orders/{id}", id)).andExpect(jsonPath("$.order.status").value("sent"));
+        mvc.perform(get("/api/orders/{id}", id).header("Authorization", "Bearer " + token)).andExpect(jsonPath("$.order.status").value("sent"));
     }
 
     @Test
     void reconciliationWaitsWhenNoMatchingTransferExistsYet() throws Exception {
         String id = createOrder("INV-6", 8_000_000).get("id").asText();
-        mvc.perform(post("/api/orders/{id}/pay", id)).andExpect(status().isOk());
+        mvc.perform(post("/api/orders/{id}/pay", id).header("Authorization", "Bearer " + token)).andExpect(status().isOk());
         chain.transfers.clear(); // the chain does not (yet) show the transfer
 
-        mvc.perform(post("/api/orders/{id}/reconcile", id))
+        mvc.perform(post("/api/orders/{id}/reconcile", id).header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.ok").value(false))
                 .andExpect(jsonPath("$.reason").value("no_matching_transfer"));
@@ -174,50 +192,50 @@ class OrderApiTest {
     @Test
     void anUnpaidOrderCannotBeReconciled() throws Exception {
         String id = createOrder("INV-7", 8_000_000).get("id").asText();
-        mvc.perform(post("/api/orders/{id}/reconcile", id)).andExpect(status().isConflict());
+        mvc.perform(post("/api/orders/{id}/reconcile", id).header("Authorization", "Bearer " + token)).andExpect(status().isConflict());
     }
 
     @Test
     void aTransferCanCreditOnlyOneOrder() {
-        Order a = service.create(new OrderService.NewOrderInput("Shenzhen Tech Co.", "CN", WALLET, "INV-A", 100_000, null, "manual", null));
-        service.pay(a.id());
-        assertTrue(service.reconcile(a.id()).ok());
-        Order paidA = service.get(a.id());
+        Order a = service.create("org_test", new OrderService.NewOrderInput("Shenzhen Tech Co.", "CN", WALLET, "INV-A", 100_000, null, "manual", null));
+        service.pay("org_test", a.id());
+        assertTrue(service.reconcile("org_test", a.id()).ok());
+        Order paidA = service.get("org_test", a.id());
 
-        Order b = service.create(new OrderService.NewOrderInput("Shenzhen Tech Co.", "CN", WALLET, "INV-B", 100_000, null, "manual", null));
+        Order b = service.create("org_test", new OrderService.NewOrderInput("Shenzhen Tech Co.", "CN", WALLET, "INV-B", 100_000, null, "manual", null));
         // pretend B was paid by the very same on-chain transfer
-        repo.claimForSending(b.id(), "2026-10-10T00:00:00Z");
-        repo.markSent(b.id(), paidA.txHash(), paidA.blockNumber(), FakeChain.memoHex("INV-B"), 1200, "2026-10-10T00:00:00Z");
+        repo.claimForSending("org_test", b.id(), "2026-10-10T00:00:00Z");
+        repo.markSent("org_test", b.id(), paidA.txHash(), paidA.blockNumber(), FakeChain.memoHex("INV-B"), 1200, "2026-10-10T00:00:00Z");
         chain.transfers.add(new FoundTransfer(
                 paidA.txHash(), paidA.recon().logIndex(), paidA.blockNumber(), FakeChain.PARTNER, WALLET,
                 new BigInteger("1000000000"), FakeChain.memoHex("INV-B")));
 
-        var result = service.reconcile(b.id());
+        var result = service.reconcile("org_test", b.id());
         assertFalse(result.ok());
         assertEquals("duplicate", result.reason());
     }
 
     @Test
     void invalidInputIsRejected() throws Exception {
-        mvc.perform(post("/api/orders").contentType(MediaType.APPLICATION_JSON).content(orderBody("INV-X", -5)))
+        mvc.perform(post("/api/orders").header("Authorization", "Bearer " + token).contentType(MediaType.APPLICATION_JSON).content(orderBody("INV-X", -5)))
                 .andExpect(status().isBadRequest());
-        mvc.perform(post("/api/orders").contentType(MediaType.APPLICATION_JSON).content(orderBody("INV-" + "9".repeat(40), 100)))
+        mvc.perform(post("/api/orders").header("Authorization", "Bearer " + token).contentType(MediaType.APPLICATION_JSON).content(orderBody("INV-" + "9".repeat(40), 100)))
                 .andExpect(status().isBadRequest()); // longer than the 32-byte memo
-        mvc.perform(post("/api/orders").contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(post("/api/orders").header("Authorization", "Bearer " + token).contentType(MediaType.APPLICATION_JSON)
                         .content(orderBody("INV-Y", 100).replace(WALLET, "0x123")))
                 .andExpect(status().isBadRequest());
-        mvc.perform(post("/api/orders").contentType(MediaType.APPLICATION_JSON).content(orderBody("INV-Z", 200_000_000)))
+        mvc.perform(post("/api/orders").header("Authorization", "Bearer " + token).contentType(MediaType.APPLICATION_JSON).content(orderBody("INV-Z", 200_000_000)))
                 .andExpect(status().isBadRequest()); // above the US$ 1,000,000 demo cap
     }
 
     @Test
     void unknownOrderIs404() throws Exception {
-        mvc.perform(get("/api/orders/NOPE")).andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("not_found"));
+        mvc.perform(get("/api/orders/NOPE").header("Authorization", "Bearer " + token)).andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("not_found"));
     }
 
     @Test
     void calculatorUsesTheSameRulesAsOrders() throws Exception {
-        mvc.perform(post("/api/compare").contentType(MediaType.APPLICATION_JSON).content("{\"monthlyUsd\":80000,\"bankFeePct\":3}"))
+        mvc.perform(post("/api/compare").header("Authorization", "Bearer " + token).contentType(MediaType.APPLICATION_JSON).content("{\"monthlyUsd\":80000,\"bankFeePct\":3}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.bankCents").value(240_000))
                 .andExpect(jsonPath("$.routeCents").value(80_000))
@@ -227,9 +245,9 @@ class OrderApiTest {
     @Test
     void proofPageDataIsVerifiedAgainstTheChain() throws Exception {
         String id = createOrder("INV-P", 100_000).get("id").asText();
-        mvc.perform(get("/api/proof/{id}", id)).andExpect(status().isNotFound()); // not paid yet
-        mvc.perform(post("/api/orders/{id}/pay", id)).andExpect(status().isOk());
-        mvc.perform(get("/api/proof/{id}", id))
+        mvc.perform(get("/api/proof/{id}", id).header("Authorization", "Bearer " + token)).andExpect(status().isNotFound()); // not paid yet
+        mvc.perform(post("/api/orders/{id}/pay", id).header("Authorization", "Bearer " + token)).andExpect(status().isOk());
+        mvc.perform(get("/api/proof/{id}", id).header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.order.invoiceNumber").value("INV-P"))
                 .andExpect(jsonPath("$.tx.status").value("success"));
@@ -237,10 +255,10 @@ class OrderApiTest {
 
     @Test
     void csvExportEscapesAndLabelsEverything() throws Exception {
-        mvc.perform(post("/api/orders").contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(post("/api/orders").header("Authorization", "Bearer " + token).contentType(MediaType.APPLICATION_JSON)
                 .content(orderBody("INV-C", 100_000).replace("Shenzhen Tech Co.", "Acme, \\\"Co\\\" Ltd")))
                 .andExpect(status().isCreated());
-        mvc.perform(get("/api/reports/orders"))
+        mvc.perform(get("/api/reports/orders").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith("text/csv"))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("\"Acme, \"\"Co\"\" Ltd\"")));
@@ -248,17 +266,17 @@ class OrderApiTest {
 
     @Test
     void anEmailIsOnlyStoredWithConsent() throws Exception {
-        mvc.perform(post("/api/leads").contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(post("/api/leads").header("Authorization", "Bearer " + token).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\":\"a@b.com\",\"consent\":false}"))
                 .andExpect(status().isBadRequest());
-        mvc.perform(post("/api/leads").contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(post("/api/leads").header("Authorization", "Bearer " + token).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\":\"a@b.com\",\"monthlyUsd\":80000,\"bankFeePct\":3,\"consent\":true}"))
                 .andExpect(status().isCreated());
     }
 
     @Test
     void healthReportsTheDatabaseAndThePartnerWallet() throws Exception {
-        mvc.perform(get("/api/health"))
+        mvc.perform(get("/api/health").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.checks.database").value("ok"))
                 .andExpect(jsonPath("$.checks.partnerWallet").value("configured"));
@@ -272,18 +290,18 @@ class OrderApiTest {
                 "invoiceNumber":"INV-SOL", "network":"solana", "amountCents":100000,"dueDate":"2026-10-25","extractionSource":"demo"}
                """.formatted(solanaWallet);
 
-        String res = mvc.perform(post("/api/orders").contentType(MediaType.APPLICATION_JSON).content(payload))
+        String res = mvc.perform(post("/api/orders").header("Authorization", "Bearer " + token).contentType(MediaType.APPLICATION_JSON).content(payload))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
         String id = json.readTree(res).get("order").get("id").asText();
 
-        mvc.perform(post("/api/orders/{id}/pay", id))
+        mvc.perform(post("/api/orders/{id}/pay", id).header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.order.status").value("sent"))
                 .andExpect(jsonPath("$.order.txHash").exists())
                 .andExpect(jsonPath("$.order.network").value("solana"));
 
-        mvc.perform(post("/api/orders/{id}/reconcile", id))
+        mvc.perform(post("/api/orders/{id}/reconcile", id).header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.ok").value(true));
     }

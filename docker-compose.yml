@@ -1,11 +1,21 @@
-# Seamoney: three services. Only the web app is published; the others are reachable inside the compose network.
-#
-#   cp .env.example .env     # then set TEMPO_PARTNER_PRIVATE_KEY (see chain-service/scripts/setup_wallets.py)
-#   docker compose up --build
-#   open http://localhost:3000
 name: seamoney
 
 services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: seamoney
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d seamoney"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   chain-service:
     build: ./chain-service
     environment:
@@ -19,12 +29,17 @@ services:
     environment:
       CHAIN_SERVICE_URL: http://chain-service:8000
       CHAIN_SERVICE_TOKEN: ${CHAIN_SERVICE_TOKEN:-dev-internal-token}
-      DATA_DIR: /data
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: seamoney
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
       DEMO_USD_BRL: ${DEMO_USD_BRL:-5.40}
-      SEED_DEMO: ${SEED_DEMO:-true}
-    volumes:
-      - rules-data:/data
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-demo}
+      JWT_SECRET: ${JWT_SECRET:-dev_jwt_secret_that_should_be_long_enough_for_hs256_alg}
     depends_on:
+      postgres:
+        condition: service_healthy
       chain-service:
         condition: service_healthy
     restart: unless-stopped
@@ -42,4 +57,4 @@ services:
     restart: unless-stopped
 
 volumes:
-  rules-data:
+  postgres-data:

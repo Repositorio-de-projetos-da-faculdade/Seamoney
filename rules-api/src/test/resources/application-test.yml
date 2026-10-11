@@ -1,0 +1,11 @@
+spring:
+  datasource:
+    url: jdbc:tc:postgresql:16:///seamoney?TC_INITSCRIPT=
+    username: test
+    password: test
+    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
+  flyway:
+    enabled: true
+
+seamoney:
+  jwt-secret: supersecret_test_key_for_jjwt_that_must_be_long_enough
