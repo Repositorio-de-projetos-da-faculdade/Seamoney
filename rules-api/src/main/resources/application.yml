@@ -5,23 +5,29 @@ spring:
   application:
     name: seamoney-rules-api
   datasource:
-    # SQLite file. DATA_DIR is created on startup (see RulesApplication).
-    url: jdbc:sqlite:${DATA_DIR:./data}/seamoney.db
-    driver-class-name: org.sqlite.JDBC
-    hikari:
-      # SQLite allows one writer; a single connection keeps things simple and safe.
-      maximum-pool-size: 1
-  sql:
-    init:
-      mode: always
-      schema-locations: classpath:schema.sql
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:seamoney}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
 
 seamoney:
   chain-service-url: ${CHAIN_SERVICE_URL:http://localhost:8000}
   chain-service-token: ${CHAIN_SERVICE_TOKEN:}
-  # SIMULATED USD/BRL rate shown in quotes. No real FX happens.
   usd-brl: ${DEMO_USD_BRL:5.40}
-  seed-demo: ${SEED_DEMO:true}
+  seed-demo: ${SEED_DEMO:false}
   fee-bps: 100
   bank-fee-pct: 3.0
   max-amount-cents: 100000000
+  jwt-secret: ${JWT_SECRET:changeme_in_production_so_it_is_secure}
+
+---
+spring:
+  config:
+    activate:
+      on-profile: demo
+
+seamoney:
+  seed-demo: true

@@ -55,6 +55,8 @@ Three services, each owned by one workstream:
 
 The prototype stores data in a SQLite file. PostgreSQL is the planned database for the next phase. Hosting: to be selected by the team (options in [docs/prototype.md](docs/prototype.md)).
 
+**Update (Phase B1):** The rules-api has been upgraded to a real backend with PostgreSQL (via Flyway), JWT Authentication, Multi-tenant isolation (by application filters), and Audit logging. See [docs/backend-api.md](docs/backend-api.md) for the API contract.
+
 ## Team workstreams
 
 ### A - Blockchain

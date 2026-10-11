@@ -143,6 +143,21 @@ const base = {
   'lp.save.title': 'What stays *in your company*',
   'lp.save.body':
     'Drag to your monthly volume. The numbers come from *the same rules engine* that prices real orders.',
+  'lp.save.body.static':
+    'Drag to your monthly volume. This page has no backend, so *the same pricing math* as the Java rules engine runs in your browser.',
+  'lp.save.leak.kicker': 'What each route loses on the way',
+  'lp.save.leak.no': 'Route {n}',
+  'lp.save.leak.lost': 'Lost on the way',
+  'lp.save.leak.bank': 'Bank wire (SWIFT)',
+  'lp.save.leak.bank.via': 'Through correspondent banks',
+  'lp.save.leak.bank.note': 'FX spread plus intermediary bank fees. Our assumption; typical estimates run from 2% to 5%.',
+  'lp.save.leak.route': 'Stablecoin on Tempo',
+  'lp.save.leak.route.via': 'Straight to the supplier, with the invoice in the memo',
+  'lp.save.leak.route.note': 'The Seamoney fee: 1% of the amount, the same figure that prices every order.',
+  'lp.save.leak.per': '{lost} on every {amount} sent',
+  'lp.save.leak.diff': '{pp} percentage points apart on every payment.',
+  'lp.save.leak.note': 'Estimates, not quotes. Taxes such as IOF are not included, and the reais to dollar leg is simulated.',
+  'lp.save.yours': 'Now with your numbers',
   'lp.save.year': 'saved per year',
   'lp.save.month': 'per month',
 
@@ -150,8 +165,6 @@ const base = {
   'lp.close.cta2': 'Open the dashboard',
   'lp.code': 'View the source code',
   'lp.code.nav': 'Code',
-  'lp.save.static':
-    'In the full demo the Java rules engine answers here, with the same numbers it uses to price real orders. This page is a static preview with no backend behind it, so the calculator is switched off.',
 
   'banner.testnet': 'Testnet payments. BRL-to-USD leg is simulated.',
   'disclaimer.demo':
@@ -517,6 +530,21 @@ const basePt: Record<keyof typeof base, string> = {
   'lp.save.title': 'O que fica *na sua empresa*',
   'lp.save.body':
     'Arraste até o seu volume mensal. Os números vêm *do mesmo motor de regras* que precifica as ordens.',
+  'lp.save.body.static':
+    'Arraste até o seu volume mensal. Esta página não tem backend, então *a mesma conta* do motor de regras em Java roda no seu navegador.',
+  'lp.save.leak.kicker': 'O que cada rota perde no caminho',
+  'lp.save.leak.no': 'Rota {n}',
+  'lp.save.leak.lost': 'Perdido no caminho',
+  'lp.save.leak.bank': 'Transferência bancária (SWIFT)',
+  'lp.save.leak.bank.via': 'Por bancos correspondentes',
+  'lp.save.leak.bank.note': 'Spread de câmbio mais tarifas dos bancos intermediários. Suposição nossa; estimativas típicas vão de 2% a 5%.',
+  'lp.save.leak.route': 'Stablecoin na Tempo',
+  'lp.save.leak.route.via': 'Direto ao fornecedor, com a fatura no memo',
+  'lp.save.leak.route.note': 'A tarifa da Seamoney: 1% do valor, o mesmo número que precifica cada ordem.',
+  'lp.save.leak.per': '{lost} a cada {amount} enviados',
+  'lp.save.leak.diff': '{pp} pontos percentuais de diferença em cada pagamento.',
+  'lp.save.leak.note': 'Estimativas, não cotação. Tributos como o IOF não estão incluídos, e a perna reais para dólar é simulada.',
+  'lp.save.yours': 'Agora com os seus números',
   'lp.save.year': 'economizados por ano',
   'lp.save.month': 'por mês',
 
@@ -524,8 +552,6 @@ const basePt: Record<keyof typeof base, string> = {
   'lp.close.cta2': 'Abrir o painel',
   'lp.code': 'Ver o código-fonte',
   'lp.code.nav': 'Código',
-  'lp.save.static':
-    'Na demo completa, o motor de regras em Java responde aqui, com os mesmos números que precificam as ordens. Esta página é uma prévia estática, sem backend por trás, então a calculadora fica desligada.',
 
   'disclaimer.demo':
     'Demo na testnet do Tempo e na devnet da Solana. A etapa de reais para dólar é simulada e nenhum dinheiro real se move. Os valores são estimativas, não cotações, e tributos como o IOF não estão incluídos.',

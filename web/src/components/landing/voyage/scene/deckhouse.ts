@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { FOREMAST } from './forecastle/layout'
 import { deckAt, HULL } from './hull'
 import { DECKHOUSE } from './stowage'
 import { createAccommodation } from './superstructure/accommodation'
@@ -7,8 +8,7 @@ import { createFunnel } from './superstructure/funnel'
 import { createLifeboat } from './superstructure/lifeboat'
 
 // The superstructure, put together: the accommodation block, the bridge and its mast, the funnel on its engine
-// casing aft, the free-fall lifeboat over the stern (each in superstructure/), then the forecastle gear, the
-// navigation lights with their halos and the floodlights that light the deck at night.
+// casing aft, the free-fall lifeboat over the stern (each in superstructure/), then the with their halos and the floodlights that light the deck at night.
 
 type Keep = <T extends { dispose(): void }>(x: T) => T
 
@@ -27,7 +27,7 @@ export function haloTexture() {
   return new THREE.CanvasTexture(c)
 }
 
-export function createDeckhouse(group: THREE.Group, keep: Keep) {
+export function createDeckhouse(group: THREE.Group, keep: Keep, rail: THREE.Material, { detail }: { detail: boolean }) {
   const steel = keep(new THREE.MeshStandardMaterial({ color: '#3a4a52', roughness: 0.7, metalness: 0.5 }))
   const soot = keep(new THREE.MeshStandardMaterial({ color: '#07090b', roughness: 0.95 }))
   const add = (geo: THREE.BufferGeometry, mat: THREE.Material, x: number, y: number, z: number) => {
@@ -40,15 +40,11 @@ export function createDeckhouse(group: THREE.Group, keep: Keep) {
   }
 
   const block = createAccommodation(group, keep)
-  const bridge = createBridge(group, keep, block, { steel })
+  const bridge = createBridge(group, keep, block, { steel, rail }, { detail })
   const funnel = createFunnel(group, keep, { steel, soot })
   createLifeboat(group, keep, { steel })
 
-  // forecastle: foremast, windlasses
-  const bowDeck = deckAt(80)
-  add(new THREE.CylinderGeometry(0.3, 0.45, 11, 8), steel, 80, bowDeck + 5.5, 0)
-  add(new THREE.BoxGeometry(0.3, 0.3, 4), steel, 80, bowDeck + 8.5, 0)
-  for (const z of [-4, 4]) add(new THREE.CylinderGeometry(1.1, 1.1, 2.2, 14), steel, 74, bowDeck + 1.1, z).rotation.x = Math.PI / 2
+  const bowDeck = deckAt(FOREMAST.x)
 
   // navigation lights with halos: red to port, green to starboard, white masthead and stern lights
   const halo = keep(haloTexture())
@@ -66,7 +62,7 @@ export function createDeckhouse(group: THREE.Group, keep: Keep) {
   navLight('#ff3b30', block.cx + 0.5, bridge.floor + 2.2, -(bridge.wingEnd + 0.2))
   navLight('#2bff88', block.cx + 0.5, bridge.floor + 2.2, bridge.wingEnd + 0.2)
   navLight('#fff4e0', bridge.mast.x, bridge.mast.top, 0, 7)
-  navLight('#fff4e0', 80, bowDeck + 11.2, 0, 7)
+  navLight('#fff4e0', FOREMAST.x, bowDeck + FOREMAST.height + 0.3, 0, 7)
   navLight('#fff4e0', HULL.stern + 1, deckAt(HULL.stern) + 2, 0)
   navLight('#ffb070', funnel.cx, funnel.top + 1.5, 0, 3)
 
@@ -81,7 +77,7 @@ export function createDeckhouse(group: THREE.Group, keep: Keep) {
   // on the bridge wing ends, outboard of the stacks, so they rake along the cargo instead of lighting the bridge
   spot('#ffbe80', 1800, new THREE.Vector3(DECKHOUSE.x1 + 1, flood + 2, HULL.beam / 2 + 1), new THREE.Vector3(40, block.base + 6, 14), 0.45)
   spot('#ffbe80', 1800, new THREE.Vector3(DECKHOUSE.x1 + 1, flood + 2, -(HULL.beam / 2 + 1)), new THREE.Vector3(40, block.base + 6, -14), 0.45)
-  spot('#dbe8ff', 650, new THREE.Vector3(79, bowDeck + 9, 0), new THREE.Vector3(40, block.base + 14, 0), 0.7)
+  spot('#dbe8ff', 650, new THREE.Vector3(FOREMAST.x - 0.7, bowDeck + FOREMAST.platform - 0.4, 0), new THREE.Vector3(40, block.base + 14, 0), 0.7)
   // aft, from halfway up the accommodation, so it lights the after stacks and not the bridge above it
   spot('#ffbe80', 1600, new THREE.Vector3(DECKHOUSE.x0 - 2, block.base + block.blockH * 0.6, 0), new THREE.Vector3(-45, block.base + 8, 0), 0.7)
   // pools of light from the lashing bridges, the way container decks glow at night

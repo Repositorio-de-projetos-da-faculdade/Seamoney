@@ -1,6 +1,7 @@
 package com.seamoney.rules.web;
 
 import com.seamoney.rules.domain.Order;
+import com.seamoney.rules.security.JwtPrincipal;
 import com.seamoney.rules.service.OrderService;
 import com.seamoney.rules.service.OrderService.NewOrderInput;
 import com.seamoney.rules.service.OrderService.ReconcileResult;
@@ -13,6 +14,8 @@ import jakarta.validation.constraints.Size;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -43,31 +46,32 @@ public class OrdersController {
     }
 
     @GetMapping
-    public Map<String, Object> list(@RequestParam(defaultValue = "200") int limit) {
-        return Map.of("orders", orders.list(limit));
+    public Map<String, Object> list(@AuthenticationPrincipal JwtPrincipal principal, @RequestParam(defaultValue = "200") int limit) {
+        return Map.of("orders", orders.list(principal.orgId(), limit));
     }
 
     @PostMapping
-    public ResponseEntity<Map<String, Order>> create(@Valid @RequestBody NewOrderRequest body) {
-        Order order = orders.create(new NewOrderInput(
+    @PreAuthorize("hasAnyRole('OWNER', 'APPROVER', 'OPERATOR')")
+    public ResponseEntity<Map<String, Order>> create(@AuthenticationPrincipal JwtPrincipal principal, @Valid @RequestBody NewOrderRequest body) {
+        Order order = orders.create(principal.orgId(), new NewOrderInput(
                 body.supplierName(), body.supplierCountry(), body.supplierWallet(), body.invoiceNumber(), body.amountCents(),
                 body.dueDate(), body.extractionSource(), body.invoiceFilename(), body.network()));
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("order", order));
     }
 
     @GetMapping("/{id}")
-    public Map<String, Object> get(@PathVariable String id) {
-        return Map.of("order", orders.get(id), "events", orders.events(id));
+    public Map<String, Object> get(@AuthenticationPrincipal JwtPrincipal principal, @PathVariable String id) {
+        return Map.of("order", orders.get(principal.orgId(), id), "events", orders.events(principal.orgId(), id));
     }
 
     @PostMapping("/{id}/pay")
-    public Map<String, Order> pay(@PathVariable String id) {
-        return Map.of("order", orders.pay(id));
+    @PreAuthorize("hasAnyRole('OWNER', 'APPROVER')")
+    public Map<String, Order> pay(@AuthenticationPrincipal JwtPrincipal principal, @PathVariable String id) {
+        return Map.of("order", orders.pay(principal.orgId(), id));
     }
 
-    /** A failed match is an expected business outcome (HTTP 200 with ok=false), not a server error. */
     @PostMapping("/{id}/reconcile")
-    public ReconcileResult reconcile(@PathVariable String id) {
-        return orders.reconcile(id);
+    public ReconcileResult reconcile(@AuthenticationPrincipal JwtPrincipal principal, @PathVariable String id) {
+        return orders.reconcile(principal.orgId(), id);
     }
 }

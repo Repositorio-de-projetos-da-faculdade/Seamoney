@@ -1,10 +1,14 @@
 import * as THREE from 'three'
 import { HULL } from '../hull'
 import { ACCOMMODATION } from '../stowage'
+import { addCompassDeck } from './compassDeck'
+import { createRadarMast } from './radarMast'
+import { addWings } from './wings'
 
-// The navigating bridge on top of the accommodation: a wheelhouse a little wider than the block, glazed all round
-// in a dark band between a white bulkhead and fascia, under a roof with a visor; open wings out to the ship's sides
-// with their bulwarks and a small glazed cab at each end; the radar mast and its scanners on the roof.
+// The navigating bridge on top of the accommodation: a wheelhouse a little wider than the block, its front windows
+// raked forward between a white bulkhead and fascia, mullions between the panes; the roof (the compass deck) is a
+// painted deck with a white lip and a sun visor over the windows. The open wings and their cabs (wings.ts), the
+// radar mast (radarMast.ts) and the gear on the roof (compassDeck.ts) are built on it.
 
 type Keep = <T extends { dispose(): void }>(x: T) => T
 
@@ -16,11 +20,14 @@ export interface Block {
 }
 
 /** Bulkhead, glass band, fascia: the three layers of a glazed deckhouse wall. */
-const LAYERS = { bulkhead: 1.05, glass: 1.45, fascia: 0.7 }
+export const LAYERS = { bulkhead: 1.05, glass: 1.45, fascia: 0.7 }
 const HOUSE_H = LAYERS.bulkhead + LAYERS.glass + LAYERS.fascia
+/** How far the top of the front windows leans out past their foot. */
+const RAKE = 0.55
+const SLAB = 0.3
 
-export function createBridge(group: THREE.Group, keep: Keep, block: Block, mats: { steel: THREE.Material }) {
-  const add = (geo: THREE.BufferGeometry, mat: THREE.Material, x: number, y: number, z: number) => {
+export function createBridge(group: THREE.Group, keep: Keep, block: Block, mats: { steel: THREE.Material; rail: THREE.Material }, { detail }: { detail: boolean }) {
+  const add = (geo: THREE.BufferGeometry, mat: THREE.Material | THREE.Material[], x: number, y: number, z: number) => {
     const m = new THREE.Mesh(keep(geo), mat)
     m.position.set(x, y, z)
     m.castShadow = m.receiveShadow = true
@@ -33,45 +40,56 @@ export function createBridge(group: THREE.Group, keep: Keep, block: Block, mats:
     new THREE.MeshPhysicalMaterial({ color: '#0b2129', roughness: 0.06, metalness: 0.3, emissive: '#3a9aa6', emissiveIntensity: 0.16, clearcoat: 1 }),
   )
 
-  /** A glazed box: bulkhead, a slightly inset glass band and the fascia, with its floor at y. */
-  const glazed = (d: number, w: number, x: number, y: number, z: number, layers = LAYERS) => {
-    add(new THREE.BoxGeometry(d, layers.bulkhead, w), white, x, y + layers.bulkhead / 2, z)
-    add(new THREE.BoxGeometry(d - 0.25, layers.glass, w - 0.25), glass, x, y + layers.bulkhead + layers.glass / 2, z)
-    add(new THREE.BoxGeometry(d, layers.fascia, w), white, x, y + layers.bulkhead + layers.glass + layers.fascia / 2, z)
-  }
-
   const floor = block.base + block.blockH
   const houseW = ACCOMMODATION.width + 4
   const houseD = block.depth - 1.5
   const hx = block.cx - 0.3
+  const front = hx + houseD / 2
 
-  // wheelhouse and its roof with a visor over the windows
-  glazed(houseD, houseW, hx, floor, 0)
-  add(new THREE.BoxGeometry(houseD + 1.4, 0.32, houseW + 1.2), trim, hx + 0.3, floor + HOUSE_H + 0.16, 0)
-
-  // open wings out to the ship's sides: deck, bulwarks fore and aft and at the end, and a glazed cab at each end
-  const wingEnd = HULL.beam / 2 + 1.5
-  const wingD = houseD - 2.4
+  // wheelhouse: bulkhead all round, a glass band inset from it, the raked front panes and the fascia over them
+  add(new THREE.BoxGeometry(houseD, LAYERS.bulkhead, houseW), white, hx, floor + LAYERS.bulkhead / 2, 0)
+  add(new THREE.BoxGeometry(houseD - 0.25, LAYERS.glass, houseW - 0.25), glass, hx - 0.1, floor + LAYERS.bulkhead + LAYERS.glass / 2, 0)
+  const lean = Math.atan2(RAKE, LAYERS.glass)
+  const paneH = Math.hypot(RAKE, LAYERS.glass)
+  const pane = add(new THREE.BoxGeometry(0.08, paneH, houseW - 0.1), glass, front + RAKE / 2, floor + LAYERS.bulkhead + LAYERS.glass / 2, 0)
+  pane.rotation.z = -lean
+  // the triangles between the raked front and the side glass, closed with plate
   for (const s of [1, -1]) {
-    const z0 = houseW / 2
-    const len = wingEnd - z0
-    const mid = s * (z0 + len / 2)
-    add(new THREE.BoxGeometry(wingD, 0.3, len), white, hx, floor + 0.15, mid)
-    for (const dx of [-wingD / 2, wingD / 2]) add(new THREE.BoxGeometry(0.16, 1.1, len), white, hx + dx, floor + 0.85, mid)
-    glazed(3.2, 2.4, hx + 0.8, floor + 0.3, s * (wingEnd - 1.2), { bulkhead: 1, glass: 1.1, fascia: 0.45 })
-    add(new THREE.BoxGeometry(3.6, 0.2, 2.8), trim, hx + 0.8, floor + 0.3 + 2.65, s * (wingEnd - 1.2))
+    const cheek = new THREE.Shape([new THREE.Vector2(0, 0), new THREE.Vector2(RAKE, LAYERS.glass), new THREE.Vector2(0, LAYERS.glass)])
+    const g = new THREE.ExtrudeGeometry(cheek, { depth: 0.1, bevelEnabled: false })
+    add(g, white, front, floor + LAYERS.bulkhead, s * (houseW / 2) - (s > 0 ? 0.1 : 0))
+  }
+  add(new THREE.BoxGeometry(houseD + RAKE, LAYERS.fascia, houseW), white, hx + RAKE / 2, floor + LAYERS.bulkhead + LAYERS.glass + LAYERS.fascia / 2, 0)
+  // mullions between the panes: raked across the front, upright down the sides
+  if (detail) {
+    for (let z = -houseW / 2 + 1.6; z < houseW / 2 - 1; z += 1.6) {
+      const m = add(new THREE.BoxGeometry(0.12, paneH, 0.1), white, front + RAKE / 2 + 0.03, floor + LAYERS.bulkhead + LAYERS.glass / 2, z)
+      m.rotation.z = -lean
+    }
+    for (const s of [1, -1]) {
+      for (let x = hx - houseD / 2 + 1.3; x < front; x += 1.5) add(new THREE.BoxGeometry(0.1, LAYERS.glass, 0.12), white, x, floor + LAYERS.bulkhead + LAYERS.glass / 2, s * (houseW / 2 - 0.1))
+    }
   }
 
-  // radar mast on the roof: a column, a yard, two scanners and the masthead light pole
-  const roof = floor + HOUSE_H + 0.32
-  const mx = hx - 1.5
-  add(new THREE.CylinderGeometry(0.28, 0.4, 9, 8), mats.steel, mx, roof + 4.5, 0)
-  add(new THREE.BoxGeometry(0.3, 0.3, 8), mats.steel, mx, roof + 6.5, 0)
-  const scanners = [
-    add(new THREE.BoxGeometry(0.35, 0.22, 5.5), white, mx, roof + 7.2, 2.6),
-    add(new THREE.BoxGeometry(0.35, 0.22, 4.2), white, mx, roof + 7.2, -2.6),
-  ]
-  add(new THREE.CylinderGeometry(0.06, 0.06, 4, 6), mats.steel, mx, roof + 11, 0)
+  // the roof: a painted deck on a slab with a white lip, and a visor angled down over the front and side windows
+  const roofD = houseD + RAKE + 0.6
+  const roofW = houseW + 0.8
+  const roofX = hx + RAKE / 2 + 0.15
+  const top = floor + HOUSE_H + SLAB
+  const deck = addCompassDeck(group, keep, { x0: roofX - roofD / 2, x1: roofX + roofD / 2, halfW: roofW / 2, y: top }, { white, trim, steel: mats.steel, rail: mats.rail, glass }, { detail })
+  add(new THREE.BoxGeometry(roofD, SLAB, roofW), [white, white, deck.material, trim, white, white], roofX, top - SLAB / 2, 0)
+  const visor = (len: number, x: number, z: number, yaw: number) => {
+    const v = add(new THREE.BoxGeometry(1.1, 0.07, len), white, x, top - SLAB - 0.12, z)
+    v.rotation.order = 'YXZ'
+    v.rotation.y = yaw
+    v.rotation.z = -0.22
+  }
+  visor(roofW, roofX + roofD / 2 + 0.45, 0, 0)
+  for (const s of [1, -1]) visor(roofD - 1, roofX, s * (roofW / 2 + 0.45), (-s * Math.PI) / 2)
 
-  return { floor, roof, mast: { x: mx, top: roof + 11.2 }, wingEnd, scanners }
+  const mast = createRadarMast(group, keep, { x: roofX - roofD / 2 + 2.4, roof: top, sband: front - 2.4 }, { white, trim, steel: mats.steel, rail: mats.rail }, { detail })
+  const wingEnd = HULL.beam / 2 + 1.5
+  addWings(group, keep, { x: hx, floor, houseW, houseD, wingEnd }, { white, trim, glass, rail: mats.rail }, { detail })
+
+  return { floor, roof: top, mast: mast.light, wingEnd, scanners: mast.scanners }
 }
