@@ -95,7 +95,7 @@ cd chain-service && pytest -q               # 34 testes offline
 cd chain-service && python -m scripts.smoke # testnet real
 ```
 
-Estado verificado em 11/10/2026: Java 37, Python 34, web 36 + tsc + lint passam. A pilha Docker (Postgres) passou o `scripts/e2e.mjs` na testnet real do Tempo: sem sessão 401, operador cria e não paga (403), aprovador paga com memo opaco, pagar de novo 409, conciliação com 5 verificações, prova, CSV e isolamento entre empresas. Na Solana o mesmo e2e parou no faucet da devnet (limite de taxa): a carteira pagadora precisa de SOL à mão em faucet.solana.com.
+Estado verificado em 11/10/2026: Java 37, Python 34, web 36 + tsc + lint passam. A pilha Docker (Postgres) passou o `scripts/e2e.mjs` na testnet real do Tempo: sem sessão 401, operador cria e não paga (403), aprovador paga com memo opaco, pagar de novo 409, conciliação com 5 verificações, prova, CSV e isolamento entre empresas. O mesmo e2e também passou na Solana devnet (`node scripts/e2e.mjs http://localhost:3000 solana`). O faucet automático da devnet costuma bloquear por limite de taxa: abasteça a carteira pagadora à mão em faucet.solana.com.
 
 ## Segredos
 
