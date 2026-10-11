@@ -20,6 +20,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from .chain import ChainError, ChainNotConfigured, ChainService, DEFAULT_RPC
+from .idempotency import store
 from .solana_chain import DEFAULT_RPC as SOLANA_DEFAULT_RPC
 from .solana_chain import SolanaService
 
@@ -121,16 +122,83 @@ def health(services: Services = Depends(get_services)):
 
 
 @app.post("/payments", response_model=PaymentOut, dependencies=[Depends(require_token)])
-def create_payment(body: PaymentIn, services: Services = Depends(get_services)):
+def create_payment(
+    body: PaymentIn,
+    idempotency_key: str = Header(..., alias="Idempotency-Key"),
+    services: Services = Depends(get_services)
+):
+    existing = store.get(idempotency_key)
+    if existing:
+        if existing["body"] != body.model_dump():
+            raise HTTPException(status_code=409, detail="Idempotency key already used with a different body")
+        if existing["status"] == "confirmed":
+            return PaymentOut(**existing["result"])
+        if existing["status"] == "failed":
+            raise HTTPException(
+                status_code=existing.get("error_code", 400),
+                detail=existing.get("error_detail", "Payment failed previously")
+            )
+        if existing["status"] == "pending":
+            try:
+                found = services[body.network].find_transfers(body.to, body.reference, 0)
+                if found:
+                    t = found[0]
+                    result = {
+                        "tx_hash": t.tx_hash,
+                        "block_number": t.block_number,
+                        "confirm_ms": 0,
+                        "memo_hex": t.memo_hex,
+                        "from_address": t.from_address
+                    }
+                    store.set(idempotency_key, "confirmed", body.model_dump(), result)
+                    return PaymentOut(**result)
+            except Exception as exc:
+                raise HTTPException(status_code=502, detail="Could not verify previous attempt status on chain") from exc
+
+    if not existing:
+        store.set(idempotency_key, "pending", body.model_dump())
+
     try:
         sent = services[body.network].send_payment(body.to, body.amount_cents, body.reference)
+        store.set(idempotency_key, "confirmed", body.model_dump(), sent.__dict__)
+        return PaymentOut(**sent.__dict__)
+    except ValueError as exc:
+        store.set(idempotency_key, "failed", body.model_dump(), error_code=400, error_detail=str(exc))
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except ChainNotConfigured as exc:
+        store.set(idempotency_key, "failed", body.model_dump(), error_code=503, error_detail=str(exc))
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except ChainError as exc:
+        if "reverted" in str(exc).lower() or "rejected" in str(exc).lower():
+            store.set(idempotency_key, "failed", body.model_dump(), error_code=502, error_detail=str(exc))
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@app.get("/payments/{key}", dependencies=[Depends(require_token)])
+def get_payment_status(key: str):
+    entry = store.get(key)
+    if not entry:
+        raise HTTPException(status_code=404, detail="Idempotency key not found")
+    out = {"status": entry["status"]}
+    if entry.get("result"):
+        out["tx_hash"] = entry["result"].get("tx_hash")
+    return out
+
+
+@app.get("/events", response_model=list[TransferOut], dependencies=[Depends(require_token)])
+def get_events(
+    network: Network = Query("tempo"),
+    token: str = Query(None),
+    from_cursor: str = Query(..., alias="from"),
+    services: Services = Depends(get_services)
+):
+    try:
+        found = services[network].get_events(token, from_cursor)
     except ChainNotConfigured as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except ChainError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
-    return PaymentOut(**sent.__dict__)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Could not query the chain: {exc}") from exc
+    return [TransferOut(**{**t.__dict__, "amount_units": str(t.amount_units)}) for t in found]
 
 
 @app.get("/transfers", response_model=list[TransferOut], dependencies=[Depends(require_token)])
