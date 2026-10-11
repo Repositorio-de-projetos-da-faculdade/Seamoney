@@ -6,6 +6,7 @@ import com.seamoney.rules.domain.Pricing.Comparison;
 import com.seamoney.rules.domain.Views.StatsResponse;
 import com.seamoney.rules.service.OrderService;
 import com.seamoney.rules.service.OrderService.Proof;
+import com.seamoney.rules.security.JwtPrincipal;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
@@ -20,6 +21,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -54,8 +57,8 @@ public class InsightsController {
     }
 
     @GetMapping("/stats")
-    public StatsResponse stats() {
-        return orders.stats();
+    public StatsResponse stats(@AuthenticationPrincipal JwtPrincipal principal) {
+        return orders.stats(principal.orgId());
     }
 
     /** The calculator asks the rules service, so the savings math has a single source of truth. */
@@ -72,17 +75,19 @@ public class InsightsController {
     }
 
     @GetMapping("/reports/orders")
-    public ResponseEntity<byte[]> csv() {
+    @PreAuthorize("hasAnyRole('OWNER', 'APPROVER', 'ACCOUNTANT')")
+    public ResponseEntity<byte[]> csv(@AuthenticationPrincipal JwtPrincipal principal) {
         String filename = "seamoney-orders-" + LocalDate.now(ZoneOffset.UTC) + ".csv";
         return ResponseEntity.ok()
                 .contentType(new MediaType("text", "csv", StandardCharsets.UTF_8))
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
-                .body(orders.ordersCsv().getBytes(StandardCharsets.UTF_8));
+                .body(orders.ordersCsv(principal.orgId()).getBytes(StandardCharsets.UTF_8));
     }
 
     @PostMapping("/leads")
     public ResponseEntity<Map<String, Boolean>> lead(@Valid @RequestBody LeadRequest body) {
         orders.saveLead(
+                null, // orgId is null for public leads
                 body.email(),
                 body.monthlyUsd() == null ? null : Math.round(body.monthlyUsd()),
                 body.bankFeePct(),
