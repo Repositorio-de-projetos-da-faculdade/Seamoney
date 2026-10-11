@@ -55,7 +55,8 @@ export function createPost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, ca
   const composer = new EffectComposer(renderer)
   composer.addPass(new RenderPass(scene, camera))
   const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.42, 0.55, 0.93)
-  if (bloomOn) composer.addPass(bloom)
+  bloom.enabled = bloomOn
+  composer.addPass(bloom)
   composer.addPass(new OutputPass())
   const grade = new ShaderPass(GradeShader)
   composer.addPass(grade)
@@ -64,6 +65,10 @@ export function createPost(renderer: THREE.WebGLRenderer, scene: THREE.Scene, ca
     setSize(w: number, h: number) {
       composer.setSize(w, h)
       bloom.resolution.set(w / 2, h / 2)
+    },
+    /** The governor turns the bloom off when the device cannot afford it. */
+    setBloom(on: boolean) {
+      bloom.enabled = on
     },
     render(time: number) {
       grade.uniforms.uTime.value = time
