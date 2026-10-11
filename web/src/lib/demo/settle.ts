@@ -5,6 +5,7 @@
 //    and the visitor signed in at /app/login with an account that may pay (owner or approver).
 // Testnet mode covers both networks: Tempo Moderato and Solana devnet, through the same Java and Python services.
 import { base58, cryptoRand, hex } from './codes'
+import type { LiveOrder } from './live'
 import type { Network, Payment, Reconciliation, Settlement, Wallet } from './types'
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -66,7 +67,7 @@ function liveMessage(status: number, error: string | undefined): string {
   return error ?? `The rules service answered ${status}.`
 }
 
-class LiveHttpError extends LiveError {
+export class LiveHttpError extends LiveError {
   constructor(
     message: string,
     public status: number,
@@ -75,7 +76,7 @@ class LiveHttpError extends LiveError {
   }
 }
 
-async function call<T>(path: string, method: 'GET' | 'POST', body?: unknown): Promise<T> {
+export async function call<T>(path: string, method: 'GET' | 'POST', body?: unknown): Promise<T> {
   let res: Response
   try {
     res = await fetch(path, {
@@ -94,54 +95,75 @@ async function call<T>(path: string, method: 'GET' | 'POST', body?: unknown): Pr
 
 const post = <T>(path: string, body?: unknown) => call<T>(path, 'POST', body)
 
-interface LiveOrder {
-  id: string
-  reference: string
-  status: string
-  txHash: string | null
-  blockNumber: number | null
-  logIndex: number | null
-  confirmMs: number | null
-  paidAt: string | null
-  recon: { matchedAt: string; expectedCents: number; paidCents: number; checks: Reconciliation['checks'] } | null
+/** The fields a new order needs: the payment, its supplier and the approved wallet it pays. */
+function orderBody(payment: Payment, supplier: { name: string; country: string }, wallet: Wallet) {
+  return {
+    supplierName: supplier.name,
+    supplierCountry: supplier.country || undefined,
+    supplierWallet: wallet.address,
+    invoiceNumber: payment.invoiceNumber,
+    reference: payment.reference,
+    network: payment.network,
+    amountCents: payment.quote.amountCents,
+    dueDate: payment.dueDate ?? undefined,
+    extractionSource: payment.source,
+    invoiceFilename: payment.invoiceFilename ?? undefined,
+  }
 }
 
 /** The Java order made for this payment by an earlier attempt, found by its reference. */
 async function existingOrder(reference: string): Promise<LiveOrder | null> {
-  const { orders } = await call<{ orders: LiveOrder[] }>('/api/orders?limit=500', 'GET')
+  const { orders } = await listLiveOrders()
   return orders.find((o) => o.reference === reference) ?? null
 }
 
+export const listLiveOrders = () => call<{ orders: LiveOrder[] }>('/api/orders?limit=500', 'GET')
+
 /**
- * Creates the order in the Java service and pays it on its network (Tempo testnet or Solana devnet). The opaque order reference of this demo
- * becomes the memo (Java accepts it in the same SM-XXXXXXXX format); the invoice number stays off-chain. A retry after
- * a failed send finds the order made the first time instead of creating a second one, and Java's idempotency key
- * makes sure a payment that did reach the chain is not sent again.
+ * Creates the order in the rules service, with this workspace's opaque reference as the memo (same SM-XXXXXXXX
+ * format). From the approval threshold up it waits there for a second person, exactly as here.
+ */
+export async function createLiveOrder(payment: Payment, supplier: { name: string; country: string }, wallet: Wallet): Promise<LiveOrder> {
+  try {
+    return (await post<{ order: LiveOrder }>('/api/orders', orderBody(payment, supplier, wallet))).order
+  } catch (e) {
+    // a retry after a lost answer: the order with this reference is already there
+    if (!(e instanceof LiveHttpError && e.status === 409)) throw e
+    const order = await existingOrder(payment.reference)
+    if (!order) throw e
+    return order
+  }
+}
+
+/** Approve, reject or cancel the order in the rules service; it checks roles and who created the order. */
+export async function liveDecision(orderId: string, action: 'approve' | 'reject' | 'cancel', reason?: string): Promise<LiveOrder> {
+  return (await post<{ order: LiveOrder }>(`/api/orders/${encodeURIComponent(orderId)}/${action}`, reason === undefined ? undefined : { reason })).order
+}
+
+/**
+ * Pays the order on its network (Tempo testnet or Solana devnet). Java's idempotency key makes sure a payment that did
+ * reach the chain is not sent again. A payment made before the workspace was connected is created in the rules
+ * service first; it can only be paid there if the policy approves it (below the threshold).
  */
 export async function sendOnTestnet(payment: Payment, supplier: { name: string; country: string }, wallet: Wallet): Promise<Settlement> {
-  let order: LiveOrder | null
-  try {
-    order = (
-      await post<{ order: LiveOrder }>('/api/orders', {
-        supplierName: supplier.name,
-        supplierCountry: supplier.country || undefined,
-        supplierWallet: wallet.address,
-        invoiceNumber: payment.invoiceNumber,
-        reference: payment.reference,
-        network: payment.network,
-        amountCents: payment.quote.amountCents,
-        dueDate: payment.dueDate ?? undefined,
-        extractionSource: payment.source,
-        invoiceFilename: payment.invoiceFilename ?? undefined,
-      })
-    ).order
-  } catch (e) {
-    if (!(e instanceof LiveHttpError && e.status === 409)) throw e
-    order = await existingOrder(payment.reference)
-    if (!order) throw e
+  let orderId = payment.liveOrderId
+  if (!orderId) {
+    const order = await createLiveOrder(payment, supplier, wallet)
+    if (order.status !== 'approved' && order.status !== 'sent' && order.status !== 'reconciled') {
+      throw new LiveError('This payment was approved before the workspace was connected to the testnet. Create it again so a second person approves it there.')
+    }
+    orderId = order.id
   }
-  const paid =
-    order.status === 'quoted' ? (await post<{ order: LiveOrder }>(`/api/orders/${encodeURIComponent(order.id)}/pay`)).order : order
+  let paid: LiveOrder
+  try {
+    paid = (await post<{ order: LiveOrder }>(`/api/orders/${encodeURIComponent(orderId)}/pay`)).order
+  } catch (e) {
+    // already paid (another tab, or an answer that got lost): take the transaction the service has
+    if (!(e instanceof LiveHttpError && e.status === 409)) throw e
+    const order = await existingOrder(payment.reference)
+    if (!order?.txHash) throw e
+    paid = order
+  }
   if (!paid.txHash || paid.blockNumber == null) throw new LiveError('The payment did not return a transaction.')
   return {
     mode: 'testnet',

@@ -8,7 +8,8 @@ import * as rules from './rules'
 import { buildSeed, DEMO_VERSION } from './seed'
 import { cryptoRand, orderReference } from './codes'
 import { memberOf, paymentOf, supplierOf, walletOf } from './selectors'
-import { goesLive, LiveError, matchOnTestnet, sendOnTestnet, simulateMatch, simulateTransfer } from './settle'
+import { mergeLiveOrders } from './live'
+import { createLiveOrder, goesLive, listLiveOrders, liveDecision, LiveError, matchOnTestnet, sendOnTestnet, simulateMatch, simulateTransfer } from './settle'
 import type { DemoState, Member, Network, Payment, PaymentStatus, Reconciliation, Role, Settings, Settlement } from './types'
 
 const KEY = 'seamoney.demo'
@@ -62,6 +63,12 @@ function commit(change: (s: DemoState) => DemoState): DemoState {
 
 const now = () => new Date().toISOString()
 const pause = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+/** Connected to the rules service: payments live there too (see live.ts). */
+const isLive = () => current?.settings.settlementMode === 'testnet'
+
+/** The rules-service order of a payment, when it has one. */
+const liveOrderOf = (id: string) => current?.payments.find((p) => p.id === id)?.liveOrderId
 
 function actor(): string {
   const id = current?.sessionMemberId
@@ -126,24 +133,64 @@ export const demo = {
     commit((s) => ({ ...s, readAt: now() }))
   },
 
+  /**
+   * Connected to the rules service, the order is created there too (and comes back with its id), so the approver can
+   * act from another computer. The local rules run first, so nothing they refuse ever reaches the service.
+   */
   async createPayment(input: rules.NewPayment): Promise<string> {
     await pause(450)
     const by = actor()
+    const reference = orderReference(cryptoRand)
+    if (!isLive()) {
+      const id = newId('pay')
+      commit((s) => rules.createPayment(s, input, by, now(), id, reference))
+      return id
+    }
+    const at = now()
+    const preview = rules.createPayment(current!, input, by, at, 'pay_preview', reference)
+    const draft = paymentOf(preview, 'pay_preview')!
+    const order = await createLiveOrder(draft, supplierOf(preview, draft)!, walletOf(preview, draft)!)
     const id = newId('pay')
-    commit((s) => rules.createPayment(s, input, by, now(), id, orderReference(cryptoRand)))
+    commit((s) => mergeLiveOrders(rules.createPayment(s, input, by, at, id, reference), [order], at))
     return id
   },
   async approve(id: string) {
     await pause(350)
-    commit((s) => rules.approvePayment(s, id, actor(), now()))
+    const by = actor()
+    const live = liveOrderOf(id)
+    // the local rules first (they throw on a refusal), so the service never records what this workspace would not
+    rules.approvePayment(current!, id, by, now())
+    if (live) await liveDecision(live, 'approve')
+    commit((s) => rules.approvePayment(s, id, by, now()))
   },
   async reject(id: string, reason: string) {
     await pause(350)
-    commit((s) => rules.rejectPayment(s, id, actor(), now(), reason))
+    const by = actor()
+    const live = liveOrderOf(id)
+    rules.rejectPayment(current!, id, by, now(), reason)
+    if (live) await liveDecision(live, 'reject', reason)
+    commit((s) => rules.rejectPayment(s, id, by, now(), reason))
   },
   async cancel(id: string, reason: string) {
     await pause(300)
-    commit((s) => rules.cancelPayment(s, id, actor(), now(), reason))
+    const by = actor()
+    const live = liveOrderOf(id)
+    rules.cancelPayment(current!, id, by, now(), reason)
+    if (live) await liveDecision(live, 'cancel', reason)
+    commit((s) => rules.cancelPayment(s, id, by, now(), reason))
+  },
+  /**
+   * Brings what happened in the rules service into this browser: orders created, approved, rejected, cancelled or
+   * paid by someone at another computer. Only when connected; a failed call just waits for the next one.
+   */
+  async syncLive() {
+    if (!current || !isLive() || !current.sessionMemberId) return
+    try {
+      const { orders } = await listLiveOrders()
+      commit((s) => mergeLiveOrders(s, orders, now()))
+    } catch {
+      // not signed in any more, or the stack is down: the settings page says which
+    }
   },
   async requestReapproval(id: string) {
     await pause(250)
@@ -249,7 +296,16 @@ export function DemoBoot() {
       }
     }
     window.addEventListener('storage', onStorage)
-    return () => window.removeEventListener('storage', onStorage)
+    // connected to the rules service: pick up what others did, on opening, every few seconds and on coming back
+    const sync = () => void demo.syncLive()
+    sync()
+    const timer = window.setInterval(sync, 8_000)
+    window.addEventListener('focus', sync)
+    return () => {
+      window.removeEventListener('storage', onStorage)
+      window.removeEventListener('focus', sync)
+      window.clearInterval(timer)
+    }
   }, [])
   return null
 }

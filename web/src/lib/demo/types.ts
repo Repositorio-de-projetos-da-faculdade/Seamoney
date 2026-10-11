@@ -119,6 +119,8 @@ export interface Payment {
   id: string
   /** Opaque order code, unique in the whole system. It is the memo of the transfer; the invoice number never is. */
   reference: string
+  /** The same order in the rules service, when the workspace is connected to it (testnet mode). */
+  liveOrderId?: string
   supplierId: string
   network: Network
   invoiceNumber: string

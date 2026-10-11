@@ -1,6 +1,7 @@
 package com.seamoney.rules.service;
 
 import com.seamoney.rules.AppProperties;
+import com.seamoney.rules.domain.Decision;
 import com.seamoney.rules.domain.Network;
 import com.seamoney.rules.domain.OrderStatus;
 import com.seamoney.rules.domain.Pricing;
@@ -39,7 +40,7 @@ public class DemoSeeder implements ApplicationRunner {
             new Row("INV-2026-0711", 0, 9_230_000, 84, 1500L, OrderStatus.RECONCILED),
             new Row("INV-2026-0804", 2, 4_780_000, 53, 1400L, OrderStatus.RECONCILED),
             new Row("INV-2026-0921", 1, 4_230_000, 21, 1500L, OrderStatus.RECONCILED),
-            new Row("INV-2026-0772", 0, 12_000_000, 2, null, OrderStatus.QUOTED));
+            new Row("INV-2026-0772", 0, 12_000_000, 2, null, OrderStatus.PENDING_APPROVAL));
 
     private final OrderRepository repo;
     private final AppProperties props;
@@ -98,12 +99,13 @@ public class DemoSeeder implements ApplicationRunner {
             long fee = Pricing.feeCents(r.usdCents(), props.feeBps());
             long total = r.usdCents() + fee;
             String id = "ORD-" + orgId + "-" + r.invoice().substring(r.invoice().length() - 4);
-            boolean paid = r.status() != OrderStatus.QUOTED;
+            boolean paid = r.status() != OrderStatus.PENDING_APPROVAL;
             repo.insert(new NewOrder(
                     id, orgId, OrderService.newReference(), supplierIds[r.supplier()], s.name(), s.country(), wallets[r.supplier()], Network.TEMPO, r.invoice(),
                     r.usdCents(), now.minus(Duration.ofDays(r.daysAgo() - 14L)).toString().substring(0, 10), props.feeBps(), fee,
                     total, props.bankFeePct(), props.usdBrl(), Pricing.usdToBrlCents(total, props.usdBrl()), r.status(), "demo",
-                    null, true, r.confirmMs(), paid ? orderCreated : null, r.status() == OrderStatus.RECONCILED ? orderCreated : null, orderCreated));
+                    null, true, r.confirmMs(), paid ? orderCreated : null, r.status() == OrderStatus.RECONCILED ? orderCreated : null, orderCreated,
+                    null, null, paid ? new Decision(null, null, orderCreated, null, null, true) : null));
             repo.addEvent(orgId, id, "created", "Demo data", orderCreated);
         }
     }

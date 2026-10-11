@@ -5,7 +5,7 @@
 // tests cannot cover (they use a fake chain). Needs Node 18+ only.
 //
 // It signs in like a person would (demo accounts of the seed, password demo123): the operator creates the order but
-// may not pay it, the approver pays, and a user of another company cannot see it. With the demo password gate on,
+// may neither approve nor pay it, the approver approves and pays, and a user of another company cannot see it. With the demo password gate on,
 // pass DEMO_SESSION_SECRET (the same value the web app uses) so the script can carry a valid gate cookie.
 import { createHmac } from 'node:crypto'
 
@@ -97,7 +97,19 @@ const operatorPays = await operator.post(`/api/orders/${order.id}/pay`)
 if (operatorPays.status !== 403) fail(`the operator could pay (HTTP ${operatorPays.status})`)
 console.log('operator:    may not pay (HTTP 403)')
 
+if (order.status !== 'pending_approval') fail(`an order of US$ 80,000 should wait for a second person, got ${order.status}`)
+const operatorApproves = await operator.post(`/api/orders/${order.id}/approve`)
+if (operatorApproves.status !== 403) fail(`the operator could approve (HTTP ${operatorApproves.status})`)
+
 const approver = await signIn('porto.approver@example.com')
+const early = await approver.post(`/api/orders/${order.id}/pay`)
+if (early.status !== 409) fail(`an order waiting for approval could be paid (HTTP ${early.status})`)
+const approved = await approver.post(`/api/orders/${order.id}/approve`)
+if (approved.status !== 200 || approved.body.order.status !== 'approved' || !approved.body.order.approval?.dataHash) {
+  fail(`approve returned ${approved.status}: ${JSON.stringify(approved.body)}`)
+}
+console.log('approval:    operator may not approve (403), approver approves; bound to', approved.body.order.approval.dataHash.slice(0, 12) + '…')
+
 const paid = await approver.post(`/api/orders/${order.id}/pay`)
 if (paid.status !== 200 || paid.body.order.status !== 'sent') fail(`pay returned ${paid.status}: ${JSON.stringify(paid.body)}`)
 console.log(`paid:        tx ${paid.body.order.txHash} confirmed in ${paid.body.order.confirmMs} ms`)

@@ -21,6 +21,7 @@ seamoney:
   fee-bps: 100
   bank-fee-pct: 3.0
   max-amount-cents: 100000000
+  approval-threshold-cents: ${APPROVAL_THRESHOLD_CENTS:1000000}
   jwt-secret: ${JWT_SECRET:}
 
 ---

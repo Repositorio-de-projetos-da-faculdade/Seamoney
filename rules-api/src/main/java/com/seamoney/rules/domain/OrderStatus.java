@@ -2,11 +2,18 @@ package com.seamoney.rules.domain;
 
 import com.fasterxml.jackson.annotation.JsonValue;
 
+/**
+ * pending_approval -> approved -> sending -> sent -> reconciled. Below the approval threshold an order is approved by
+ * the policy at creation. Before anything is sent an order can end as rejected (by an approver) or cancelled.
+ */
 public enum OrderStatus {
-    QUOTED("quoted"),
+    PENDING_APPROVAL("pending_approval"),
+    APPROVED("approved"),
     SENDING("sending"),
     SENT("sent"),
-    RECONCILED("reconciled");
+    RECONCILED("reconciled"),
+    REJECTED("rejected"),
+    CANCELLED("cancelled");
 
     private final String value;
 

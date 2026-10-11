@@ -48,7 +48,7 @@ class DemoSeederTest {
         List<Order> orders = service.list("org_1", 100);
         assertEquals(7, orders.size());
         assertTrue(orders.stream().allMatch(Order::demo), "every seeded row is flagged as demo data");
-        assertEquals(1, orders.stream().filter(o -> o.status() == OrderStatus.QUOTED).count());
+        assertEquals(1, orders.stream().filter(o -> o.status() == OrderStatus.PENDING_APPROVAL).count());
         assertTrue(orders.stream().noneMatch(o -> o.txHash() != null), "demo rows have no on-chain transaction");
     }
 

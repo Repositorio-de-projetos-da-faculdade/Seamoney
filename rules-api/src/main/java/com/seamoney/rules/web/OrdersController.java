@@ -1,5 +1,6 @@
 package com.seamoney.rules.web;
 
+import com.seamoney.rules.domain.Actor;
 import com.seamoney.rules.domain.Order;
 import com.seamoney.rules.security.JwtPrincipal;
 import com.seamoney.rules.service.AuditService;
@@ -41,6 +42,9 @@ public class OrdersController {
             @Pattern(regexp = "^(tempo|solana)?$") String network,
             @Pattern(regexp = "^$|^SM-[0-9A-HJKMNP-TV-Z]{8}$") String reference) {}
 
+    /** Why an order is rejected (required) or cancelled (optional). */
+    public record ReasonRequest(@Size(max = 500) String reason) {}
+
     private final OrderService orders;
     private final AuditService audit;
 
@@ -57,7 +61,7 @@ public class OrdersController {
     @PostMapping
     @PreAuthorize("hasAnyRole('OWNER', 'APPROVER', 'OPERATOR')")
     public ResponseEntity<Map<String, Order>> create(@AuthenticationPrincipal JwtPrincipal principal, @Valid @RequestBody NewOrderRequest body) {
-        Order order = orders.create(principal.orgId(), new NewOrderInput(
+        Order order = orders.create(principal.orgId(), actor(principal), new NewOrderInput(
                 body.supplierName(), body.supplierCountry(), body.supplierWallet(), body.invoiceNumber(), body.amountCents(),
                 body.dueDate(), body.extractionSource(), body.invoiceFilename(), body.network(), body.reference()));
         audit.logWrite(principal.orgId(), principal.userId(), "ORDER_CREATED", "ORDER", order.id(), null, order.status().value());
@@ -69,11 +73,35 @@ public class OrdersController {
         return Map.of("order", orders.get(principal.orgId(), id), "events", orders.events(principal.orgId(), id));
     }
 
+    @PostMapping("/{id}/approve")
+    @PreAuthorize("hasAnyRole('OWNER', 'APPROVER')")
+    public Map<String, Order> approve(@AuthenticationPrincipal JwtPrincipal principal, @PathVariable String id) {
+        Order order = orders.approve(principal.orgId(), actor(principal), id);
+        audit.logWrite(principal.orgId(), principal.userId(), "ORDER_APPROVED", "ORDER", id, "pending_approval", order.status().value());
+        return Map.of("order", order);
+    }
+
+    @PostMapping("/{id}/reject")
+    @PreAuthorize("hasAnyRole('OWNER', 'APPROVER')")
+    public Map<String, Order> reject(@AuthenticationPrincipal JwtPrincipal principal, @PathVariable String id, @Valid @RequestBody ReasonRequest body) {
+        Order order = orders.reject(principal.orgId(), actor(principal), id, body.reason());
+        audit.logWrite(principal.orgId(), principal.userId(), "ORDER_REJECTED", "ORDER", id, "pending_approval", order.status().value());
+        return Map.of("order", order);
+    }
+
+    @PostMapping("/{id}/cancel")
+    @PreAuthorize("hasAnyRole('OWNER', 'APPROVER', 'OPERATOR')")
+    public Map<String, Order> cancel(@AuthenticationPrincipal JwtPrincipal principal, @PathVariable String id, @RequestBody(required = false) ReasonRequest body) {
+        Order order = orders.cancel(principal.orgId(), actor(principal), id, body == null ? null : body.reason());
+        audit.logWrite(principal.orgId(), principal.userId(), "ORDER_CANCELLED", "ORDER", id, null, order.status().value());
+        return Map.of("order", order);
+    }
+
     @PostMapping("/{id}/pay")
     @PreAuthorize("hasAnyRole('OWNER', 'APPROVER')")
     public Map<String, Order> pay(@AuthenticationPrincipal JwtPrincipal principal, @PathVariable String id) {
         Order order = orders.pay(principal.orgId(), id);
-        audit.logWrite(principal.orgId(), principal.userId(), "ORDER_PAID", "ORDER", id, "quoted", order.status().value());
+        audit.logWrite(principal.orgId(), principal.userId(), "ORDER_PAID", "ORDER", id, "approved", order.status().value());
         return Map.of("order", order);
     }
 
@@ -84,5 +112,9 @@ public class OrdersController {
         audit.logWrite(principal.orgId(), principal.userId(), result.ok() ? "ORDER_RECONCILED" : "ORDER_RECONCILE_FAILED", "ORDER", id,
                 "sent", result.ok() ? "reconciled" : result.reason());
         return result;
+    }
+
+    private static Actor actor(JwtPrincipal principal) {
+        return new Actor(principal.userId(), principal.role());
     }
 }

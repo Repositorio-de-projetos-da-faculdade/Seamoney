@@ -2,6 +2,8 @@ package com.seamoney.rules.store;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.seamoney.rules.domain.Actor;
+import com.seamoney.rules.domain.Decision;
 import com.seamoney.rules.domain.Network;
 import com.seamoney.rules.domain.Order;
 import com.seamoney.rules.domain.OrderStatus;
@@ -51,7 +53,11 @@ public class OrderRepository {
             Long confirmMs,
             String paidAt,
             String reconciledAt,
-            String createdAt) {}
+            String createdAt,
+            String createdBy,
+            String createdRole,
+            /** Set when the policy approved the order at creation; null while it waits for a person. */
+            Decision approval) {}
 
     public record Supplier(String id, String organizationId, String name, String country, String walletAddress, Network network) {}
 
@@ -99,7 +105,7 @@ public class OrderRepository {
                 SELECT
                   COALESCE(SUM(CASE WHEN status IN ('sent','reconciled')
                                     THEN CAST(ROUND(amount_cents * bank_fee_pct / 100.0) AS INTEGER) - fee_cents END), 0) AS savings,
-                  COALESCE(SUM(CASE WHEN status != 'reconciled' THEN 1 ELSE 0 END), 0) AS in_progress,
+                  COALESCE(SUM(CASE WHEN status IN ('pending_approval','approved','sending','sent') THEN 1 ELSE 0 END), 0) AS in_progress,
                   COALESCE(SUM(CASE WHEN status = 'reconciled' THEN 1 ELSE 0 END), 0) AS reconciled,
                   AVG(confirm_ms) AS avg_ms,
                   COALESCE(SUM(CASE WHEN status IN ('sent','reconciled') THEN amount_cents END), 0) AS volume,
@@ -163,22 +169,43 @@ public class OrderRepository {
     }
 
     public void insert(NewOrder o) {
+        Decision a = o.approval();
         jdbc.update(
                 """
                 INSERT INTO orders (id, organization_id, reference, supplier_id, supplier_name, supplier_country, supplier_wallet, network,
                   invoice_number, amount_cents, currency, due_date, fee_bps, fee_cents, total_cents, bank_fee_pct,
                   fx_rate, total_brl_cents, status, extraction_source, invoice_filename, confirm_ms, paid_at,
-                  reconciled_at, is_demo, created_at, updated_at)
-                VALUES (?,?,?,?,?,?,?,?,?,?,'USD',?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                  reconciled_at, is_demo, created_at, updated_at, created_by, created_role,
+                  approved_by, approved_role, approved_at, approval_hash, approval_auto)
+                VALUES (?,?,?,?,?,?,?,?,?,?,'USD',?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 """,
                 o.id(), o.organizationId(), o.reference(), o.supplierId(), o.supplierName(), o.supplierCountry(), o.supplierWallet(), o.network().value(),
                 o.invoiceNumber(), o.amountCents(), o.dueDate(), o.feeBps(), o.feeCents(), o.totalCents(), o.bankFeePct(),
                 o.fxRate(), o.totalBrlCents(), o.status().value(), o.extractionSource(), o.invoiceFilename(), o.confirmMs(),
-                o.paidAt(), o.reconciledAt(), o.demo() ? 1 : 0, o.createdAt(), o.createdAt());
+                o.paidAt(), o.reconciledAt(), o.demo() ? 1 : 0, o.createdAt(), o.createdAt(), o.createdBy(), o.createdRole(),
+                a == null ? null : a.by(), a == null ? null : a.role(), a == null ? null : a.at(), a == null ? null : a.dataHash(),
+                a != null && a.auto() ? 1 : 0);
+    }
+
+    /** pending_approval -> approved, bound to the hash of the data approved. False when it was no longer waiting. */
+    public boolean approve(String orgId, String id, Actor actor, String dataHash, String now) {
+        return jdbc.update(
+                "UPDATE orders SET status = 'approved', approved_by = ?, approved_role = ?, approved_at = ?, approval_hash = ?, approval_auto = 0, updated_at = ? "
+                        + "WHERE id = ? AND organization_id = ? AND status = 'pending_approval'",
+                actor.userId(), actor.role(), now, dataHash, now, id, orgId) == 1;
+    }
+
+    /** Ends an order before sending (rejected or cancelled). False when it had already moved on. */
+    public boolean close(String orgId, String id, OrderStatus to, Actor actor, String reason, String now, List<OrderStatus> from) {
+        String in = String.join(",", from.stream().map(s -> "'" + s.value() + "'").toList());
+        return jdbc.update(
+                "UPDATE orders SET status = ?, closed_by = ?, closed_role = ?, closed_at = ?, closed_reason = ?, updated_at = ? "
+                        + "WHERE id = ? AND organization_id = ? AND status IN (" + in + ")",
+                to.value(), actor.userId(), actor.role(), now, reason, now, id, orgId) == 1;
     }
 
     public boolean claimForSending(String orgId, String id, String now) {
-        return jdbc.update("UPDATE orders SET status = 'sending', error = NULL, updated_at = ? WHERE id = ? AND status = 'quoted' AND organization_id = ?", now, id, orgId) == 1;
+        return jdbc.update("UPDATE orders SET status = 'sending', error = NULL, updated_at = ? WHERE id = ? AND status = 'approved' AND organization_id = ?", now, id, orgId) == 1;
     }
 
     public void markSent(String orgId, String id, String txHash, long blockNumber, String memoHex, long confirmMs, String now) {
@@ -197,7 +224,7 @@ public class OrderRepository {
     }
 
     public void releaseClaim(String orgId, String id, String error, String now) {
-        jdbc.update("UPDATE orders SET status = 'quoted', error = ?, updated_at = ? WHERE id = ? AND organization_id = ?", error, now, id, orgId);
+        jdbc.update("UPDATE orders SET status = 'approved', error = ?, updated_at = ? WHERE id = ? AND organization_id = ?", error, now, id, orgId);
     }
 
     /**
@@ -245,13 +272,26 @@ public class OrderRepository {
                     rs.getString("invoice_number"),
                     amount, rs.getString("currency"), rs.getString("due_date"), rs.getInt("fee_bps"), fee,
                     rs.getLong("total_cents"), bankPct, nullableDouble(rs, "fx_rate"), nullableLong(rs, "total_brl_cents"),
-                    OrderStatus.fromValue(rs.getString("status")), rs.getString("extraction_source"),
+                    OrderStatus.fromValue(rs.getString("status")), rs.getString("created_by"), rs.getString("created_role"),
+                    approvalOf(rs), closureOf(rs), rs.getString("extraction_source"),
                     rs.getString("invoice_filename"), rs.getString("tx_hash"), nullableLong(rs, "block_number"),
                     nullableInt(rs, "log_index"), rs.getString("memo_hex"), nullableLong(rs, "confirm_ms"),
                     rs.getString("paid_at"), rs.getString("reconciled_at"), parseRecon(rs.getString("recon_json")),
                     rs.getString("error"), rs.getInt("is_demo") == 1, rs.getString("created_at"), rs.getString("updated_at"),
                     bankCost, bankCost - fee);
         };
+    }
+
+    private static Decision approvalOf(ResultSet rs) throws SQLException {
+        String at = rs.getString("approved_at");
+        if (at == null) return null;
+        return new Decision(rs.getString("approved_by"), rs.getString("approved_role"), at, rs.getString("approval_hash"), null, rs.getInt("approval_auto") == 1);
+    }
+
+    private static Decision closureOf(ResultSet rs) throws SQLException {
+        String at = rs.getString("closed_at");
+        if (at == null) return null;
+        return new Decision(rs.getString("closed_by"), rs.getString("closed_role"), at, null, rs.getString("closed_reason"), false);
     }
 
     private Recon parseRecon(String json) {

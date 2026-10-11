@@ -34,7 +34,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import com.seamoney.rules.security.JwtTokenProvider;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-@SpringBootTest(properties = {"seamoney.seed-demo=false"})
+// approvals are covered by ApprovalApiTest; here every order is approved by the policy at creation
+@SpringBootTest(properties = {"seamoney.seed-demo=false", "seamoney.approval-threshold-cents=1000000000"})
 @AutoConfigureMockMvc
 @Import(OrderApiTest.TestChain.class)
 class OrderApiTest {
@@ -99,7 +100,7 @@ class OrderApiTest {
     void creatingAnOrderQuotesTheRouteAndTheSavings() throws Exception {
         mvc.perform(post("/api/orders").header("Authorization", "Bearer " + token).contentType(MediaType.APPLICATION_JSON).content(orderBody("INV-1", 8_000_000)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.order.status").value("quoted"))
+                .andExpect(jsonPath("$.order.status").value("approved"))
                 .andExpect(jsonPath("$.order.reference").value(matchesPattern(OPAQUE_REFERENCE)))
                 .andExpect(jsonPath("$.order.feeCents").value(80_000))
                 .andExpect(jsonPath("$.order.totalCents").value(8_080_000))
@@ -176,7 +177,7 @@ class OrderApiTest {
                 .andExpect(status().isBadGateway())
                 .andExpect(jsonPath("$.code").value("chain"));
         mvc.perform(get("/api/orders/{id}", id).header("Authorization", "Bearer " + token))
-                .andExpect(jsonPath("$.order.status").value("quoted"))
+                .andExpect(jsonPath("$.order.status").value("approved"))
                 .andExpect(jsonPath("$.order.error").value("The chain service is unavailable"));
 
         mvc.perform(post("/api/orders/{id}/pay", id).header("Authorization", "Bearer " + token)).andExpect(status().isOk());

@@ -190,6 +190,9 @@ function patchSupplier(state: DemoState, id: string, change: (s: Supplier) => Su
   return { ...state, suppliers: state.suppliers.map((s) => (s.id === id ? change(s) : s)) }
 }
 
+/** The activity log, for changes that arrive from the rules service (see live.ts). */
+export const logActivity = log
+
 export function nextId(state: DemoState, prefix: string): { state: DemoState; id: string } {
   const seq = state.seq + 1
   return { state: { ...state, seq }, id: `${prefix}_${String(seq).padStart(4, '0')}` }
