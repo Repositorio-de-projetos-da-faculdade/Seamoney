@@ -42,6 +42,10 @@ const EMPTY: Draft = {
 const ACCEPT = ['application/pdf', 'image/png', 'image/jpeg', 'image/webp']
 const MAX_BYTES = 10 * 1024 * 1024
 const STEPS: Step[] = ['upload', 'review', 'quote', 'pay']
+// Same limit as the rules service (OrdersController); the invoice number never goes on-chain.
+const MAX_INVOICE_CHARS = 64
+// Shape of the opaque reference the rules service writes into the memo ("SM-" + 8 characters).
+const MEMO_SHAPE = 'SM-XXXXXXXX'
 
 type Phase = 'sending' | 'reconciling' | 'reconciled' | 'not_found' | 'error'
 
@@ -106,13 +110,14 @@ export function OrderWizard() {
   }
 
   const amountCents = parseMoneyToCents(draft.amount)
-  const invoiceBytes = new TextEncoder().encode(draft.invoiceNumber.trim()).length
+  // The invoice number stays in the rules service; the memo is an opaque code it assigns (MEMO_SHAPE bytes long).
+  const invoiceTooLong = draft.invoiceNumber.trim().length > MAX_INVOICE_CHARS
   const walletOk = draft.wallet === '' || /^0x[0-9a-fA-F]{40}$/.test(draft.wallet)
   const usdOnly = draft.currency === 'USD'
   const reviewValid =
     draft.supplierName.trim() !== '' &&
     draft.invoiceNumber.trim() !== '' &&
-    invoiceBytes <= 32 &&
+    !invoiceTooLong &&
     amountCents !== null &&
     amountCents > 0 &&
     usdOnly &&
@@ -304,8 +309,9 @@ export function OrderWizard() {
               <Field label={t('wiz.review.invoice')} htmlFor="invoice">
                 <input
                   id="invoice"
-                  className={clsx(input, invoiceBytes > 32 && 'border-bad-ink')}
-                  aria-invalid={invoiceBytes > 32}
+                  className={clsx(input, invoiceTooLong && 'border-bad-ink')}
+                  aria-invalid={invoiceTooLong}
+                  maxLength={MAX_INVOICE_CHARS}
                   value={draft.invoiceNumber}
                   onChange={(e) => set({ invoiceNumber: e.target.value })}
                 />
@@ -355,15 +361,14 @@ export function OrderWizard() {
                 {draft.filename || t('wiz.review.title')}
               </p>
               <p className="text-sm font-semibold">{t('wiz.pay.memo')}</p>
-              <p className="break-all rounded-xl bg-navy-900 px-3.5 py-3 font-mono text-sm font-semibold text-aqua">{draft.invoiceNumber || '—'}</p>
+              <p className="break-all rounded-xl bg-navy-900 px-3.5 py-3 font-mono text-sm font-semibold text-aqua/60">{MEMO_SHAPE}</p>
               <div>
                 <div className="h-2 overflow-hidden rounded-full bg-line" role="presentation">
-                  <div
-                    className={clsx('h-full rounded-full transition-all', invoiceBytes > 32 ? 'bg-bad-ink' : 'bg-gradient-to-r from-brand-500 to-mint')}
-                    style={{ width: `${Math.min(100, (invoiceBytes / 32) * 100)}%` }}
-                  />
+                  <div className="h-full rounded-full bg-gradient-to-r from-brand-500 to-mint" style={{ width: `${(MEMO_SHAPE.length / 32) * 100}%` }} />
                 </div>
-                <p className={clsx('mt-1.5 text-xs tabular-nums', invoiceBytes > 32 ? 'font-semibold text-bad-ink' : 'text-muted')}>{invoiceBytes}/32 bytes</p>
+                <p className="mt-1.5 text-xs tabular-nums text-muted">
+                  {MEMO_SHAPE.length}/32 bytes · {t('wiz.pay.memoPending')}
+                </p>
               </div>
               <p className="text-xs leading-relaxed text-muted">{t('wiz.pay.memoNote')}</p>
             </Card>

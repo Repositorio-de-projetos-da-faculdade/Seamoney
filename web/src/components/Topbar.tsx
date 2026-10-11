@@ -2,6 +2,7 @@ import { Plus } from 'lucide-react'
 import Link from 'next/link'
 import { getT } from '@/lib/i18n/server'
 import { LanguageToggle } from './LanguageToggle'
+import { SessionBadge } from './SessionBadge'
 import { btnPrimary, Logo } from './ui'
 
 export async function Topbar() {
@@ -25,6 +26,7 @@ export async function Topbar() {
             <Plus size={16} aria-hidden="true" />
             {t('orders.new')}
           </Link>
+          <SessionBadge />
         </div>
       </div>
     </header>

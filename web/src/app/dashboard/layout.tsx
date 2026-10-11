@@ -1,11 +1,15 @@
 import { BottomNav } from '@/components/BottomNav'
 import { Sidebar } from '@/components/Sidebar'
 import { Topbar } from '@/components/Topbar'
+import { redirect } from 'next/navigation'
+import { sessionToken } from '@/lib/session'
 
 // Everything under /dashboard reads live data, so it is rendered per request.
 export const dynamic = 'force-dynamic'
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  // The Java service answers only signed-in users; an expired token is caught by the API client and also lands on /login.
+  if (!(await sessionToken())) redirect('/login')
   return (
     <div className="min-h-dvh lg:flex">
       <Sidebar />
