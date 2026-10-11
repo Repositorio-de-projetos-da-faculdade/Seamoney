@@ -159,5 +159,8 @@ Carteira nova ou trocada é uma proposta (`proposed`) até outra pessoa aprovar;
 * **GET /api/settings**: `{"approvalThresholdCents", "feeBps", "bankFeePct", "usdBrl"}`. O limite é o da empresa; sem valor salvo, vale `APPROVAL_THRESHOLD_CENTS`. (Qualquer autenticado)
 * **PUT /api/settings**: `{"approvalThresholdCents": 5000000}` muda o limite da empresa (0 a US$ 1.000.000). 403 para quem não é dono. (OWNER)
 
+### Trilha de auditoria (`/api/audit`)
+* **GET /api/audit?limit=200**: `{"entries": [{"id", "at", "actorEmail", "actorRole", "action", "entityType", "entityId", "before", "after"}]}`, mais recentes primeiro. Inclui entradas, falhas de entrada dos e-mails da empresa, troca de empresa, cada transição de ordem, carteiras e configurações. O IP fica só no banco. (OWNER, APPROVER, ACCOUNTANT)
+
 ### [PLANEJADO, NÃO IMPLEMENTADO] Ledger
 * **GET /api/ledger**: Listagem de todas as movimentações on-chain de stablecoin conciliadas (Ledger). (Qualquer Autenticado)

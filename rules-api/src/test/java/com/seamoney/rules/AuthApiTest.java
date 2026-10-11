@@ -77,6 +77,23 @@ class AuthApiTest {
     }
 
     @Test
+    void theAuditTrailShowsTheCompanysSignInsAndFailedAttemptsOnly() throws Exception {
+        String ok = "{\"email\":\"ownerA@test.com\",\"password\":\"password\"}";
+        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content(ok)).andExpect(status().isOk());
+        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"ownerA@test.com\",\"password\":\"nope\"}"))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"ownerB@test.com\",\"password\":\"password\"}"))
+                .andExpect(status().isOk());
+
+        String acct = jwt.createToken("usr_3", "org_A", "ACCOUNTANT");
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/audit").header("Authorization", "Bearer " + acct))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.entries[?(@.action == 'LOGIN' && @.actorEmail == 'ownerA@test.com')]").isNotEmpty())
+                .andExpect(jsonPath("$.entries[?(@.action == 'LOGIN_FAILED' && @.actorEmail == 'ownerA@test.com')]").isNotEmpty())
+                .andExpect(jsonPath("$.entries[?(@.actorEmail == 'ownerB@test.com')]").isEmpty());
+    }
+
+    @Test
     void loginFailAndBlock() throws Exception {
         for (int i=0; i<5; i++) {
             mvc.perform(post("/api/auth/login")
