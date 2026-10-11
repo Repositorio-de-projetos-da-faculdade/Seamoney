@@ -2,6 +2,7 @@ package com.seamoney.rules;
 
 import com.seamoney.rules.chain.ChainClient;
 import com.seamoney.rules.chain.ChainException;
+import com.seamoney.rules.domain.Network;
 import com.seamoney.rules.domain.Pricing;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -15,6 +16,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class FakeChain implements ChainClient {
 
     public static final String PARTNER = "0x7F44CF78Cd8052FB426Dd8C818498A1e1d7e8835";
+    public static final String PARTNER_SOLANA = "A8KzP4sZzX8eBqW2qK5cM7dY3nN6yR1tE4xU7iV9oF2p";
 
     public final List<FoundTransfer> transfers = new CopyOnWriteArrayList<>();
     private final AtomicInteger counter = new AtomicInteger();
@@ -30,37 +32,40 @@ public class FakeChain implements ChainClient {
     }
 
     @Override
-    public SentPayment sendPayment(String to, long amountCents, String reference) {
+    public SentPayment sendPayment(Network network, String to, long amountCents, String reference) {
         ChainException failure = failNextPayment;
         if (failure != null) {
             failNextPayment = null;
             throw failure;
         }
         int n = counter.incrementAndGet();
-        String tx = "0x" + "%064x".formatted(n);
+        String tx = network == Network.TEMPO ? "0x" + "%064x".formatted(n) : "5J" + "%064x".formatted(n).replace("0", "X");
         BigInteger units = tamperNextAmount != null ? tamperNextAmount : Pricing.centsToUnits(amountCents);
         tamperNextAmount = null;
         String memo = memoHex(reference);
-        transfers.add(new FoundTransfer(tx, 1, 100L + n, PARTNER, to, units, memo));
-        return new SentPayment(tx, 100L + n, 1200, memo, PARTNER);
+        String partner = network == Network.TEMPO ? PARTNER : PARTNER_SOLANA;
+        transfers.add(new FoundTransfer(tx, 1, 100L + n, partner, to, units, memo));
+        return new SentPayment(tx, 100L + n, 1200, memo, partner);
     }
 
     @Override
-    public List<FoundTransfer> findTransfers(String to, String reference, long fromBlock) {
+    public List<FoundTransfer> findTransfers(Network network, String to, String reference, long fromBlock) {
         String memo = memoHex(reference);
-        return transfers.stream().filter(t -> t.toAddress().equalsIgnoreCase(to) && t.memoHex().equals(memo)).toList();
+        return transfers.stream()
+                .filter(t -> network.sameAddress(t.toAddress(), to) && t.memoHex().equals(memo))
+                .toList();
     }
 
     @Override
-    public Optional<TxInfo> transaction(String txHash) {
+    public Optional<TxInfo> transaction(Network network, String txHash) {
         return transfers.stream()
-                .filter(t -> t.txHash().equalsIgnoreCase(txHash))
+                .filter(t -> network.sameHash(t.txHash(), txHash))
                 .findFirst()
                 .map(t -> new TxInfo("success", t.blockNumber(), "2026-10-10T04:00:00Z"));
     }
 
     @Override
     public ChainHealth health() {
-        return new ChainHealth(true, PARTNER, 1);
+        return new ChainHealth(true, PARTNER, 1, true);
     }
 }

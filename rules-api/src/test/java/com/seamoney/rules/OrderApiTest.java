@@ -263,4 +263,29 @@ class OrderApiTest {
                 .andExpect(jsonPath("$.checks.database").value("ok"))
                 .andExpect(jsonPath("$.checks.partnerWallet").value("configured"));
     }
+
+    @Test
+    void anOrderOnSolanaIsPaidAndReconciled() throws Exception {
+        String solanaWallet = "A8KzP4sZzX8eBqW2qK5cM7dY3nN6yR1tE4xU7iV9oF2p";
+        String payload = """
+               {"supplierName":"Shenzhen Tech Co.","supplierCountry":"CN","supplierWallet":"%s",
+                "invoiceNumber":"INV-SOL", "network":"solana", "amountCents":100000,"dueDate":"2026-10-25","extractionSource":"demo"}
+               """.formatted(solanaWallet);
+
+        String res = mvc.perform(post("/api/orders").contentType(MediaType.APPLICATION_JSON).content(payload))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        String id = json.readTree(res).get("order").get("id").asText();
+
+        mvc.perform(post("/api/orders/{id}/pay", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.order.status").value("sent"))
+                .andExpect(jsonPath("$.order.txHash").exists())
+                .andExpect(jsonPath("$.order.network").value("solana"));
+
+        mvc.perform(post("/api/orders/{id}/reconcile", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ok").value(true));
+    }
 }
+
