@@ -2,6 +2,7 @@ import clsx from 'clsx'
 import { usd, type Locale } from '@/lib/format'
 import type { Key } from '@/lib/i18n/dict'
 import { Cta } from '../Cta'
+import type { SiteLink } from '../site'
 import { label } from '../type'
 import { CompareBars } from './CompareBars'
 import { Odometer } from './Odometer'
@@ -17,6 +18,7 @@ export function ResultPanel({
   savingsCents,
   bankCents,
   routeCents,
+  cta,
 }: {
   t: (key: Key) => string
   locale: Locale
@@ -24,6 +26,7 @@ export function ResultPanel({
   savingsCents: number
   bankCents: number
   routeCents: number
+  cta: SiteLink
 }) {
   const negative = savingsCents < 0
 
@@ -53,8 +56,8 @@ export function ResultPanel({
         {t('calc.note')}
       </p>
 
-      <Cta href="/app" className="mt-10">
-        {t('lp.cta')}
+      <Cta href={cta.href} className="mt-10">
+        {cta.label}
       </Cta>
     </div>
   )
