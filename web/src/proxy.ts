@@ -5,10 +5,14 @@ import { verifySession, checkRateLimit } from './lib/gate'
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   const pwd = process.env.DEMO_ACCESS_PASSWORD
-  const secret = process.env.DEMO_SESSION_SECRET || 'default-secret'
+  const secret = process.env.DEMO_SESSION_SECRET ?? ''
   
   // 1. Gate / password check
   if (pwd && pwd.length > 0) {
+    // fail closed: sem segredo de sessao nao ha como validar cookie
+    if (secret.length < 16) {
+      return NextResponse.json({ error: 'Gate misconfigured' }, { status: 503 })
+    }
     // Exclude /unlock and Next.js static files
     if (
       !pathname.startsWith('/unlock') &&
@@ -32,8 +36,7 @@ export function proxy(request: NextRequest) {
     // only POST for orders and extract
     if (request.method === 'POST') {
       const ip = request.headers.get('x-forwarded-for') ?? 'unknown'
-      const cookieId = request.cookies.get('seamoney_session')?.value ?? 'anon'
-      const key = `${ip}-${cookieId}`
+      const key = ip.split(',')[0].trim()
       
       const allowed = checkRateLimit(key, 10, 60 * 1000) // 10 req/min
       if (!allowed) {

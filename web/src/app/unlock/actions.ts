@@ -6,10 +6,13 @@ import { safeCompare, signSession } from '@/lib/gate'
 
 export async function unlock(formData: FormData) {
   const pwd = process.env.DEMO_ACCESS_PASSWORD
-  const secret = process.env.DEMO_SESSION_SECRET || 'default-secret'
+  const secret = process.env.DEMO_SESSION_SECRET ?? ''
   
   if (!pwd) {
     redirect('/')
+  }
+  if (secret.length < 16) {
+    return { error: 'unlock.error' }
   }
   
   const input = formData.get('password') as string
