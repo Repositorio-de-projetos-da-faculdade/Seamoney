@@ -5,7 +5,7 @@ import { appEn, appPt } from './app'
 
 const base = {
   'lang.switch': 'Português',
-  'brand.tagline': 'International payments, simpler, cheaper, with automatic reconciliation.',
+  'brand.tagline': 'International payments made simpler and cheaper, with automatic reconciliation.',
   'brand.pitch': 'For Brazilian importers who want more control, lower fees and zero headaches.',
   'brand.closing': 'Importing just got easier.',
 
@@ -100,11 +100,11 @@ const base = {
   'lp.loader': 'Loading the memo',
   'lp.hero.title': 'The payment that carries *its own invoice.*',
   'lp.hero.sub':
-    'Brazilian importers pay suppliers in Asia {route} in *stablecoins* on Tempo or Solana. The invoice number {memo} travels *inside the transfer*, so every payment reconciles itself {check}.',
+    'Brazilian importers pay suppliers in Asia {route} in *stablecoins*, on Tempo or Solana. The invoice number {memo} rides *inside the transfer*, so every payment reconciles itself {check}.',
   'lp.cta': 'Create a payment order',
   'lp.cta2': 'Estimate your savings',
   'lp.live': 'Live on Tempo testnet and Solana devnet',
-  'lp.sim': 'Reais-to-dollar leg simulated',
+  'lp.sim': 'BRL-to-USD conversion simulated',
   'lp.scroll': 'Scroll to load the cargo',
   'lp.clock': 'Local time',
   'lp.ch.1': 'Loading',
@@ -118,9 +118,9 @@ const base = {
   'lp.cargo.body':
     'Every payment carries a *32-byte memo* {bytes}, on Tempo or on Solana. We load your invoice number into it, byte by byte, before the money leaves.',
   'lp.cargo.bytes': '{n} of 32 bytes',
-  'lp.cargo.over': '{n} of 32 bytes. Too long for the memo.',
+  'lp.cargo.over': '{n} of 32 bytes. It does not fit in the memo.',
   'lp.cargo.try': 'Load your own invoice number',
-  'lp.cargo.public': 'The memo is public on the blockchain. It carries the invoice number, never customer data.',
+  'lp.cargo.public': 'Anyone can read the memo on the blockchain, so it carries only the invoice number, never customer data.',
 
   'lp.speed.title': 'Seconds, *not days.*',
   'lp.speed.bank': 'Bank wire',
@@ -136,11 +136,11 @@ const base = {
   'lp.speed.recon.sea': 'Reconciles itself',
   'lp.speed.axis.time': '5 business days',
   'lp.speed.note':
-    'Estimates for a typical bank wire. Seamoney settles on the Tempo testnet and Solana devnet.',
+    'Estimates for a typical bank wire. For now, Seamoney settles only on the Tempo testnet and Solana devnet.',
 
   'lp.map.title': 'The old route *makes port calls.*',
   'lp.map.body':
-    'A dollar wire from Brazil to China usually clears through *correspondent banks* {hops}. Each one takes a fee and some time, and at the end someone matches the statement to the invoice *by hand*.',
+    'A dollar wire from Brazil to China usually clears through *correspondent banks* {hops}. Each one takes a fee and holds the money for a while. At the end, someone matches the bank statement to the invoice *by hand*.',
   'lp.map.stop.origin': 'Your bank, São Paulo',
   'lp.map.stop.ny': 'Correspondent bank, New York',
   'lp.map.stop.hk': 'Intermediary bank, Hong Kong',
@@ -151,30 +151,30 @@ const base = {
 
   'lp.recon.title': 'The payment *reconciles itself.*',
   'lp.recon.body':
-    'Seamoney finds the {event} event by recipient and memo, then checks *five things* {five} before it closes the invoice.',
+    'Seamoney finds the {event} event on the blockchain by recipient and memo, then checks *five things* {five} before it marks the invoice paid.',
   'lp.recon.stamp': 'Reconciled',
   'lp.recon.invoice': 'Commercial invoice',
   'lp.recon.event': 'On-chain event',
   'lp.recon.proof': 'A proof page for your supplier',
   'lp.recon.csv': 'A CSV line for your accountant',
 
-  'lp.save.title': 'What stays *in your company*',
+  'lp.save.title': 'What stays *in your company.*',
   'lp.save.body':
-    'Drag to your monthly volume. The numbers come from *the same rules engine* that prices real orders.',
+    'Drag to what you pay suppliers each month. The numbers come from *the same rules engine* that prices every order.',
   'lp.save.body.static':
-    'Drag to your monthly volume. This page has no backend, so *the same pricing math* as the Java rules engine runs in your browser.',
+    'Drag to what you pay suppliers each month. This page has no server, so the Java rules engine’s *pricing math* runs in your browser instead.',
   'lp.save.leak.kicker': 'What each route loses on the way',
   'lp.save.leak.no': 'Route {n}',
   'lp.save.leak.lost': 'Lost on the way',
   'lp.save.leak.bank': 'Bank wire (SWIFT)',
   'lp.save.leak.bank.via': 'Through correspondent banks',
-  'lp.save.leak.bank.note': 'FX spread plus intermediary bank fees. Our assumption; typical estimates run from 2% to 5%.',
+  'lp.save.leak.bank.note': 'FX spread plus intermediary bank fees. The figure is our assumption; typical estimates run from 2% to 5%.',
   'lp.save.leak.route': 'Stablecoin on Tempo',
   'lp.save.leak.route.via': 'Straight to the supplier, with the invoice in the memo',
-  'lp.save.leak.route.note': 'The Seamoney fee: 1% of the amount, the same figure that prices every order.',
+  'lp.save.leak.route.note': 'Seamoney’s fee is 1% of the amount, the same rate used to price every order.',
   'lp.save.leak.per': '{lost} on every {amount} sent',
   'lp.save.leak.diff': '{pp} percentage points apart on every payment.',
-  'lp.save.leak.note': 'Estimates, not quotes. Taxes such as IOF are not included, and the reais to dollar leg is simulated.',
+  'lp.save.leak.note': 'Estimates, not quotes. Taxes such as IOF are not included, and the BRL-to-USD conversion is simulated.',
   'lp.save.yours': 'Now with your numbers',
   'lp.save.year': 'saved per year',
   'lp.save.month': 'per month',
@@ -186,7 +186,7 @@ const base = {
 
   'banner.testnet': 'Testnet payments. BRL-to-USD leg is simulated.',
   'disclaimer.demo':
-    'Demo on the Tempo testnet and Solana devnet. The reais-to-dollar leg is simulated and no real money moves. Figures are estimates, not quotes, and taxes such as IOF are not included.',
+    'Demo on the Tempo testnet and Solana devnet. The BRL-to-USD conversion is simulated and no real money moves. Figures are estimates, not quotes, and taxes such as IOF are not included.',
   'footer.built': 'Built for the Colosseum Crypto World’s Fair hackathon.',
 
   'calc.title': 'Savings calculator',
@@ -199,7 +199,7 @@ const base = {
   'calc.result.route': 'Our route (estimate)',
   'calc.result.savings': 'Savings per month',
   'calc.result.year': 'Savings per year',
-  'calc.result.negative': 'At these assumptions the bank wire is cheaper. Adjust the fee to match your real bank.',
+  'calc.result.negative': 'With these assumptions the bank wire is cheaper. Set the fee to what your bank actually charges.',
   'calc.note': 'Estimates only. Taxes such as IOF and your bank’s actual spread are not included.',
   'calc.lead.title': 'Want us to check your numbers?',
   'calc.lead.email': 'Email (optional)',
@@ -506,12 +506,12 @@ const basePt: Record<keyof typeof base, string> = {
   'lp.loader': 'Carregando o memo',
   'lp.hero.title': 'O pagamento que leva *a própria fatura.*',
   'lp.hero.sub':
-    'Importadores brasileiros pagam fornecedores na Ásia {route} em *stablecoin* no Tempo ou na Solana. O número da fatura {memo} viaja *dentro da transferência*, e cada pagamento se concilia sozinho {check}.',
+    'Importadoras brasileiras pagam fornecedores na Ásia {route} em *stablecoin*, no Tempo ou na Solana. O número da fatura {memo} vai *dentro da transferência*, então cada pagamento se concilia sozinho {check}.',
   'lp.cta': 'Criar ordem de pagamento',
   'lp.cta2': 'Estimar sua economia',
   'lp.live': 'Ao vivo na testnet do Tempo e na devnet da Solana',
-  'lp.sim': 'Perna reais–dólar simulada',
-  'lp.scroll': 'Role para carregar a carga',
+  'lp.sim': 'Conversão de reais para dólar simulada',
+  'lp.scroll': 'Role para embarcar a carga',
   'lp.clock': 'Hora local',
   'lp.ch.1': 'Carregamento',
   'lp.ch.2': 'Travessia',
@@ -522,11 +522,11 @@ const basePt: Record<keyof typeof base, string> = {
 
   'lp.cargo.title': 'A carga *é a fatura.*',
   'lp.cargo.body':
-    'Todo pagamento leva um *memo de 32 bytes* {bytes}, no Tempo ou na Solana. Carregamos nele o número da sua fatura, byte a byte, antes do dinheiro sair.',
+    'Todo pagamento leva um *memo de 32 bytes* {bytes}, no Tempo ou na Solana. Carregamos nele o número da sua fatura, byte a byte, antes de o dinheiro sair.',
   'lp.cargo.bytes': '{n} de 32 bytes',
-  'lp.cargo.over': '{n} de 32 bytes. Grande demais para o memo.',
+  'lp.cargo.over': '{n} de 32 bytes. Não cabe no memo.',
   'lp.cargo.try': 'Carregue o número da sua fatura',
-  'lp.cargo.public': 'O memo é público na blockchain. Leva o número da fatura, nunca dados de clientes.',
+  'lp.cargo.public': 'Qualquer pessoa pode ler o memo na blockchain, por isso ele leva só o número da fatura, nunca dados de clientes.',
 
   'lp.speed.title': 'Segundos, *não dias.*',
   'lp.speed.bank': 'Transferência bancária',
@@ -538,15 +538,15 @@ const basePt: Record<keyof typeof base, string> = {
   'lp.speed.time.sea': 'Segundos',
   'lp.speed.fee.bank': '2–5% em taxas',
   'lp.speed.fee.sea': 'Cerca de 1%',
-  'lp.speed.recon.bank': 'Conciliado na mão',
+  'lp.speed.recon.bank': 'Conciliado à mão',
   'lp.speed.recon.sea': 'Concilia sozinho',
   'lp.speed.axis.time': '5 dias úteis',
   'lp.speed.note':
-    'Estimativas para uma transferência bancária típica. A Seamoney liquida na testnet do Tempo e na devnet da Solana.',
+    'Estimativas para uma transferência bancária típica. Por enquanto, a Seamoney liquida apenas na testnet do Tempo e na devnet da Solana.',
 
   'lp.map.title': 'A rota antiga *faz escalas.*',
   'lp.map.body':
-    'Uma transferência em dólar do Brasil para a China costuma passar por *bancos correspondentes* {hops}. Cada um cobra uma taxa e leva um tempo, e no fim alguém casa o extrato com a fatura *na mão*.',
+    'Uma transferência em dólar do Brasil para a China costuma passar por *bancos correspondentes* {hops}. Cada um cobra sua taxa e segura o dinheiro por um tempo. No fim, alguém casa o extrato com a fatura *à mão*.',
   'lp.map.stop.origin': 'Seu banco, São Paulo',
   'lp.map.stop.ny': 'Banco correspondente, Nova York',
   'lp.map.stop.hk': 'Banco intermediário, Hong Kong',
@@ -557,30 +557,30 @@ const basePt: Record<keyof typeof base, string> = {
 
   'lp.recon.title': 'O pagamento *se concilia sozinho.*',
   'lp.recon.body':
-    'A Seamoney acha o evento {event} por destinatário e memo e confere *cinco coisas* {five} antes de fechar a fatura.',
+    'A Seamoney procura na blockchain o evento {event} pelo destinatário e pelo memo, e confere *cinco coisas* {five} antes de dar baixa na fatura.',
   'lp.recon.stamp': 'Conciliado',
   'lp.recon.invoice': 'Fatura comercial',
   'lp.recon.event': 'Evento on-chain',
-  'lp.recon.proof': 'Uma página de prova para o fornecedor',
+  'lp.recon.proof': 'Uma página de comprovante para o fornecedor',
   'lp.recon.csv': 'Uma linha de CSV para o contador',
 
-  'lp.save.title': 'O que fica *na sua empresa*',
+  'lp.save.title': 'O que fica *na sua empresa.*',
   'lp.save.body':
-    'Arraste até o seu volume mensal. Os números vêm *do mesmo motor de regras* que precifica as ordens.',
+    'Arraste até o valor que você paga a fornecedores por mês. Os números vêm *do mesmo motor de regras* que precifica cada ordem.',
   'lp.save.body.static':
-    'Arraste até o seu volume mensal. Esta página não tem backend, então *a mesma conta* do motor de regras em Java roda no seu navegador.',
+    'Arraste até o valor que você paga a fornecedores por mês. Como esta página não tem servidor, *a mesma conta* do motor de regras em Java roda no seu navegador.',
   'lp.save.leak.kicker': 'O que cada rota perde no caminho',
   'lp.save.leak.no': 'Rota {n}',
   'lp.save.leak.lost': 'Perdido no caminho',
   'lp.save.leak.bank': 'Transferência bancária (SWIFT)',
   'lp.save.leak.bank.via': 'Por bancos correspondentes',
-  'lp.save.leak.bank.note': 'Spread de câmbio mais tarifas dos bancos intermediários. Suposição nossa; estimativas típicas vão de 2% a 5%.',
-  'lp.save.leak.route': 'Stablecoin na Tempo',
+  'lp.save.leak.bank.note': 'Spread de câmbio mais tarifas dos bancos intermediários. O número é uma suposição nossa; as estimativas típicas vão de 2% a 5%.',
+  'lp.save.leak.route': 'Stablecoin no Tempo',
   'lp.save.leak.route.via': 'Direto ao fornecedor, com a fatura no memo',
-  'lp.save.leak.route.note': 'A tarifa da Seamoney: 1% do valor, o mesmo número que precifica cada ordem.',
+  'lp.save.leak.route.note': 'A tarifa da Seamoney é 1% do valor, a mesma usada no preço de cada ordem.',
   'lp.save.leak.per': '{lost} a cada {amount} enviados',
   'lp.save.leak.diff': '{pp} pontos percentuais de diferença em cada pagamento.',
-  'lp.save.leak.note': 'Estimativas, não cotação. Tributos como o IOF não estão incluídos, e a perna reais para dólar é simulada.',
+  'lp.save.leak.note': 'Estimativas, não cotação. Tributos como o IOF não estão incluídos, e a conversão de reais para dólar é simulada.',
   'lp.save.yours': 'Agora com os seus números',
   'lp.save.year': 'economizados por ano',
   'lp.save.month': 'por mês',
@@ -591,7 +591,7 @@ const basePt: Record<keyof typeof base, string> = {
   'lp.code.nav': 'Código',
 
   'disclaimer.demo':
-    'Demo na testnet do Tempo e na devnet da Solana. A etapa de reais para dólar é simulada e nenhum dinheiro real se move. Os valores são estimativas, não cotações, e tributos como o IOF não estão incluídos.',
+    'Demo na testnet do Tempo e na devnet da Solana. A conversão de reais para dólar é simulada e nenhum dinheiro real é movimentado. Os valores são estimativas, não cotações, e tributos como o IOF não estão incluídos.',
   'footer.built': 'Feito para o hackathon Crypto World’s Fair da Colosseum.',
 
   'calc.title': 'Calculadora de economia',
@@ -604,7 +604,7 @@ const basePt: Record<keyof typeof base, string> = {
   'calc.result.route': 'Nossa rota (estimativa)',
   'calc.result.savings': 'Economia por mês',
   'calc.result.year': 'Economia por ano',
-  'calc.result.negative': 'Com essas premissas a transferência bancária sai mais barata. Ajuste a taxa para o seu banco real.',
+  'calc.result.negative': 'Com essas premissas a transferência bancária sai mais barata. Ajuste a taxa para o que o seu banco cobra de fato.',
   'calc.note': 'Apenas estimativas. Tributos como o IOF e o spread real do seu banco não estão incluídos.',
   'calc.lead.title': 'Quer que a gente confira seus números?',
   'calc.lead.email': 'E-mail (opcional)',
