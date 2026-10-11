@@ -5,7 +5,7 @@ import { Card, Notice } from '@/components/ui'
 import { getProof } from '@/lib/api'
 import { dateTime, usd } from '@/lib/format'
 import { getT, type T } from '@/lib/i18n/server'
-import { explorerTx, NETWORK_NAME } from '@/lib/links'
+import { explorerTxOn, networkName } from '@/lib/links'
 import type { Proof } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
@@ -69,13 +69,13 @@ function ProofCard({ proof, t, locale }: { proof: Proof; t: T; locale: 'en' | 'p
             <Row label={t('proof.payer')} value={t('proof.payer.value')} />
             <Row label={t('proof.to')} value={order.supplierName} />
             <Row label={t('proof.when')} value={dateTime(tx?.timestamp ?? order.paidAt, locale)} />
-            <Row label={t('wiz.pay.network')} value={NETWORK_NAME} />
+            <Row label={t('wiz.pay.network')} value={networkName(order.network)} />
             <Row label={t('proof.memo')} value={order.reference} mono />
             <div>
               <dt className="text-muted">{t('proof.tx')}</dt>
               <dd className="mt-1.5 rounded-xl bg-tint p-3.5">
                 <code className="block break-all text-xs">{order.txHash}</code>
-                <a href={explorerTx(order.txHash)} target="_blank" rel="noreferrer" className="mt-2.5 inline-flex items-center gap-1.5 font-semibold text-brand-700 hover:underline">
+                <a href={explorerTxOn(order.network, order.txHash)} target="_blank" rel="noreferrer" className="mt-2.5 inline-flex items-center gap-1.5 font-semibold text-brand-700 hover:underline">
                   {t('wiz.pay.view')} <ExternalLink size={14} aria-hidden="true" />
                 </a>
               </dd>

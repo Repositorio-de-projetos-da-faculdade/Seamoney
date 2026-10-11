@@ -73,7 +73,7 @@ export const en = {
   'app.side.verified': 'Verified company',
   'app.side.santos': 'Santos',
   'app.side.shenzhen': 'Shenzhen',
-  'app.side.settleLive': 'Tempo testnet live, Solana simulated',
+  'app.side.settleLive': 'Live on Tempo testnet and Solana devnet',
   'app.side.settleSim': 'Settlement simulated on Tempo and Solana',
 
   'app.err.role': 'Your role cannot do this.',
@@ -202,7 +202,7 @@ export const pt: Record<keyof typeof en, string> = {
   'app.side.verified': 'Empresa verificada',
   'app.side.santos': 'Santos',
   'app.side.shenzhen': 'Shenzhen',
-  'app.side.settleLive': 'Testnet Tempo ao vivo, Solana simulada',
+  'app.side.settleLive': 'Ao vivo na testnet Tempo e na devnet Solana',
   'app.side.settleSim': 'Liquidação simulada na rede Tempo e na Solana',
 
   'app.err.role': 'Seu papel não permite esta ação.',

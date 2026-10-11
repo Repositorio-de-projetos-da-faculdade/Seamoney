@@ -2,7 +2,7 @@
 
 import { useT } from '@/lib/i18n/client'
 import { usd } from '@/lib/format'
-import { explorerTx } from '@/lib/links'
+import { explorerTxOn } from '@/lib/links'
 import type { DemoState, Payment, Supplier, Wallet } from '@/lib/demo/types'
 import { Stamp, stampDate } from '../kit/Stamp'
 import { figure, label } from '../kit/styles'
@@ -28,7 +28,7 @@ export function ProofSheet({ state, payment, supplier, wallet }: { state: DemoSt
         ) : null}
       </ProofLetterhead>
 
-      <ProofBanner live={live} href={explorerTx(s.txHash)} />
+      <ProofBanner live={live} href={explorerTxOn(s.network, s.txHash)} />
 
       <div className="border-b border-hair px-5 py-6 sm:px-8">
         <p className={`${label} !text-ink/60`}>{t('app.proof.amount')}</p>
@@ -53,7 +53,7 @@ export function ProofSheet({ state, payment, supplier, wallet }: { state: DemoSt
             failLabel={t('app.proof.fail')}
             checkLabel={(k) => t(`app.proof.check.${k}`)}
             note={live ? null : t('app.proof.simulated')}
-            link={live ? { href: explorerTx(s.txHash), label: t('app.proof.explorer') } : null}
+            link={live ? { href: explorerTxOn(s.network, s.txHash), label: t('app.proof.explorer') } : null}
           />
         </div>
       ) : null}

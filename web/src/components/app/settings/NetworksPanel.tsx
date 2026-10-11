@@ -67,7 +67,12 @@ export function NetworksPanel({ settings, canEdit }: { settings: Settings; canEd
             token={t('app.set.tokenTempo')}
             status={<TestnetStatus state={live} />}
           />
-          <NetworkRow title={t('app.set.solana')} hint={t('app.set.solanaNote')} token={t('app.set.tokenSolana')} status={<Simulated />} />
+          <NetworkRow
+            title={t('app.set.solana')}
+            hint={t('app.set.solanaNote')}
+            token={t('app.set.tokenSolana')}
+            status={mode === 'testnet' ? <TestnetStatus state={live} /> : <Simulated />}
+          />
         </fieldset>
         {live ? (
           <div role="status">

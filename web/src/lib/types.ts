@@ -85,6 +85,7 @@ export interface ProofOrder {
   amountCents: number
   supplierName: string
   reference: string
+  network: 'tempo' | 'solana'
   txHash: string
   paidAt: string | null
 }

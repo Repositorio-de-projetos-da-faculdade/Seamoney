@@ -1,9 +1,9 @@
 // How a demo payment reaches the "chain". Two modes, chosen in Settings:
 //  - simulated: nothing leaves the browser. A random hash stands in for the transaction and is labelled simulated.
-//  - testnet: the same payment is created in the Java rules API and sent for real on the Tempo testnet through the
+//  - testnet: the same payment is created in the Java rules API and sent for real (Tempo testnet or Solana devnet) through the
 //    existing /api proxy (web -> Java -> Python -> Tempo). Only works when that stack is running (docker compose)
 //    and the visitor signed in at /app/login with an account that may pay (owner or approver).
-// Solana payments are always simulated here: its adapter is not wired to the Java service yet.
+// Testnet mode covers both networks: Tempo Moderato and Solana devnet, through the same Java and Python services.
 import { base58, cryptoRand, hex } from './codes'
 import type { Network, Payment, Reconciliation, Settlement, Wallet } from './types'
 
@@ -11,8 +11,8 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 /* ------------------------------ simulated ------------------------------ */
 
-/** Can this payment go to a real testnet? Only Tempo, and only when Settings ask for it. */
-export const goesLive = (network: Network, mode: Settlement['mode']) => network === 'tempo' && mode === 'testnet'
+/** Does this payment go to a real test network (Tempo testnet or Solana devnet)? Only when Settings ask for it. */
+export const goesLive = (_network: Network, mode: Settlement['mode']) => mode === 'testnet'
 
 export async function simulateTransfer(network: Network, walletId: string): Promise<Settlement> {
   const started = performance.now()
@@ -113,7 +113,7 @@ async function existingOrder(reference: string): Promise<LiveOrder | null> {
 }
 
 /**
- * Creates the order in the Java service and pays it on the Tempo testnet. The opaque order reference of this demo
+ * Creates the order in the Java service and pays it on its network (Tempo testnet or Solana devnet). The opaque order reference of this demo
  * becomes the memo (Java accepts it in the same SM-XXXXXXXX format); the invoice number stays off-chain. A retry after
  * a failed send finds the order made the first time instead of creating a second one, and Java's idempotency key
  * makes sure a payment that did reach the chain is not sent again.
@@ -128,6 +128,7 @@ export async function sendOnTestnet(payment: Payment, supplier: { name: string; 
         supplierWallet: wallet.address,
         invoiceNumber: payment.invoiceNumber,
         reference: payment.reference,
+        network: payment.network,
         amountCents: payment.quote.amountCents,
         dueDate: payment.dueDate ?? undefined,
         extractionSource: payment.source,
@@ -144,7 +145,7 @@ export async function sendOnTestnet(payment: Payment, supplier: { name: string; 
   if (!paid.txHash || paid.blockNumber == null) throw new LiveError('The payment did not return a transaction.')
   return {
     mode: 'testnet',
-    network: 'tempo',
+    network: payment.network,
     walletId: wallet.id,
     txHash: paid.txHash,
     blockNumber: paid.blockNumber,
