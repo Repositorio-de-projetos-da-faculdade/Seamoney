@@ -1,10 +1,11 @@
 'use client'
 
 import { useT } from '@/lib/i18n/client'
+import type { Network } from '@/lib/demo/types'
 import { Simulated } from '../kit/Status'
 
 /** The line under the letterhead: simulated settlements say so plainly, testnet ones link to the explorer. */
-export function ProofBanner({ live, href }: { live: boolean; href: string }) {
+export function ProofBanner({ live, href, network }: { live: boolean; href: string; network: Network }) {
   const { t } = useT()
   if (!live) {
     return (
@@ -17,7 +18,7 @@ export function ProofBanner({ live, href }: { live: boolean; href: string }) {
     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-ink/15 px-5 py-3 text-[14px] sm:px-8">
       <p className="flex items-center gap-2.5 font-medium">
         <span aria-hidden="true" className="size-2 shrink-0 rotate-45 bg-mint" />
-        {t('app.proof.bannerTestnet')}
+        {t('app.proof.bannerTestnet', { network: t(`app.net.${network}.long`) })}
       </p>
       <a href={href} target="_blank" rel="noopener noreferrer" className="underline underline-offset-[4px] print:hidden">
         {t('app.proof.explorer')}

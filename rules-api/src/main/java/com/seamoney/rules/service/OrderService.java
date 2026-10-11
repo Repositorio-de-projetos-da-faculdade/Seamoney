@@ -140,8 +140,11 @@ public class OrderService {
         } catch (ChainException e) {
             tx = null; // unverified, and the page says so
         }
+        OrderRepository.ProofParties parties = repo.proofParties(id);
         return new Proof(
-                new ProofOrder(o.id(), o.invoiceNumber(), o.amountCents(), o.supplierName(), o.reference(), o.network(), o.txHash(), o.paidAt()), tx);
+                new ProofOrder(o.id(), o.invoiceNumber(), o.amountCents(), o.supplierName(), o.reference(), o.network(), o.txHash(), o.paidAt(),
+                        parties.companyName(), o.supplierWallet(), parties.supplierCity(), parties.supplierPort(), o.blockNumber(), o.reconciledAt(), o.recon()),
+                tx);
     }
 
     // ---------- create + quote ----------

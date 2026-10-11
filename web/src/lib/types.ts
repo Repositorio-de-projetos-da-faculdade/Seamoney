@@ -88,6 +88,13 @@ export interface ProofOrder {
   network: 'tempo' | 'solana'
   txHash: string
   paidAt: string | null
+  companyName: string | null
+  supplierWallet: string | null
+  supplierCity: string | null
+  supplierPort: string | null
+  blockNumber: number | null
+  reconciledAt: string | null
+  recon: Recon | null
 }
 
 export interface Proof {

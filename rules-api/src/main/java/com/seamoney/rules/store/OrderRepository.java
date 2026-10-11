@@ -77,6 +77,18 @@ public class OrderRepository {
         return jdbc.query("SELECT * FROM orders WHERE id = ? AND organization_id = ?", orderMapper(), id, orgId).stream().findFirst();
     }
 
+    /** Who is on the proof besides the order itself: the paying company and the supplier's port, when known. */
+    public record ProofParties(String companyName, String supplierCity, String supplierPort) {}
+
+    public ProofParties proofParties(String orderId) {
+        return jdbc.query(
+                        "SELECT g.name AS company, s.city, s.port FROM orders o JOIN organizations g ON g.id = o.organization_id "
+                                + "LEFT JOIN suppliers s ON s.id = o.supplier_id WHERE o.id = ?",
+                        (rs, i) -> new ProofParties(rs.getString("company"), rs.getString("city"), rs.getString("port")),
+                        orderId)
+                .stream().findFirst().orElse(new ProofParties(null, null, null));
+    }
+
     public Optional<Order> findForProof(String id) {
         return jdbc.query("SELECT * FROM orders WHERE id = ?", orderMapper(), id).stream().findFirst();
     }
