@@ -7,7 +7,7 @@ import { projectMemo, type ScreenRect } from './memoBounds'
 import { createNoiseTexture } from './noise'
 import { createOcean } from './ocean'
 import { createPost } from './post'
-import { detectTier, profileFor, type Profile } from './quality'
+import { pickTier, profileFor, type Profile } from './quality'
 import { createReflection } from './reflection'
 import type { Shot } from './shots'
 import { createShip } from './ship'
@@ -17,7 +17,7 @@ import { createSmoke } from './smoke'
 // The whole night scene: sky, ocean with reflections, the ship and its memo cargo, moonlight with shadows, an
 // environment map made from the sky itself, smoke and post-processing. React only feeds it a camera shot, the
 // load progress, the ship's speed and the memo bytes. It renders only while it is on screen, at most 60 times a
-// second, at the detail the device can afford (quality.ts), trimmed further if frames run slow (governor.ts).
+// second, at the low tier unless ?quality= asks otherwise (quality.ts), trimmed further if frames run slow (governor.ts).
 
 /** Faster screens (90, 120, 144 Hz) skip frames: the scene moves slowly and the GPU is spared. */
 const FRAME_MS = 1000 / 60
@@ -59,7 +59,7 @@ export async function createVoyageScene(canvas: HTMLCanvasElement, bytes: MemoBy
   // no antialias on the canvas: the scene is drawn into the post-processing targets, and the canvas only ever
   // receives the final full-screen pass, so multisampling it would cost memory and buy nothing
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' })
-  const profile: Profile = profileFor(detectTier(renderer.getContext()))
+  const profile: Profile = profileFor(pickTier())
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, profile.pixelRatio.max))
   renderer.toneMapping = THREE.ACESFilmicToneMapping
   renderer.toneMappingExposure = 1.1

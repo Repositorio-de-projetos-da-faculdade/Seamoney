@@ -1,9 +1,8 @@
 import type { ShipQuality } from './ship'
 
-// How much of the scene a device gets. The window width says little about the GPU behind it: a 13-inch Android
-// tablet is as wide as a laptop and has a phone's GPU. So the tier comes from the screen, the input (touch first),
-// the GPU's name when the browser gives it, and memory and cores. The governor (governor.ts) then trims further on
-// any device that still cannot keep up. `?quality=low|medium|high` forces a tier, for testing on a device.
+// How much of the scene a device gets. Every device gets 'low': side by side, the team saw little difference from
+// 'high' and a large one in speed. The governor (governor.ts) still trims further on any device that cannot keep
+// up. `?quality=low|medium|high` picks another tier, to compare them on a device.
 
 export type Tier = 'low' | 'medium' | 'high'
 
@@ -27,30 +26,9 @@ const PROFILES: Record<Tier, Omit<Profile, 'tier'>> = {
   low: { ship: 'low', pixelRatio: { max: 1.4, min: 0.85 }, shadowSize: 1024, shadowEvery: 3, reflection: 0, bloom: true, oceanRings: 120 },
 }
 
-const MOBILE_GPU = /mali|adreno|xclipse|powervr|immortalis|videocore|tegra/i
-
-function gpuName(gl: WebGLRenderingContext | WebGL2RenderingContext) {
-  try {
-    const info = gl.getExtension('WEBGL_debug_renderer_info')
-    return info ? String(gl.getParameter(info.UNMASKED_RENDERER_WEBGL)) : ''
-  } catch {
-    return ''
-  }
-}
-
-function forced(): Tier | null {
+export function pickTier(): Tier {
   const q = new URLSearchParams(window.location.search).get('quality')
-  return q === 'low' || q === 'medium' || q === 'high' ? q : null
-}
-
-export function detectTier(gl: WebGLRenderingContext | WebGL2RenderingContext): Tier {
-  const force = forced()
-  if (force) return force
-  if (window.matchMedia('(max-width: 767px)').matches) return 'low'
-  const nav = navigator as Navigator & { deviceMemory?: number }
-  const touch = window.matchMedia('(pointer: coarse)').matches
-  const weak = (nav.deviceMemory ?? 8) <= 4 || (nav.hardwareConcurrency ?? 8) <= 4
-  return touch || weak || MOBILE_GPU.test(gpuName(gl)) ? 'medium' : 'high'
+  return q === 'medium' || q === 'high' ? q : 'low'
 }
 
 export function profileFor(tier: Tier): Profile {

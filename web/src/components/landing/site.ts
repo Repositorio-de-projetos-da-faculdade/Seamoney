@@ -12,9 +12,8 @@ export interface SiteLink {
   label: string
 }
 
-/** The main way in: the SaaS demo at /app (it opens on the persona picker), or the source code on the static site. */
-export const primaryCta = (t: T): SiteLink =>
-  STATIC_SITE ? { href: REPO_URL, label: t('lp.code') } : { href: '/app', label: t('lp.cta') }
+/** The main way in, labelled as an early access request: the SaaS demo at /app (it opens on the persona picker), or the source code on the static site. */
+export const primaryCta = (t: T): SiteLink => ({ href: STATIC_SITE ? REPO_URL : '/app', label: t('lp.cta') })
 
 /** The app in the menus: the SaaS demo; the source code on the static site. The live testnet prototype stays at /dashboard. */
 export const appLink = (t: T): SiteLink =>

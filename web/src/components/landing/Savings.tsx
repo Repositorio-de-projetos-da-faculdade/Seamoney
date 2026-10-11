@@ -5,7 +5,7 @@ import clsx from 'clsx'
 import { useT } from '@/lib/i18n/client'
 import { useComparison, useLocalComparison } from '@/lib/useComparison'
 import { Reveal } from './Reveal'
-import { primaryCta, STATIC_SITE } from './site'
+import { STATIC_SITE } from './site'
 import { Lede } from './lede/Lede'
 import { ChapterTag, displayL, label } from './type'
 import { FeeInput } from './savings/FeeInput'
@@ -70,7 +70,6 @@ function Calculator() {
           savingsCents={result.savingsCents}
           bankCents={result.bankCents}
           routeCents={result.routeCents}
-          cta={primaryCta(t)}
         />
       )}
     </div>

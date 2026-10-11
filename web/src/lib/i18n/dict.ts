@@ -83,7 +83,7 @@ const base = {
   'lp.hero.title': 'The payment that carries *its own invoice.*',
   'lp.hero.sub':
     'Brazilian importers pay suppliers in Asia {route} in *stablecoins*, on Tempo or Solana. The invoice number {memo} rides *inside the transfer*, so every payment reconciles itself {check}.',
-  'lp.cta': 'Create a payment order',
+  'lp.cta': 'Request early access',
   'lp.cta2': 'Estimate your savings',
   'lp.live': 'Live on Tempo testnet and Solana devnet',
   'lp.sim': 'BRL-to-USD conversion simulated',
@@ -163,7 +163,6 @@ const base = {
 
 
   'lp.close.cta2': 'Open the dashboard',
-  'lp.code': 'View the source code',
   'lp.code.nav': 'Code',
 
   'banner.testnet': 'Testnet payments. BRL-to-USD leg is simulated.',
@@ -470,7 +469,7 @@ const basePt: Record<keyof typeof base, string> = {
   'lp.hero.title': 'O pagamento que leva *a própria fatura.*',
   'lp.hero.sub':
     'Importadoras brasileiras pagam fornecedores na Ásia {route} em *stablecoin*, no Tempo ou na Solana. O número da fatura {memo} vai *dentro da transferência*, então cada pagamento se concilia sozinho {check}.',
-  'lp.cta': 'Criar ordem de pagamento',
+  'lp.cta': 'Solicite acesso antecipado',
   'lp.cta2': 'Estimar sua economia',
   'lp.live': 'Ao vivo na testnet do Tempo e na devnet da Solana',
   'lp.sim': 'Conversão de reais para dólar simulada',
@@ -550,7 +549,6 @@ const basePt: Record<keyof typeof base, string> = {
 
 
   'lp.close.cta2': 'Abrir o painel',
-  'lp.code': 'Ver o código-fonte',
   'lp.code.nav': 'Código',
 
   'disclaimer.demo':
