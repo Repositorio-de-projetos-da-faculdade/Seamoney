@@ -1,5 +1,8 @@
 // Server-side client for the Java rules API. Used by Server Components only.
-import type { MonthPoint, Order, OrderEvent, Proof, Stats } from './types'
+// Calls carry the signed-in session; without one (or once it expires) the dashboard sends the visitor to /login.
+import { redirect } from 'next/navigation'
+import { authHeaders } from './session'
+import type { MonthPoint, Order, OrderEvent, Proof, Session, Stats } from './types'
 
 export const rulesUrl = () => process.env.RULES_API_URL ?? 'http://localhost:8080'
 
@@ -15,10 +18,11 @@ export class RulesApiError extends Error {
 async function get<T>(path: string): Promise<T | null> {
   let res: Response
   try {
-    res = await fetch(`${rulesUrl()}${path}`, { cache: 'no-store' })
+    res = await fetch(`${rulesUrl()}${path}`, { cache: 'no-store', headers: await authHeaders() })
   } catch {
     throw new RulesApiError('The rules service is unavailable.', 503)
   }
+  if (res.status === 401) redirect('/login')
   if (res.status === 404) return null
   if (!res.ok) throw new RulesApiError(`The rules service answered ${res.status}.`, res.status)
   return (await res.json()) as T
@@ -41,4 +45,16 @@ export async function getStats(): Promise<{ stats: Stats; series: MonthPoint[] }
 
 export async function getProof(id: string): Promise<Proof | null> {
   return get(`/api/proof/${encodeURIComponent(id)}`)
+}
+
+/** Who is signed in, or null without a valid session. Never redirects, so layouts can call it. */
+export async function getSession(): Promise<Session | null> {
+  const headers = await authHeaders()
+  if (!headers.authorization) return null
+  try {
+    const res = await fetch(`${rulesUrl()}/api/auth/me`, { cache: 'no-store', headers })
+    return res.ok ? ((await res.json()) as Session) : null
+  } catch {
+    return null
+  }
 }

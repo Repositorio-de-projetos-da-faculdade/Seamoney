@@ -96,7 +96,8 @@ class AuthApiTest {
     @Test
     void tokenExpiredOrTampered() throws Exception {
         mvc.perform(get("/api/orders").header("Authorization", "Bearer invalid.token.here"))
-                .andExpect(status().isForbidden()); // Spring security defaults to 403 when authentication fails on protected resources if not strictly configured, actually it returns 401 or 403. Let's just expect 403.
+                .andExpect(status().isUnauthorized()); // no valid session: 401, so the web app sends the person back to sign in
+        mvc.perform(get("/api/orders")).andExpect(status().isUnauthorized());
     }
 
     @Test

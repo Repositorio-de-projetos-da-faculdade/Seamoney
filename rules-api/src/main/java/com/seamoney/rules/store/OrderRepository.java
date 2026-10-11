@@ -75,8 +75,9 @@ public class OrderRepository {
         return jdbc.query("SELECT * FROM orders WHERE id = ?", orderMapper(), id).stream().findFirst();
     }
 
-    public boolean referenceExists(String orgId, String reference) {
-        Integer n = jdbc.queryForObject("SELECT COUNT(*) FROM orders WHERE reference = ? AND organization_id = ?", Integer.class, reference, orgId);
+    /** References are unique across every company: the memo on a public chain must point to one order only. */
+    public boolean referenceExists(String reference) {
+        Integer n = jdbc.queryForObject("SELECT COUNT(*) FROM orders WHERE reference = ?", Integer.class, reference);
         return n != null && n > 0;
     }
 
@@ -186,24 +187,39 @@ public class OrderRepository {
                 txHash, blockNumber, memoHex, confirmMs, now, now, id, orgId);
     }
 
+    public String idempotencyKey(String orgId, String id) {
+        List<String> keys = jdbc.queryForList("SELECT idempotency_key FROM orders WHERE id = ? AND organization_id = ?", String.class, id, orgId);
+        return keys.isEmpty() ? null : keys.get(0);
+    }
+
+    public void setIdempotencyKey(String orgId, String id, String key) {
+        jdbc.update("UPDATE orders SET idempotency_key = ? WHERE id = ? AND organization_id = ?", key, id, orgId);
+    }
+
     public void releaseClaim(String orgId, String id, String error, String now) {
         jdbc.update("UPDATE orders SET status = 'quoted', error = ?, updated_at = ? WHERE id = ? AND organization_id = ?", error, now, id, orgId);
     }
 
-    public void markReconciled(String orgId, String id, int logIndex, Recon recon) {
+    /**
+     * Closes a sent order with the transfer that paid it. False when the order was no longer sent (a concurrent
+     * reconciliation won). The unique index on (tx_hash, log_index) refuses a transfer that already credited another
+     * order, with a DuplicateKeyException.
+     */
+    public boolean markReconciled(String orgId, String id, String txHash, int logIndex, Recon recon) {
         try {
-            jdbc.update(
-                    "UPDATE orders SET status = 'reconciled', log_index = ?, reconciled_at = ?, recon_json = ?, updated_at = ? WHERE id = ? AND organization_id = ?",
-                    logIndex, recon.matchedAt(), mapper.writeValueAsString(recon), recon.matchedAt(), id, orgId);
+            return jdbc.update(
+                    "UPDATE orders SET status = 'reconciled', tx_hash = ?, log_index = ?, reconciled_at = ?, recon_json = ?, updated_at = ? WHERE id = ? AND organization_id = ? AND status = 'sent'",
+                    txHash, logIndex, recon.matchedAt(), mapper.writeValueAsString(recon), recon.matchedAt(), id, orgId) == 1;
         } catch (JsonProcessingException e) {
             throw new IllegalStateException(e);
         }
     }
 
-    public boolean alreadyCredited(String orgId, String txHash, int logIndex, String excludeOrderId) {
+    /** Across every company: a transfer on a public chain can only ever pay one order. */
+    public boolean alreadyCredited(String txHash, int logIndex, String excludeOrderId) {
         Integer n = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM orders WHERE tx_hash = ? AND log_index = ? AND status = 'reconciled' AND id != ? AND organization_id = ?",
-                Integer.class, txHash, logIndex, excludeOrderId, orgId);
+                "SELECT COUNT(*) FROM orders WHERE tx_hash = ? AND log_index = ? AND status = 'reconciled' AND id != ?",
+                Integer.class, txHash, logIndex, excludeOrderId);
         return n != null && n > 0;
     }
 

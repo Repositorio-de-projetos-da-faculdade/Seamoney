@@ -1,7 +1,9 @@
 package com.seamoney.rules;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.hamcrest.Matchers.matchesPattern;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -65,6 +67,7 @@ class OrderApiTest {
     @Autowired JdbcTemplate jdbc;
     private String token;
 
+    private static final String OPAQUE_REFERENCE = "^SM-[0-9A-HJKMNP-TV-Z]{8}$";
     private static final String WALLET = "0x75c0281a3261449901b6a60b0C31c1fdfA8D7ff0";
 
     @BeforeEach
@@ -75,6 +78,7 @@ class OrderApiTest {
         chain.transfers.clear();
         chain.failNextPayment = null;
         chain.tamperNextAmount = null;
+        chain.timeoutAfterSending = false;
     }
 
     private String orderBody(String invoice, long cents) {
@@ -96,7 +100,7 @@ class OrderApiTest {
         mvc.perform(post("/api/orders").header("Authorization", "Bearer " + token).contentType(MediaType.APPLICATION_JSON).content(orderBody("INV-1", 8_000_000)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.order.status").value("quoted"))
-                .andExpect(jsonPath("$.order.reference").value("INV-1"))
+                .andExpect(jsonPath("$.order.reference").value(matchesPattern(OPAQUE_REFERENCE)))
                 .andExpect(jsonPath("$.order.feeCents").value(80_000))
                 .andExpect(jsonPath("$.order.totalCents").value(8_080_000))
                 .andExpect(jsonPath("$.order.bankCostCents").value(240_000))
@@ -106,10 +110,27 @@ class OrderApiTest {
     }
 
     @Test
-    void reusedInvoiceNumbersGetASuffixSoEveryMemoIsUnique() throws Exception {
-        createOrder("INV-DUP", 100_00);
+    void theMemoIsAnOpaqueReferenceNeverTheInvoiceNumber() throws Exception {
+        JsonNode first = createOrder("INV-DUP", 100_00);
         JsonNode second = createOrder("INV-DUP", 100_00);
-        assertEquals("INV-DUP-2", second.get("reference").asText());
+        String a = first.get("reference").asText();
+        String b = second.get("reference").asText();
+        assertTrue(a.matches(OPAQUE_REFERENCE) && b.matches(OPAQUE_REFERENCE));
+        assertNotEquals(a, b, "every order gets its own memo");
+        assertEquals("INV-DUP", second.get("invoiceNumber").asText(), "the invoice number stays off-chain, on the order");
+    }
+
+    @Test
+    void aClientMayBringItsOwnReferenceOnce() throws Exception {
+        String body = orderBody("INV-REF", 100_00).replace("\"extractionSource\"", "\"reference\":\"SM-7K3QX9PA\",\"extractionSource\"");
+        mvc.perform(post("/api/orders").header("Authorization", "Bearer " + token).contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.order.reference").value("SM-7K3QX9PA"));
+        mvc.perform(post("/api/orders").header("Authorization", "Bearer " + token).contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isConflict());
+        mvc.perform(post("/api/orders").header("Authorization", "Bearer " + token).contentType(MediaType.APPLICATION_JSON)
+                        .content(body.replace("SM-7K3QX9PA", "INV-2026-0845")))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -159,6 +180,19 @@ class OrderApiTest {
                 .andExpect(jsonPath("$.order.error").value("The chain service is unavailable"));
 
         mvc.perform(post("/api/orders/{id}/pay", id).header("Authorization", "Bearer " + token)).andExpect(status().isOk());
+        assertEquals(1, chain.transfers.size());
+    }
+
+    @Test
+    void aRetryAfterATimeoutDoesNotPayTwice() throws Exception {
+        String id = createOrder("INV-TIMEOUT", 50_000).get("id").asText();
+        chain.timeoutAfterSending = true; // the transfer lands on-chain, but the answer never arrives
+
+        mvc.perform(post("/api/orders/{id}/pay", id).header("Authorization", "Bearer " + token)).andExpect(status().isBadGateway());
+        mvc.perform(post("/api/orders/{id}/pay", id).header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.order.txHash").value(chain.transfers.get(0).txHash()));
+        assertEquals(1, chain.transfers.size(), "the retry reuses the idempotency key, so nothing is sent twice");
     }
 
     @Test
@@ -205,10 +239,10 @@ class OrderApiTest {
         Order b = service.create("org_test", new OrderService.NewOrderInput("Shenzhen Tech Co.", "CN", WALLET, "INV-B", 100_000, null, "manual", null));
         // pretend B was paid by the very same on-chain transfer
         repo.claimForSending("org_test", b.id(), "2026-10-10T00:00:00Z");
-        repo.markSent("org_test", b.id(), paidA.txHash(), paidA.blockNumber(), FakeChain.memoHex("INV-B"), 1200, "2026-10-10T00:00:00Z");
+        repo.markSent("org_test", b.id(), paidA.txHash(), paidA.blockNumber(), FakeChain.memoHex(b.reference()), 1200, "2026-10-10T00:00:00Z");
         chain.transfers.add(new FoundTransfer(
                 paidA.txHash(), paidA.recon().logIndex(), paidA.blockNumber(), FakeChain.PARTNER, WALLET,
-                new BigInteger("1000000000"), FakeChain.memoHex("INV-B")));
+                new BigInteger("1000000000"), FakeChain.memoHex(b.reference())));
 
         var result = service.reconcile("org_test", b.id());
         assertFalse(result.ok());
@@ -219,8 +253,8 @@ class OrderApiTest {
     void invalidInputIsRejected() throws Exception {
         mvc.perform(post("/api/orders").header("Authorization", "Bearer " + token).contentType(MediaType.APPLICATION_JSON).content(orderBody("INV-X", -5)))
                 .andExpect(status().isBadRequest());
-        mvc.perform(post("/api/orders").header("Authorization", "Bearer " + token).contentType(MediaType.APPLICATION_JSON).content(orderBody("INV-" + "9".repeat(40), 100)))
-                .andExpect(status().isBadRequest()); // longer than the 32-byte memo
+        mvc.perform(post("/api/orders").header("Authorization", "Bearer " + token).contentType(MediaType.APPLICATION_JSON).content(orderBody("INV-" + "9".repeat(70), 100)))
+                .andExpect(status().isBadRequest()); // invoice numbers are capped at 64 characters
         mvc.perform(post("/api/orders").header("Authorization", "Bearer " + token).contentType(MediaType.APPLICATION_JSON)
                         .content(orderBody("INV-Y", 100).replace(WALLET, "0x123")))
                 .andExpect(status().isBadRequest());

@@ -58,9 +58,10 @@ public class HttpChainClient implements ChainClient {
     }
 
     @Override
-    public SentPayment sendPayment(Network network, String to, long amountCents, String reference) {
+    public SentPayment sendPayment(Network network, String to, long amountCents, String reference, String idempotencyKey) {
         SentDto dto = call(() -> http.post()
                 .uri("/payments")
+                .header("Idempotency-Key", idempotencyKey)
                 .body(Map.of("to", to, "amount_cents", amountCents, "reference", reference, "network", network.value()))
                 .retrieve()
                 .onStatus(s -> s.isError(), (req, res) -> {
@@ -68,6 +69,19 @@ public class HttpChainClient implements ChainClient {
                 })
                 .body(SentDto.class));
         return new SentPayment(dto.txHash(), dto.blockNumber(), dto.confirmMs(), dto.memoHex(), dto.fromAddress());
+    }
+
+    @Override
+    public Optional<String> paymentStatus(String idempotencyKey) {
+        JsonNode body = call(() -> http.get()
+                .uri("/payments/{key}", idempotencyKey)
+                .retrieve()
+                .onStatus(s -> s.value() == HttpStatus.NOT_FOUND.value(), (req, res) -> {})
+                .onStatus(s -> s.isError() && s.value() != HttpStatus.NOT_FOUND.value(), (req, res) -> {
+                    throw error(res.getStatusCode().value(), res.getBody().readAllBytes());
+                })
+                .body(JsonNode.class));
+        return Optional.ofNullable(body).map(b -> b.path("status")).filter(JsonNode::isTextual).map(JsonNode::asText);
     }
 
     @Override

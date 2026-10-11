@@ -101,3 +101,15 @@ export interface Comparison {
   savingsShare: number
   feeBps: number
 }
+
+export type Role = 'OWNER' | 'APPROVER' | 'OPERATOR' | 'ACCOUNTANT'
+
+/** GET /api/auth/me: the signed-in user and the company the session acts for. */
+export interface Session {
+  id: string
+  email: string
+  organizationId: string
+  organizationName: string
+  role: Role
+  organizations: { id: string; name: string; role: Role }[]
+}

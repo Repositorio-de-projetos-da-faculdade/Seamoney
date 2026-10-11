@@ -3,7 +3,7 @@ import type { MemoByte } from '@/lib/memo'
 import { FONTS } from './livery'
 
 // The roof of a memo container, read from above: the character it carries, its byte in hex and its position
-// in the memo. Redrawn whenever the visitor types a new invoice number.
+// in the memo. Redrawn whenever the visitor issues another order code.
 
 type Ctx = CanvasRenderingContext2D & { letterSpacing: string }
 

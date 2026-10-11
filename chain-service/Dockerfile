@@ -1,5 +1,6 @@
 # syntax=docker/dockerfile:1
-# Seamoney chain service (Python, FastAPI + pytempo). Stateless: holds the TESTNET partner key, talks to Tempo.
+# Seamoney chain service (Python, FastAPI + pytempo). Holds the TESTNET partner key, talks to Tempo and Solana devnet.
+# Its only state is the idempotency file in /app/data (a volume in docker-compose.yml).
 
 FROM python:3.12-slim AS run
 WORKDIR /app
@@ -7,7 +8,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY app ./app
-RUN useradd --system --no-create-home app && chown -R app /app
+RUN useradd --system --no-create-home app && mkdir -p /app/data && chown -R app /app
 USER app
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \

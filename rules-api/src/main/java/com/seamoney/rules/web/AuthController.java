@@ -2,6 +2,7 @@ package com.seamoney.rules.web;
 
 import com.seamoney.rules.security.JwtPrincipal;
 import com.seamoney.rules.service.AuthService;
+import com.seamoney.rules.store.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
@@ -10,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -17,9 +19,11 @@ import java.util.Map;
 public class AuthController {
 
     private final AuthService authService;
+    private final UserRepository users;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, UserRepository users) {
         this.authService = authService;
+        this.users = users;
     }
 
     public record LoginRequest(@NotBlank @Email String email, @NotBlank String password) {}
@@ -54,10 +58,15 @@ public class AuthController {
     @GetMapping("/me")
     public ResponseEntity<?> me(@AuthenticationPrincipal JwtPrincipal principal) {
         if (principal == null) return ResponseEntity.status(401).build();
+        List<UserRepository.Company> companies = users.findCompanies(principal.userId());
+        String organizationName = companies.stream().filter(c -> c.id().equals(principal.orgId())).map(UserRepository.Company::name).findFirst().orElse("");
         return ResponseEntity.ok(Map.of(
                 "id", principal.userId(),
+                "email", users.findEmail(principal.userId()).orElse(""),
                 "organizationId", principal.orgId(),
-                "role", principal.role()
+                "organizationName", organizationName,
+                "role", principal.role(),
+                "organizations", companies
         ));
     }
 }

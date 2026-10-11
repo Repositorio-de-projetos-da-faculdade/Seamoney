@@ -16,16 +16,17 @@ Isto subirá o PostgreSQL, o Chain Service e o Rules API.
 
 ## Variáveis de Ambiente (rules-api)
 
-* `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`: Credenciais do banco PostgreSQL.
-* `JWT_SECRET`: Segredo usado para assinar tokens JWT (HS256). Obrigatório e deve ser longo/seguro.
+* `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`: Credenciais do banco PostgreSQL. O schema é criado e versionado pelo Flyway (`rules-api/src/main/resources/db/migration`).
+* `JWT_SECRET`: Segredo usado para assinar tokens JWT (HS256). Obrigatório, com 32 caracteres ou mais. O serviço não sobe com o segredo ausente ou curto.
 * `CHAIN_SERVICE_URL`: URL base do Python chain-service.
 * `CHAIN_SERVICE_TOKEN`: Token interno de autorização.
 * `DEMO_USD_BRL`: Taxa de câmbio simulada.
-* `SPRING_PROFILES_ACTIVE`: Use `demo` para habilitar a criação dos dados de teste no startup.
+* `SEED_DEMO`: `false` desliga os dados de demo (padrão do perfil `demo`). Os dados só são criados quando o banco está vazio.
+* `SPRING_PROFILES_ACTIVE`: Use `demo` (padrão do docker compose) para criar os dados de teste no startup.
 
 ## Credenciais de Demo (Fictícias)
 
-Com o perfil `demo` ativo, o sistema cria duas empresas e 4 usuários em cada (um por papel).
+Com o perfil `demo` ativo e `SEED_DEMO` ligado, o sistema cria duas empresas (Porto Claro Importadora e Acme Corp) e 4 usuários em cada (um por papel), somente quando o banco está vazio.
 * Senha universal: `demo123`
 * Emails Empresa 1: `porto.owner@example.com`, `porto.approver@example.com`, `porto.operator@example.com`, `porto.accountant@example.com`
 * Emails Empresa 2: `acme.owner@example.com`, `acme.approver@example.com`, `acme.operator@example.com`, `acme.accountant@example.com`
@@ -35,9 +36,11 @@ Com o perfil `demo` ativo, o sistema cria duas empresas e 4 usuários em cada (u
 ## Papéis (Roles)
 
 * **OWNER**: Acesso total.
-* **APPROVER**: Cria pagamentos, edita fornecedores, aprova ordens e carteiras, envia pagamentos, exporta, vê auditoria.
-* **OPERATOR**: Cria pagamentos, edita fornecedores (mas não pode enviar nem aprovar).
-* **ACCOUNTANT**: Apenas exporta e vê auditoria.
+* **APPROVER**: Cria ordens, envia pagamentos, concilia, exporta, vê auditoria.
+* **OPERATOR**: Cria ordens e concilia (não pode enviar pagamentos).
+* **ACCOUNTANT**: Exporta o CSV e concilia.
+
+Permissões por endpoint: criar ordem (OWNER, APPROVER, OPERATOR); pagar (OWNER, APPROVER; operador recebe 403); conciliar (qualquer papel); CSV (OWNER, APPROVER, ACCOUNTANT).
 
 ## Endpoints
 
@@ -47,17 +50,19 @@ Todas as requisições (exceto públicas) exigem o cabeçalho: `Authorization: B
 
 #### POST /api/auth/login (Público)
 * **Corpo**: `{"email": "...", "password": "..."}`
-* **Resposta (200)**: `{"token": "eyJ..."}`
-* **Erros**: 401 Unauthorized (credenciais inválidas ou bloqueio temporário por tentativas).
+* **Resposta (200)**: `{"token": "eyJ..."}` (JWT HS256, válido por 1 hora)
+* **Erros**: 401 Unauthorized (credenciais inválidas). Depois de 5 tentativas falhas, o e-mail fica bloqueado por 15 minutos (controle em memória, zerado ao reiniciar o serviço).
 
 #### POST /api/auth/refresh (Requer Token)
-* **Descrição**: Atualiza o token ou troca a organização ativa.
+* **Descrição**: Renova o token ou troca a empresa ativa.
 * **Corpo**: `{"organizationId": "nova_org_id"}` (opcional).
 * **Resposta (200)**: `{"token": "..."}`
-* **Erros**: 404 Not Found (usuário não tem acesso à organização).
+* **Erros**: 404 Not Found (usuário não tem acesso à empresa informada).
 
 #### GET /api/auth/me (Requer Token)
-* **Resposta (200)**: `{"id": "...", "organizationId": "...", "role": "..."}`
+* **Resposta (200)**: `{"id": "...", "email": "...", "organizationId": "...", "organizationName": "...", "role": "...", "organizations": [{"id": "...", "name": "...", "role": "..."}]}`
+
+O token carrega a empresa e o papel do usuário. Toda consulta de ordens é filtrada pela empresa do token, então uma ordem de outra empresa responde 404 (e não aparece na listagem nem no CSV). Cada transição de status é gravada na tabela `audit_log`.
 
 ### Health & Públicos (Fase B1)
 
@@ -82,24 +87,26 @@ Todas as requisições (exceto públicas) exigem o cabeçalho: `Authorization: B
 
 #### POST /api/orders (OWNER, APPROVER, OPERATOR)
 * Cria nova ordem de pagamento e cotação.
-* **Corpo**: `{"supplierName": "...", "supplierCountry": "...", "supplierWallet": "...", "invoiceNumber": "...", "amountCents": 100000, "dueDate": "...", "extractionSource": "demo", "invoiceFilename": "...", "network": "tempo"}`
+* **Corpo**: `{"supplierName": "...", "supplierCountry": "...", "supplierWallet": "...", "invoiceNumber": "...", "amountCents": 100000, "dueDate": "...", "extractionSource": "demo", "invoiceFilename": "...", "network": "tempo", "reference": "SM-XXXXXXXX"}`
+* `reference` é opcional e, se enviado, deve estar no formato `SM-` seguido de 8 caracteres Crockford base32 (sem I, L, O, U). Sem ele, o serviço gera uma referência. A referência é o memo on-chain: ela é opaca e **nunca** contém o número da fatura. O número da fatura (até 64 caracteres) fica somente no banco.
 * **Resposta (201)**: `{"order": {...}}`
-* **Erros**: 400 Bad Request (dados inválidos).
+* **Erros**: 400 Bad Request (dados inválidos ou referência fora do formato), 409 Conflict (referência já usada).
 
 #### GET /api/orders/{id} (Qualquer Autenticado)
 * Retorna detalhes da ordem e seus eventos (timeline).
 * **Resposta (200)**: `{"order": {...}, "events": [...]}`
-* **Erros**: 404 Not Found.
+* **Erros**: 404 Not Found (inclui ordem de outra empresa).
 
 #### POST /api/orders/{id}/pay (OWNER, APPROVER)
-* Inicia o pagamento on-chain (atomic claim).
+* Inicia o pagamento on-chain (reserva atômica). Cada tentativa usa a chave de idempotência `<orderId>-<tentativa>` enviada ao chain-service, que consulta `GET /payments/{key}` antes de enviar de novo; um pagamento já enviado não é duplicado.
 * **Resposta (200)**: `{"order": {...}}`
-* **Erros**: 404 Not Found, 409 Conflict (já em progresso), 502 Bad Gateway (erro na chain).
+* **Erros**: 403 Forbidden (operador ou contador), 404 Not Found, 409 Conflict (já em progresso ou já paga), 502 Bad Gateway (erro na chain).
 
 #### POST /api/orders/{id}/reconcile (Qualquer Autenticado)
 * Tenta conciliar a ordem na chain. Retorna OK HTTP com status no corpo se houver falha de negócio.
 * **Resposta (200)**: `{"ok": true/false, "order": {...}, "reason": "...", "checks": {...}}`
-* **Erros**: 409 Conflict (se ordem não estiver paga).
+* A conciliação busca o evento `TransferWithMemo` por destinatário e memo e confere token, destinatário, valor, memo e recibo. Um par (hash da transação, índice do log) concilia uma única ordem (índice único no banco).
+* **Erros**: 404 Not Found (inclui ordem de outra empresa), 409 Conflict (se ordem não estiver paga).
 
 #### GET /api/proof/{id} (Público)
 * Página de prova para o fornecedor.
@@ -115,8 +122,8 @@ Todas as requisições (exceto públicas) exigem o cabeçalho: `Authorization: B
 * Download de CSV com todas as ordens.
 * **Resposta (200)**: Corpo em texto/csv.
 
-### [PLANEJADO] Fase B2: Fornecedores, Ledger, Aprovação
-Estes endpoints serão implementados na próxima fase.
+### [PLANEJADO, NÃO IMPLEMENTADO] Fase B2: Fornecedores, Ledger, Aprovação
+Estes endpoints ainda não existem no código; são o plano da próxima fase.
 
 * **GET /api/suppliers**: Listar fornecedores. (Qualquer Autenticado)
 * **GET /api/suppliers/{id}**: Detalhes do fornecedor e suas carteiras versionadas. (Qualquer Autenticado)

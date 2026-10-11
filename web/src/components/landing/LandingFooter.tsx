@@ -3,6 +3,7 @@ import Link from 'next/link'
 import type { T } from '@/lib/i18n/server'
 import { Logo } from '../ui'
 import { VoyageLine } from './footer/VoyageLine'
+import { SAMPLE_REFERENCE } from './sample'
 import { appLink, externalProps } from './site'
 import { label } from './type'
 
@@ -44,7 +45,7 @@ export function LandingFooter({ t }: { t: T }) {
       </div>
 
       <div className="mt-24 md:mt-32">
-        <VoyageLine memo="INV-2026-0845" />
+        <VoyageLine memo={SAMPLE_REFERENCE} />
       </div>
 
       <div className={clsx(label, 'mt-16 flex flex-wrap items-center justify-between gap-x-8 gap-y-3 border-t border-foam/10 py-6 text-foam/45')}>

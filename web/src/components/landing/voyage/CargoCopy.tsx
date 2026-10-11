@@ -8,23 +8,22 @@ import { Reveal } from '../Reveal'
 import { Lede } from '../lede/Lede'
 import { ChapterTag, displayL } from '../type'
 import { ByteStrip } from './cargo/ByteStrip'
-import { MemoInput } from './cargo/MemoInput'
 import { Readout } from './cargo/Readout'
+import { ReissueButton } from './cargo/ReissueButton'
 
 interface Props {
-  reference: string
   memo: Memo
   /** Memo containers already on deck (scroll-driven), 0 to 32. */
   landed: number
-  onChange: (value: string) => void
+  onReissue: () => void
 }
 
 /**
  * Chapter 01, over the top-down shot of the deck. Above the ship: the title, the explanation and the reference
- * spelled out as its bytes land. Below it: the 32-byte strip and, once the cargo is loaded, a field to load your
- * own invoice number. The ship itself is left to the 3D and its HUD brackets.
+ * spelled out as its bytes land. Below it: the 32-byte strip and, once the cargo is loaded, a button that issues
+ * another order code. The ship itself is left to the 3D and its HUD brackets.
  */
-export function CargoCopy({ reference, memo, landed, onChange }: Props) {
+export function CargoCopy({ memo, landed, onReissue }: Props) {
   const { t } = useT()
   const countId = useId()
   const ready = landed >= MEMO_SIZE
@@ -44,7 +43,7 @@ export function CargoCopy({ reference, memo, landed, onChange }: Props) {
       </div>
 
       <div>
-        <MemoInput value={reference} ready={ready} describedBy={countId} onChange={onChange} />
+        <ReissueButton ready={ready} describedBy={countId} onReissue={onReissue} />
         <div className="mt-5">
           <ByteStrip memo={memo} landed={landed} />
         </div>

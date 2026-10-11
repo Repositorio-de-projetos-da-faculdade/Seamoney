@@ -23,6 +23,20 @@ public class UserRepository {
                 email).stream().findFirst();
     }
 
+    public Optional<String> findEmail(String userId) {
+        return jdbc.query("SELECT email FROM users WHERE id = ?", (rs, i) -> rs.getString(1), userId).stream().findFirst();
+    }
+
+    /** The companies a user belongs to, with names, for the company switcher. */
+    public record Company(String id, String name, String role) {}
+
+    public List<Company> findCompanies(String userId) {
+        return jdbc.query(
+                "SELECT o.id, o.name, m.role FROM memberships m JOIN organizations o ON o.id = m.organization_id WHERE m.user_id = ? ORDER BY o.name",
+                (rs, i) -> new Company(rs.getString("id"), rs.getString("name"), rs.getString("role")),
+                userId);
+    }
+
     public List<Membership> findMemberships(String userId) {
         return jdbc.query("SELECT * FROM memberships WHERE user_id = ?",
                 (rs, rowNum) -> new Membership(rs.getString("user_id"), rs.getString("organization_id"), Role.valueOf(rs.getString("role").toUpperCase()), rs.getString("status")),

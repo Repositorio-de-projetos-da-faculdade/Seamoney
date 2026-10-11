@@ -1,3 +1,4 @@
+import { SAMPLE_REFERENCE } from '../sample'
 import { label } from '../type'
 import { VIEW_H, VIEW_W, type RouteGeometry, type StopKey } from './geometry'
 import { RouteFx, SonarDefs } from './RouteFx'
@@ -76,7 +77,7 @@ export function RouteChart({ geo, labels }: { geo: RouteGeometry; labels: Record
           <g transform="translate(0 -30)">
             <rect x={-92} y={-14} width={184} height={28} rx={14} className="fill-abyss stroke-mint" strokeWidth={1} />
             <text textAnchor="middle" dominantBaseline="central" className="fill-mint font-data" fontSize={11} fontWeight={500} letterSpacing={0.8}>
-              memo INV-2026-0845
+              memo {SAMPLE_REFERENCE}
             </text>
           </g>
         </g>

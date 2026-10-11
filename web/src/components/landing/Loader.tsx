@@ -6,10 +6,10 @@ import { useT } from '@/lib/i18n/client'
 import { encodeMemo, MEMO_SIZE } from '@/lib/memo'
 import { LogoMark } from '../ui'
 import { prefersReducedMotion, REVEAL_EVENT } from './motion'
+import { SAMPLE_REFERENCE as REFERENCE } from './sample'
 import { label } from './type'
 import { READY_EVENT } from './voyage/useVoyage'
 
-const REFERENCE = 'INV-2026-0845'
 const BYTES = encodeMemo(REFERENCE).bytes
 const MIN_MS = 1500
 const MAX_MS = 5000

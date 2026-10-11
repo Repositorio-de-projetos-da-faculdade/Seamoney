@@ -8,11 +8,16 @@ import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
-/** An in-memory blockchain for tests: a payment becomes a transfer that reconciliation can find again. */
+/**
+ * An in-memory blockchain for tests: a payment becomes a transfer that reconciliation can find again. Like the chain
+ * service, it remembers each Idempotency-Key and answers a repeated key with the first payment.
+ */
 public class FakeChain implements ChainClient {
 
     public static final String PARTNER = "0x7F44CF78Cd8052FB426Dd8C818498A1e1d7e8835";
@@ -21,8 +26,13 @@ public class FakeChain implements ChainClient {
     public final List<FoundTransfer> transfers = new CopyOnWriteArrayList<>();
     private final AtomicInteger counter = new AtomicInteger();
 
-    /** When set, the next sendPayment fails with this error, once. */
+    private final Map<String, SentPayment> paid = new ConcurrentHashMap<>();
+    private final Map<String, String> statuses = new ConcurrentHashMap<>();
+
+    /** When set, the next sendPayment fails with this error, once. Nothing reaches the chain. */
     public volatile ChainException failNextPayment;
+    /** When set, the next payment reaches the chain but the caller only sees a timeout, once. */
+    public volatile boolean timeoutAfterSending;
     /** When set, the next payment is recorded on-chain with this (wrong) amount in base units. */
     public volatile BigInteger tamperNextAmount;
 
@@ -32,10 +42,13 @@ public class FakeChain implements ChainClient {
     }
 
     @Override
-    public SentPayment sendPayment(Network network, String to, long amountCents, String reference) {
+    public SentPayment sendPayment(Network network, String to, long amountCents, String reference, String idempotencyKey) {
+        SentPayment earlier = paid.get(idempotencyKey);
+        if (earlier != null) return earlier;
         ChainException failure = failNextPayment;
         if (failure != null) {
             failNextPayment = null;
+            statuses.put(idempotencyKey, "failed");
             throw failure;
         }
         int n = counter.incrementAndGet();
@@ -45,7 +58,20 @@ public class FakeChain implements ChainClient {
         String memo = memoHex(reference);
         String partner = network == Network.TEMPO ? PARTNER : PARTNER_SOLANA;
         transfers.add(new FoundTransfer(tx, 1, 100L + n, partner, to, units, memo));
-        return new SentPayment(tx, 100L + n, 1200, memo, partner);
+        SentPayment sent = new SentPayment(tx, 100L + n, 1200, memo, partner);
+        paid.put(idempotencyKey, sent);
+        if (timeoutAfterSending) {
+            timeoutAfterSending = false;
+            statuses.put(idempotencyKey, "pending");
+            throw new ChainException("The chain service is unavailable", new java.net.http.HttpTimeoutException("read timed out"));
+        }
+        statuses.put(idempotencyKey, "confirmed");
+        return sent;
+    }
+
+    @Override
+    public Optional<String> paymentStatus(String idempotencyKey) {
+        return Optional.ofNullable(statuses.get(idempotencyKey));
     }
 
     @Override

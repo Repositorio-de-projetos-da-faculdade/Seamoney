@@ -22,8 +22,8 @@ export function Outcomes({ copy }: { copy: ReconcileCopy }) {
         <p className="mt-2.5 pl-6 font-data text-[10px] leading-relaxed text-ink/50">
           <span className="block truncate">{copy.csvLines[0]}</span>
           <span className="block truncate">
-            <span className="bg-mint/45 text-ink">{copy.invoiceNo}</span>
-            {copy.csvLines[1].slice(copy.invoiceNo.length)}
+            <span className="bg-mint/45 text-ink">{copy.reference}</span>
+            {copy.csvLines[1].slice(copy.reference.length)}
           </span>
         </p>
       </div>

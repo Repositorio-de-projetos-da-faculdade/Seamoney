@@ -20,8 +20,22 @@ public class JwtTokenProvider {
     private final SecretKey key;
     private final long validityInMilliseconds = 3600000; // 1h
 
-    public JwtTokenProvider(@Value("${seamoney.jwt-secret}") String secret) {
-        this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+    /** Below this many characters, or with a placeholder from the docs, anyone could forge a token: refuse to start. */
+    static final int MIN_SECRET_LENGTH = 32;
+
+    public JwtTokenProvider(@Value("${seamoney.jwt-secret:}") String secret) {
+        this.key = Keys.hmacShaKeyFor(checkedSecret(secret).getBytes(StandardCharsets.UTF_8));
+    }
+
+    static String checkedSecret(String secret) {
+        if (secret == null || secret.length() < MIN_SECRET_LENGTH) {
+            throw new IllegalStateException("JWT_SECRET must be set to a random string of at least " + MIN_SECRET_LENGTH + " characters.");
+        }
+        String lower = secret.toLowerCase();
+        if (lower.contains("changeme") || lower.startsWith("your_secure")) {
+            throw new IllegalStateException("JWT_SECRET still holds the example value; set a random one.");
+        }
+        return secret;
     }
 
     public String createToken(String userId, String orgId, String role) {

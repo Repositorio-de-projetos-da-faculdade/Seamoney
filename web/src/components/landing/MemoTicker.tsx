@@ -1,9 +1,9 @@
 import clsx from 'clsx'
 import type { CSSProperties } from 'react'
 import { encodeMemo, memoHex } from '@/lib/memo'
+import { SAMPLE_REFERENCE as REFERENCE } from './sample'
 import { mono } from './type'
 
-const REFERENCE = 'INV-2026-0845'
 const RUN = [REFERENCE, memoHex(encodeMemo(REFERENCE)), 'TransferWithMemo', 'AlphaUSD · TIP-20', 'Tempo Moderato · 42431', 'Solana devnet · Memo program']
 
 function Run() {

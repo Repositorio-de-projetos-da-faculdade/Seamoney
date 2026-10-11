@@ -1,7 +1,8 @@
 // How a demo payment reaches the "chain". Two modes, chosen in Settings:
 //  - simulated: nothing leaves the browser. A random hash stands in for the transaction and is labelled simulated.
 //  - testnet: the same payment is created in the Java rules API and sent for real on the Tempo testnet through the
-//    existing /api proxy (web -> Java -> Python -> Tempo). Only works when that stack is running (docker compose).
+//    existing /api proxy (web -> Java -> Python -> Tempo). Only works when that stack is running (docker compose)
+//    and the visitor signed in at /login with an account that may pay (owner or approver).
 // Solana payments are always simulated here: its adapter is not wired to the Java service yet.
 import { base58, cryptoRand, hex } from './codes'
 import type { Network, Payment, Reconciliation, Settlement, Wallet } from './types'
@@ -45,22 +46,41 @@ export async function simulateMatch(payment: Payment): Promise<Reconciliation> {
 
 export class LiveError extends Error {}
 
-/** True when the web app can reach the Java rules API and it can reach the chain service. */
-export async function liveAvailable(): Promise<boolean> {
+/** Can a testnet payment go out now: the stack answers ('ok'), it does but nobody signed in ('signin'), or 'no'. */
+export async function liveAvailable(): Promise<'ok' | 'signin' | 'no'> {
   try {
     const res = await fetch('/api/health', { cache: 'no-store', signal: AbortSignal.timeout(6_000) })
     const body = (await res.json()) as { checks?: Record<string, string> }
-    return body.checks?.rulesApi === 'ok' && body.checks?.chainService === 'ok'
+    if (body.checks?.rulesApi !== 'ok' || body.checks?.chainService !== 'ok') return 'no'
+    const session = await fetch('/api/session', { cache: 'no-store', signal: AbortSignal.timeout(6_000) })
+    return session.ok ? 'ok' : 'signin'
   } catch {
-    return false
+    return 'no'
   }
 }
 
-async function post<T>(path: string, body?: unknown): Promise<T> {
+/** Errors of the Java service, in words a person can act on. */
+function liveMessage(status: number, error: string | undefined): string {
+  if (status === 401) return 'Sign in at /login to pay on the testnet.'
+  if (status === 403) return 'The signed-in testnet account may not do this. Use an owner or approver account.'
+  return error ?? `The rules service answered ${status}.`
+}
+
+class LiveHttpError extends LiveError {
+  constructor(
+    message: string,
+    public status: number,
+  ) {
+    super(message)
+  }
+}
+
+async function call<T>(path: string, method: 'GET' | 'POST', body?: unknown): Promise<T> {
   let res: Response
   try {
     res = await fetch(path, {
-      method: 'POST',
+      method,
+      cache: 'no-store',
       headers: { 'content-type': 'application/json' },
       body: body === undefined ? undefined : JSON.stringify(body),
     })
@@ -68,12 +88,16 @@ async function post<T>(path: string, body?: unknown): Promise<T> {
     throw new LiveError('The live testnet stack is not reachable.')
   }
   const json = (await res.json().catch(() => ({}))) as T & { error?: string }
-  if (!res.ok) throw new LiveError(json.error ?? `The rules service answered ${res.status}.`)
+  if (!res.ok) throw new LiveHttpError(liveMessage(res.status, json.error), res.status)
   return json
 }
 
+const post = <T>(path: string, body?: unknown) => call<T>(path, 'POST', body)
+
 interface LiveOrder {
   id: string
+  reference: string
+  status: string
   txHash: string | null
   blockNumber: number | null
   logIndex: number | null
@@ -82,22 +106,41 @@ interface LiveOrder {
   recon: { matchedAt: string; expectedCents: number; paidCents: number; checks: Reconciliation['checks'] } | null
 }
 
+/** The Java order made for this payment by an earlier attempt, found by its reference. */
+async function existingOrder(reference: string): Promise<LiveOrder | null> {
+  const { orders } = await call<{ orders: LiveOrder[] }>('/api/orders?limit=500', 'GET')
+  return orders.find((o) => o.reference === reference) ?? null
+}
+
 /**
- * Creates the order in the Java service and pays it on the Tempo testnet. The Java prototype writes its invoice field
- * as the memo, so the opaque order reference goes there: the invoice number never reaches the public chain.
+ * Creates the order in the Java service and pays it on the Tempo testnet. The opaque order reference of this demo
+ * becomes the memo (Java accepts it in the same SM-XXXXXXXX format); the invoice number stays off-chain. A retry after
+ * a failed send finds the order made the first time instead of creating a second one, and Java's idempotency key
+ * makes sure a payment that did reach the chain is not sent again.
  */
 export async function sendOnTestnet(payment: Payment, supplier: { name: string; country: string }, wallet: Wallet): Promise<Settlement> {
-  const { order } = await post<{ order: LiveOrder }>('/api/orders', {
-    supplierName: supplier.name,
-    supplierCountry: supplier.country || undefined,
-    supplierWallet: wallet.address,
-    invoiceNumber: payment.reference,
-    amountCents: payment.quote.amountCents,
-    dueDate: payment.dueDate ?? undefined,
-    extractionSource: payment.source,
-    invoiceFilename: payment.invoiceFilename ?? undefined,
-  })
-  const paid = (await post<{ order: LiveOrder }>(`/api/orders/${encodeURIComponent(order.id)}/pay`)).order
+  let order: LiveOrder | null
+  try {
+    order = (
+      await post<{ order: LiveOrder }>('/api/orders', {
+        supplierName: supplier.name,
+        supplierCountry: supplier.country || undefined,
+        supplierWallet: wallet.address,
+        invoiceNumber: payment.invoiceNumber,
+        reference: payment.reference,
+        amountCents: payment.quote.amountCents,
+        dueDate: payment.dueDate ?? undefined,
+        extractionSource: payment.source,
+        invoiceFilename: payment.invoiceFilename ?? undefined,
+      })
+    ).order
+  } catch (e) {
+    if (!(e instanceof LiveHttpError && e.status === 409)) throw e
+    order = await existingOrder(payment.reference)
+    if (!order) throw e
+  }
+  const paid =
+    order.status === 'quoted' ? (await post<{ order: LiveOrder }>(`/api/orders/${encodeURIComponent(order.id)}/pay`)).order : order
   if (!paid.txHash || paid.blockNumber == null) throw new LiveError('The payment did not return a transaction.')
   return {
     mode: 'testnet',

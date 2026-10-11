@@ -29,6 +29,7 @@ class DemoSeederTest {
         registry.add("spring.datasource.username", () -> "sa");
         registry.add("spring.datasource.password", () -> "");
         registry.add("spring.flyway.enabled", () -> "true");
+        registry.add("seamoney.jwt-secret", () -> "test_jwt_secret_that_needs_to_be_long_enough_for_hs256_alg");
     }
 
     @TestConfiguration

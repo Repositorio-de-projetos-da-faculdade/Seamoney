@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useId, useRef, useState } from 'react'
 import { liveAvailable } from '@/lib/demo/settle'
 import type { Settings, SettlementMode } from '@/lib/demo/types'
@@ -24,8 +25,8 @@ export function NetworksPanel({ settings, canEdit }: { settings: Settings; canEd
   // Looks for the Docker stack whenever the testnet option is chosen; only the latest answer counts.
   const check = () => {
     const ticket = ++asked.current
-    void liveAvailable().then((ok) => {
-      if (ticket === asked.current) setLive(ok ? 'ok' : 'no')
+    void liveAvailable().then((state) => {
+      if (ticket === asked.current) setLive(state)
     })
   }
   const pick = (next: SettlementMode) => {
@@ -70,8 +71,16 @@ export function NetworksPanel({ settings, canEdit }: { settings: Settings; canEd
         </fieldset>
         {live ? (
           <div role="status">
-            <Note tone={live === 'ok' ? 'ok' : live === 'no' ? 'warn' : 'info'}>
-              {live === 'checking' ? t('app.set.checking') : live === 'ok' ? t('app.set.liveOk') : t('app.set.liveNo')}
+            <Note tone={live === 'ok' ? 'ok' : live === 'checking' ? 'info' : 'warn'}>
+              {live === 'checking' ? t('app.set.checking') : live === 'ok' ? t('app.set.liveOk') : live === 'signin' ? t('app.set.liveSignIn') : t('app.set.liveNo')}
+              {live === 'signin' ? (
+                <>
+                  {' '}
+                  <Link href="/login?next=/app/settings" className="font-medium underline underline-offset-2">
+                    {t('app.set.signIn')}
+                  </Link>
+                </>
+              ) : null}
             </Note>
           </div>
         ) : null}

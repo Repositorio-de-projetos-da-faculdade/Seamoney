@@ -22,6 +22,12 @@ services:
       TEMPO_PARTNER_PRIVATE_KEY: ${TEMPO_PARTNER_PRIVATE_KEY:?Set TEMPO_PARTNER_PRIVATE_KEY in .env (testnet key only)}
       TEMPO_GAS_LIMIT: ${TEMPO_GAS_LIMIT:-500000}
       CHAIN_SERVICE_TOKEN: ${CHAIN_SERVICE_TOKEN:-dev-internal-token}
+      # optional: without them the Solana devnet payer is derived from the Tempo testnet key
+      SOLANA_PAYER_PRIVATE_KEY: ${SOLANA_PAYER_PRIVATE_KEY:-}
+      SOLANA_RPC_URL: ${SOLANA_RPC_URL:-https://api.devnet.solana.com}
+    volumes:
+      # the idempotency keys of sent payments; kept across restarts so a retry never pays twice
+      - chain-data:/app/data
     restart: unless-stopped
 
   rules-api:
@@ -36,7 +42,8 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
       DEMO_USD_BRL: ${DEMO_USD_BRL:-5.40}
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-demo}
-      JWT_SECRET: ${JWT_SECRET:-dev_jwt_secret_that_should_be_long_enough_for_hs256_alg}
+      SEED_DEMO: ${SEED_DEMO:-true}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env (a random string of 32+ characters)}
     depends_on:
       postgres:
         condition: service_healthy
@@ -49,6 +56,9 @@ services:
     environment:
       RULES_API_URL: http://rules-api:8080
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # optional password gate for a public demo; the secret signs its cookie (16+ characters)
+      DEMO_ACCESS_PASSWORD: ${DEMO_ACCESS_PASSWORD:-}
+      DEMO_SESSION_SECRET: ${DEMO_SESSION_SECRET:-}
     ports:
       - "${WEB_PORT:-3000}:3000"
     depends_on:
@@ -58,3 +68,4 @@ services:
 
 volumes:
   postgres-data:
+  chain-data:

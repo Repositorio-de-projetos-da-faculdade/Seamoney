@@ -21,7 +21,7 @@ seamoney:
   fee-bps: 100
   bank-fee-pct: 3.0
   max-amount-cents: 100000000
-  jwt-secret: ${JWT_SECRET:changeme_in_production_so_it_is_secure}
+  jwt-secret: ${JWT_SECRET:}
 
 ---
 spring:
@@ -30,4 +30,5 @@ spring:
       on-profile: demo
 
 seamoney:
-  seed-demo: true
+  # the demo profile seeds by default; SEED_DEMO=false starts it with an empty database
+  seed-demo: ${SEED_DEMO:true}
