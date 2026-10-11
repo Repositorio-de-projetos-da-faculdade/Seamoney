@@ -22,7 +22,7 @@ export function verifySession(cookieValue: string | undefined, secret: string): 
   const expected = signSession(timestamp, secret)
   try {
     return timingSafeEqual(Buffer.from(cookieValue), Buffer.from(expected))
-  } catch (e) {
+  } catch {
     return false
   }
 }

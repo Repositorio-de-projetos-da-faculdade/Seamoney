@@ -2,16 +2,16 @@
 
 import { useActionState } from 'react'
 import { unlock } from './actions'
-import { translate } from '@/lib/i18n/dict'
+import { translate, type Key } from '@/lib/i18n/dict'
 import { LangSwitch } from '@/components/landing/LangSwitch'
 
 export function UnlockForm({ locale }: { locale: 'en' | 'pt' }) {
   const [state, formAction, isPending] = useActionState(
-    async (prevState: any, formData: FormData) => await unlock(formData),
+    async (_prev: { error: string } | null, formData: FormData) => await unlock(formData),
     null
   )
 
-  const t = (key: any) => translate(locale, key)
+  const t = (key: Key) => translate(locale, key)
 
   return (
     <div className="min-h-screen flex flex-col bg-(--color-abyss) text-(--color-foam) items-center justify-center p-4">
@@ -40,7 +40,7 @@ export function UnlockForm({ locale }: { locale: 'en' | 'pt' }) {
           
           {state?.error && (
             <div className="text-(--color-bad-bg) text-sm bg-(--color-bad-ink)/20 px-4 py-2 rounded-lg">
-              {t(state.error)}
+              {t(state.error as Key)}
             </div>
           )}
           
