@@ -28,12 +28,23 @@ function isDuplicate(state: DemoState, d: Draft) {
 }
 
 /** The order's fields, checked as you type: supplier and its approved networks, invoice, amount, due date, review. */
-export function DetailsForm({ state, draft, set }: { state: DemoState; draft: Draft; set: (patch: Partial<Draft>) => void }) {
+export function DetailsForm({
+  state,
+  draft,
+  set,
+  submitting = false,
+}: {
+  state: DemoState
+  draft: Draft
+  set: (patch: Partial<Draft>) => void
+  /** While the order is being created the new order would read as its own duplicate; the rules check it anyway. */
+  submitting?: boolean
+}) {
   const { t, locale } = useT()
   // read once per mount, so the due-date warning does not change while the page is open
   const [now] = useState(() => Date.now())
   const supplier = state.suppliers.find((s) => s.id === draft.supplierId)
-  const duplicate = !!supplier && draft.invoiceNumber.trim() !== '' && isDuplicate(state, draft)
+  const duplicate = !submitting && !!supplier && draft.invoiceNumber.trim() !== '' && isDuplicate(state, draft)
   const addHref = '/app/suppliers'
 
   const amountCents = parseMoneyToCents(draft.amount)

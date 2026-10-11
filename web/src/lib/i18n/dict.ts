@@ -10,7 +10,7 @@ const base = {
   'brand.closing': 'Importing just got easier.',
 
   'nav.calculator': 'Calculator',
-  'nav.dashboard': 'Dashboard',
+  'nav.dashboard': 'Open the app',
   'nav.getStarted': 'Get started',
   'nav.proof': 'Proof of payment',
   'nav.how': 'How it works',
@@ -413,7 +413,7 @@ const basePt: Record<keyof typeof base, string> = {
   'brand.closing': 'Importar ficou mais fácil.',
 
   'nav.calculator': 'Calculadora',
-  'nav.dashboard': 'Painel',
+  'nav.dashboard': 'Abrir o app',
   'nav.getStarted': 'Começar',
   'nav.proof': 'Comprovante',
   'nav.how': 'Como funciona',
