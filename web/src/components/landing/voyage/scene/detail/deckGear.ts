@@ -1,10 +1,11 @@
 import * as THREE from 'three'
 import { deckAt, halfBreadth, HULL } from '../hull'
+import { FORECASTLE as FORE } from '../forecastle/layout'
 import { FUNNEL_X } from '../stowage'
 import { railing, rect } from './rail'
 
 // What a real deck carries at its edges and ends: the railing along both sides, the solid bulwark round the
-// forecastle, bollards and mooring winches aft and forward, and the rail round the engine casing. Railings are left
+// forecastle, bollards and mooring winches aft (the forecastle gear is in forecastle/), and the rail round the engine casing. Railings are left
 // out on phones (`rails`).
 
 type Keep = <T extends { dispose(): void }>(x: T) => T
@@ -16,7 +17,7 @@ export interface GearMaterials {
   drum: THREE.Material
 }
 
-const FORECASTLE = 60
+const FORECASTLE = FORE.x0
 
 /** The deck edge on one side, from x0 to x1, a little inboard of the shell. */
 function edge(side: 1 | -1, x0: number, x1: number, step = 2) {
@@ -78,13 +79,13 @@ export function addDeckGear(group: THREE.Group, keep: Keep, mats: GearMaterials,
   // mooring gear: pairs of bollards and winch drums, aft and forward
   const bollard = new THREE.CylinderGeometry(0.32, 0.36, 0.9, 12)
   const pairs: [number, number][] = [
-    [-93.5, 7.5], [-93.5, -7.5], [-88.5, 10.5], [-88.5, -10.5], [-70, 15], [-70, -15], [52, 14.5], [52, -14.5], [84, 7], [84, -7],
+    [-93.5, 7.5], [-93.5, -7.5], [-88.5, 10.5], [-88.5, -10.5], [-70, 15], [-70, -15], [52, 14.5], [52, -14.5],
   ]
   for (const [x, z] of pairs) {
     for (const dx of [-0.6, 0.6]) add(bollard.clone(), mats.steel, x + dx, deckAt(x) + 0.45, z)
   }
   bollard.dispose()
-  for (const [x, z] of [[-90.5, 7], [-90.5, -7], [76, 3.2], [76, -3.2]] as [number, number][]) {
+  for (const [x, z] of [[-90.5, 7], [-90.5, -7]] as [number, number][]) {
     const drum = add(new THREE.CylinderGeometry(0.75, 0.75, 2.2, 16), mats.drum, x, deckAt(x) + 1, z)
     drum.rotation.x = Math.PI / 2
     add(new THREE.BoxGeometry(1.4, 1.2, 1.1), mats.steel, x, deckAt(x) + 0.6, z + Math.sign(z) * 1.7)
