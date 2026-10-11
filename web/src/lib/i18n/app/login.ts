@@ -1,0 +1,36 @@
+// SaaS demo: copy added in the login page pass. Keys are owned by that page only.
+export const en = {
+  'app.login2.todoOne': '1 thing to do',
+  'app.login2.todoMany': '{n} things to do',
+  'app.login2.nothing': 'Nothing waiting',
+  'app.login2.reports': 'Reports and audit trail',
+  'app.login2.try.title': 'Try the demo in three steps',
+  'app.login2.try.lede': 'Each step signs you in as one person and opens the screen where that part of the work happens.',
+  'app.login2.try.step': 'Step {n}',
+  'app.login2.try.1': '{name} creates a payment from the sample invoice.',
+  'app.login2.try.2': '{name} approves the payment and sends it.',
+  'app.login2.try.3': '{name} downloads the CSV report.',
+  'app.login2.try.go': 'Sign in as {name}',
+  'app.login2.try.unavailable': 'This person is not in the demo right now.',
+  'app.login2.sea.kicker': 'Porto Claro Importadora, payments at sea',
+  'app.login2.sea.note': 'Each vessel is a fictitious payment on its way. Nothing moves real money.',
+  'app.login2.chart.title': 'Night chart of open payments, drawn as vessels at sea',
+}
+
+export const pt: Record<keyof typeof en, string> = {
+  'app.login2.todoOne': '1 coisa para fazer',
+  'app.login2.todoMany': '{n} coisas para fazer',
+  'app.login2.nothing': 'Nada esperando',
+  'app.login2.reports': 'Relatórios e trilha de auditoria',
+  'app.login2.try.title': 'Experimente a demo em três passos',
+  'app.login2.try.lede': 'Cada passo entra como uma pessoa e abre a tela em que essa parte do trabalho acontece.',
+  'app.login2.try.step': 'Passo {n}',
+  'app.login2.try.1': '{name} cria um pagamento a partir da fatura de exemplo.',
+  'app.login2.try.2': '{name} aprova o pagamento e o envia.',
+  'app.login2.try.3': '{name} baixa o relatório CSV.',
+  'app.login2.try.go': 'Entrar como {name}',
+  'app.login2.try.unavailable': 'Esta pessoa não está na demo agora.',
+  'app.login2.sea.kicker': 'Porto Claro Importadora, pagamentos no mar',
+  'app.login2.sea.note': 'Cada embarcação é um pagamento fictício em trânsito. Nada movimenta dinheiro real.',
+  'app.login2.chart.title': 'Carta noturna dos pagamentos em aberto, desenhados como embarcações no mar',
+}

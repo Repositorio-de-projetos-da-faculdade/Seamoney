@@ -472,3 +472,104 @@ html.lenis body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* SaaS demo (/app): the desk the sheets lie on, the sheets, and their rules. The landing tokens above are shared. */
+@theme {
+  --color-desk: #efece5;
+  --color-sheet: #fbfaf7;
+  --color-rule: #dcd6c9;
+  --color-hair: #e9e5dc;
+}
+
+/* ---------- SaaS demo (/app) ---------- */
+.desk {
+  /* the workspace keeps Funnel Sans for running text (the published identity), whatever the landing uses */
+  --font-text: "Funnel Sans Variable", "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-text);
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--color-ink);
+  background: var(--color-desk);
+  font-feature-settings: normal;
+}
+/* the marketing pages set a heading font and tracking globally; the desk sets its own on each heading */
+@layer base {
+  .desk :is(h1, h2, h3) {
+    font-family: var(--font-grotesk);
+    letter-spacing: normal;
+  }
+  /* layered, so a text-right utility still wins on numeric columns */
+  .desk th {
+    text-align: left;
+    font-weight: inherit;
+  }
+}
+/* Titles: *starred* words of the copy switch to the italic serif, like the landing headlines. */
+.desk-display em {
+  font-family: var(--font-accent);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.08em;
+  letter-spacing: -0.01em;
+}
+.desk :focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+.desk ::selection {
+  background: rgb(36 228 180 / 0.35);
+}
+
+/* a rubber stamp landing on the paper */
+@keyframes stamp-press {
+  0% {
+    opacity: 0;
+    transform: scale(1.6) rotate(var(--stamp-rot, -6deg));
+  }
+  60% {
+    opacity: 1;
+    transform: scale(0.96) rotate(var(--stamp-rot, -6deg));
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(var(--stamp-rot, -6deg));
+  }
+}
+.stamp-press {
+  animation: stamp-press 0.42s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+/* the live dot: a payment on its way */
+@keyframes beat {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(36 228 180 / 0.55);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgb(36 228 180 / 0);
+  }
+}
+.beat {
+  animation: beat 1.6s ease-in-out infinite;
+}
+
+/* a progress hairline running while the network answers */
+@keyframes run {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+
+/* a vessel waiting at anchor swings a little (the chart in /app) */
+@keyframes swing {
+  from {
+    transform: rotate(-4deg);
+  }
+  to {
+    transform: rotate(4deg);
+  }
+}

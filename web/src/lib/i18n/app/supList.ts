@@ -1,0 +1,36 @@
+// SaaS demo: copy of the suppliers list page (/app/suppliers). Keys are owned by that page only.
+export const en = {
+  'app.slist.sum.suppliers': 'Suppliers',
+  'app.slist.sum.paid90': 'Paid, last 90 days',
+  'app.slist.sum.open': 'Open orders',
+  'app.slist.sum.waiting': 'Wallets waiting',
+  'app.slist.sim': 'Simulated. The figures come from demo data, not from a bank.',
+  'app.slist.spark.sr': 'Paid per month over the last six months, {total} in total.',
+  'app.slist.net.label': 'Network',
+  'app.slist.net.all': 'All',
+  'app.slist.col.port': 'Port',
+  'app.slist.col.trend': 'Last six months',
+  'app.slist.col.share': 'Share, 90 days',
+  'app.slist.empty.network': 'No supplier has an approved wallet on this network.',
+  'app.slist.reason.new': 'New supplier, first wallet',
+  'app.slist.reason.network': 'New network for this supplier',
+  'app.slist.reason.version': 'Address change from version {n}',
+}
+
+export const pt: Record<keyof typeof en, string> = {
+  'app.slist.sum.suppliers': 'Fornecedores',
+  'app.slist.sum.paid90': 'Pago nos últimos 90 dias',
+  'app.slist.sum.open': 'Ordens abertas',
+  'app.slist.sum.waiting': 'Carteiras aguardando',
+  'app.slist.sim': 'Simulado. Os valores vêm de dados de demonstração, não de um banco.',
+  'app.slist.spark.sr': 'Pago por mês nos últimos seis meses, {total} no total.',
+  'app.slist.net.label': 'Rede',
+  'app.slist.net.all': 'Todas',
+  'app.slist.col.port': 'Porto',
+  'app.slist.col.trend': 'Últimos seis meses',
+  'app.slist.col.share': 'Parcela, 90 dias',
+  'app.slist.empty.network': 'Nenhum fornecedor tem carteira aprovada nesta rede.',
+  'app.slist.reason.new': 'Fornecedor novo, primeira carteira',
+  'app.slist.reason.network': 'Rede nova para este fornecedor',
+  'app.slist.reason.version': 'Troca de endereço da versão {n}',
+}

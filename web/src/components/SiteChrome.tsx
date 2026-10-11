@@ -9,9 +9,9 @@ export async function SiteHeader() {
   const links = [
     { href: '/#how', label: t('nav.how') },
     { href: '/calculator', label: t('nav.calculator') },
-    { href: '/dashboard', label: t('nav.dashboard') },
+    { href: '/app', label: t('nav.dashboard') },
   ]
-  const cta = { href: '/dashboard/orders/new', label: t('nav.getStarted') }
+  const cta = { href: '/app', label: t('nav.getStarted') }
 
   return (
     <header className="sticky top-0 z-40 border-b border-white/10 bg-navy-900/80 backdrop-blur-xl">
@@ -63,7 +63,8 @@ export async function SiteFooter() {
             {[
               ['/#how', t('nav.how')],
               ['/calculator', t('nav.calculator')],
-              ['/dashboard', t('nav.dashboard')],
+              ['/app', t('nav.dashboard')],
+              ['/dashboard', t('app.nav.live')],
             ].map(([href, label]) => (
               <li key={href}>
                 <Link href={href} className="inline-flex min-h-9 items-center text-white/75 transition hover:text-white">

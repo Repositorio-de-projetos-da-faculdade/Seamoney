@@ -56,3 +56,16 @@ export function seconds(ms: number | null | undefined, locale: Locale = 'en'): s
 
 export const shortHash = (h: string | null | undefined, head = 8, tail = 6) =>
   !h ? '-' : h.length <= head + tail + 1 ? h : `${h.slice(0, head)}…${h.slice(-tail)}`
+
+/** "3 hours ago", "yesterday"; older than a week falls back to the date. Client-side only (depends on now). */
+export function relative(iso: string | null | undefined, locale: Locale = 'en', nowMs = Date.now()): string {
+  if (!iso) return '-'
+  const seconds = (new Date(iso).getTime() - nowMs) / 1000
+  const abs = Math.abs(seconds)
+  const rtf = new Intl.RelativeTimeFormat(tag(locale), { numeric: 'auto' })
+  if (abs < 45) return rtf.format(0, 'second')
+  if (abs < 3_600) return rtf.format(Math.round(seconds / 60), 'minute')
+  if (abs < 86_400) return rtf.format(Math.round(seconds / 3_600), 'hour')
+  if (abs < 7 * 86_400) return rtf.format(Math.round(seconds / 86_400), 'day')
+  return dateShort(iso, locale)
+}

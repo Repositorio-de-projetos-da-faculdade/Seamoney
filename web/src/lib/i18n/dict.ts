@@ -1,6 +1,9 @@
 // UI copy in English (default, because the hackathon submission must be in English) and Portuguese.
 // The Portuguese dictionary is typed against the English one, so a missing key is a compile error.
-const en = {
+// Copy of the SaaS demo (/app) lives in ./app, one file per area, merged in below.
+import { appEn, appPt } from './app'
+
+const base = {
   'lang.switch': 'Português',
   'brand.tagline': 'International payments, simpler, cheaper, with automatic reconciliation.',
   'brand.pitch': 'For Brazilian importers who want more control, lower fees and zero headaches.',
@@ -360,10 +363,12 @@ const en = {
   'error.retry': 'Try again',
 } as const
 
+const en = { ...base, ...appEn }
+
 export type Key = keyof typeof en
 export type Dict = Record<Key, string>
 
-const pt: Dict = {
+const basePt: Record<keyof typeof base, string> = {
   'lang.switch': 'English',
   'brand.tagline': 'Pagamentos internacionais mais simples, baratos e com conciliação automática.',
   'brand.pitch': 'Para importadores brasileiros que querem mais controle, menos taxas e zero dor de cabeça.',
@@ -722,6 +727,8 @@ const pt: Dict = {
   'error.service': 'O serviço de regras da Seamoney não respondeu. Verifique se ele está no ar e tente de novo.',
   'error.retry': 'Tentar de novo',
 }
+
+const pt: Dict = { ...basePt, ...appPt }
 
 export const dict = { en: en as Dict, pt } as const
 export type Locale = keyof typeof dict

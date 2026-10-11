@@ -8,6 +8,8 @@ Built for Colosseum's Crypto World's Fair 2026.
 
 Working prototype. Every item of the planned MVP below runs end to end on the Tempo testnet: cost calculator, invoice upload with AI-assisted reading (demo mode without an API key), payment order, simulated exchange quote, testnet payment with the order reference in the memo, automatic reconciliation, supplier receipt page and CSV report.
 
+A browser-only **SaaS demo** at `/app` shows the product with roles, approvals, reconciliation and reports on fictitious data, with no backend needed; it can optionally send its payments for real on the Tempo testnet. See "SaaS demo" in [docs/prototype.md](docs/prototype.md).
+
 Architecture, how to run each service, configuration, deployment options and hackathon disclosures are in [docs/prototype.md](docs/prototype.md). Remaining work is tracked through GitHub Issues and the Seamoney - MVP project board.
 
 ## The problem
