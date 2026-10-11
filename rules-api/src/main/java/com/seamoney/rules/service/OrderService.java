@@ -19,6 +19,7 @@ import com.seamoney.rules.domain.Views.ProofOrder;
 import com.seamoney.rules.domain.Views.StatsResponse;
 import com.seamoney.rules.service.OrderException.Code;
 import com.seamoney.rules.store.OrderRepository;
+import com.seamoney.rules.store.SupplierRepository;
 import com.seamoney.rules.store.OrderRepository.NewOrder;
 import com.seamoney.rules.store.OrderRepository.Supplier;
 import java.math.BigInteger;
@@ -94,12 +95,14 @@ public class OrderService {
     private static final Pattern REFERENCE = Pattern.compile("^SM-[" + REFERENCE_ALPHABET + "]{8}$");
 
     private final OrderRepository repo;
+    private final SupplierRepository suppliers;
     private final ChainClient chain;
     private final AppProperties props;
     private final Clock clock;
 
-    public OrderService(OrderRepository repo, ChainClient chain, AppProperties props, Clock clock) {
+    public OrderService(OrderRepository repo, SupplierRepository suppliers, ChainClient chain, AppProperties props, Clock clock) {
         this.repo = repo;
+        this.suppliers = suppliers;
         this.chain = chain;
         this.props = props;
         this.clock = clock;
@@ -171,20 +174,31 @@ public class OrderService {
         String reference = reference(in.reference());
         String now = now();
 
-        // Supplier: reuse by name. Without a wallet we create a throwaway demo address (public part only);
-        // a wallet saved for another network is of no use here.
         Optional<Supplier> existing = repo.findSupplierByName(orgId, supplierName);
-        String wallet = hasWallet
-                ? in.supplierWallet()
-                : existing.filter(s -> s.network() == network).map(Supplier::walletAddress).orElseGet(network::randomAddress);
         String country = blankToNull(in.supplierCountry());
+        String wallet;
         String supplierId;
-        if (existing.isPresent()) {
+        if (existing.isPresent() && suppliers.hasWallets(orgId, existing.get().id())) {
+            // a supplier in the wallet registry is paid only at the address a second person approved on this network
             supplierId = existing.get().id();
-            repo.updateSupplier(orgId, supplierId, wallet, network, country);
+            wallet = suppliers.approvedAddress(orgId, supplierId, network)
+                    .orElseThrow(() -> invalid("This supplier has no approved wallet on " + network.label() + "."));
+            if (hasWallet && !network.sameAddress(in.supplierWallet(), wallet)) {
+                throw invalid("Payments to this supplier go only to its approved wallet on " + network.label() + ".");
+            }
         } else {
-            supplierId = "sup_" + randomHex(4);
-            repo.insertSupplier(orgId, supplierId, supplierName, country, wallet, network, now);
+            // Supplier outside the registry: reuse by name. Without a wallet we create a throwaway demo address (public
+            // part only); a wallet saved for another network is of no use here.
+            wallet = hasWallet
+                    ? in.supplierWallet()
+                    : existing.filter(s -> s.network() == network).map(Supplier::walletAddress).orElseGet(network::randomAddress);
+            if (existing.isPresent()) {
+                supplierId = existing.get().id();
+                repo.updateSupplier(orgId, supplierId, wallet, network, country);
+            } else {
+                supplierId = "sup_" + randomHex(4);
+                repo.insertSupplier(orgId, supplierId, supplierName, country, wallet, network, now);
+            }
         }
 
         int feeBps = props.feeBps();

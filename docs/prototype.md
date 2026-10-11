@@ -31,7 +31,7 @@ Only `web` is published by `docker-compose.yml`. The Java service is the only ca
 | Proof-of-payment page for the supplier, verified live on-chain | **Real** |
 | Invoice reading by AI | **Real** when `ANTHROPIC_API_KEY` is set; otherwise **demo mode**, clearly labelled |
 | BRL to USD conversion by an authorized partner | **Simulated** (no partner integration exists yet) |
-| Dashboard history on a fresh database | **Demo data**, flagged with a "Demo" tag |
+| Offline demo data on a fresh browser | **Demo data**, flagged with a "Demo" tag |
 | Authentication | **JWT sign-in** (HS256, one-hour sessions) with fictitious demo accounts; every order query is filtered by the token's company. An optional password gate (`DEMO_ACCESS_PASSWORD`) can sit in front of the web app. |
 
 Regulatory note: Brazil's central bank Resolution BCB 561 (in force since 2026-10-01) prohibits virtual assets in settlement between an eFX provider and its foreign counterparty. Whether a software layer plus an authorized partner can route an importer's payment this way must be confirmed with a lawyer or the partner before any real use. This repository does not move or convert real funds.
@@ -40,7 +40,7 @@ Regulatory note: Brazil's central bank Resolution BCB 561 (in force since 2026-1
 
 A browser-only version of the product for demos and judging. It needs no Java, Python, Docker or keys: every visitor gets a private sandbox with a fictitious importer (Porto Claro Importadora), four people with different roles, six suppliers and seven months of payments, stored in their own browser.
 
-What it shows, following the team's backend plan: role-based permissions (owner, approver, operator, accountant, switched from the sidebar; operators create orders and propose wallets but do not send), supplier wallets versioned per network (Tempo or Solana) that a second person approves, one active order per invoice, AI-read invoices that a person must confirm, approval by someone other than the creator bound to a SHA-256 of the payment data (approve a new wallet and the payment needs approval again), an opaque order reference as the memo (never the invoice number), a single atomic claim before sending, automatic reconciliation with five checks that opens a review case when one fails, cancellation before sending, the supplier's proof, CSV export, the audit trail, team and settings.
+What it shows, following the team's backend plan: role-based permissions (owner, approver, operator, accountant, switched from the night rail that opens on hover or keyboard focus; operators create orders and propose wallets but do not send), supplier wallets versioned per network (Tempo or Solana) that a second person approves, one active order per invoice, AI-read invoices that a person must confirm, approval by someone other than the creator bound to a SHA-256 of the payment data (approve a new wallet and the payment needs approval again), an opaque order reference as the memo (never the invoice number), a single atomic claim before sending, automatic reconciliation with five checks that opens a review case when one fails, cancellation before sending, the supplier's proof, CSV export, the audit trail, team and settings.
 
 | Part | Status |
 |---|---|
@@ -48,7 +48,7 @@ What it shows, following the team's backend plan: role-based permissions (owner,
 | Fee, savings and BRL figures | Same integer-cent rules as the Java `Pricing` (tested); BRL **simulated** |
 | Transfer, by default | **Simulated**: a random hash, labelled, with no explorer link |
 | Transfer with Settings > Tempo testnet | **Real testnet** payment through the Java and Python services (needs `docker compose up`), with the opaque reference as memo |
-| Payments on Solana | Always **simulated** in the demo; the Solana adapter is not wired to the rules service yet |
+| Payments on Solana | With sign-in at `/app/login` (Docker stack running), a **real Solana devnet** payment through the Java and Python services; in the offline demo, always **simulated** |
 
 Code: data and rules in `web/src/lib/demo/`, chart geometry in `web/src/lib/chart/`, UI in `web/src/components/app/`. The chart coastline comes from Natural Earth 1:50m (public domain) and is regenerated with `node web/scripts/build-chart.mjs`.
 
@@ -95,20 +95,20 @@ The look follows the team's mockup: deep navy, teal and mint accents, green acti
 | Ship imagery | `web/src/components/ShipScene.tsx`: a hand-built vector scene of a container ship (with the Seamoney mark on its funnel), quay cranes, a distant port and the reflection on the water. It replaces photography so the repo has no image licences to track. To use real photos, replace the `ShipScene` usages with `next/image` and keep the dark gradient overlays for legibility. |
 | Favicon, app icon, share image | `web/src/app/icon.svg`, `favicon.ico`, `apple-icon.png`, `opengraph-image.png` |
 | Landing page sections | `web/src/app/page.tsx` and `web/src/components/landing/*` |
-| Workspace shell | `/app`: night rail and top bar in `web/src/components/app/shell` (the first `/dashboard` prototype was folded into it; old links redirect) |
+| Workspace shell | `/app`: night rail and top bar in `web/src/components/app/shell`. The old `/dashboard/*` prototype was removed: `next.config.ts` redirects `/dashboard/*` to `/app`, and `/login` to `/app/login` |
 
 Work on the interface without Java, Python or Docker: `node web/scripts/mock-rules.mjs` starts a stand-in for the rules API with the same JSON shapes (port 8089), then `cd web && RULES_API_URL=http://localhost:8089 npm run dev`. It is for UI work only, never for demos.
 
 ## Tests
 
 ```bash
-cd web && npm run typecheck && npm run lint && npm test       # web: 36 tests (UI input parsing, demo rules and reports)
-cd rules-api && mvn verify                                    # Java: 37 tests; or: docker build --target test ./rules-api
+cd web && npm run typecheck && npm run lint && npm test       # web: 39 tests (UI input parsing, demo rules and reports)
+cd rules-api && mvn verify                                    # Java: 42 tests; or: docker build --target test ./rules-api
 cd chain-service && pytest -q                                 # Python: 34 offline contract tests
 cd chain-service && python -m scripts.smoke                   # REAL testnet: pay with memo, find it by memo
 ```
 
-The Java suite (H2 in PostgreSQL mode) covers the money rules and the whole order flow against a fake chain: quote, pay, double-pay blocked, failed payment and retry, reconciliation match, wrong amount, missing transfer, transfer replay across orders, input validation, CSV, leads consent, sign-in and company isolation.
+The Java suite (H2 in PostgreSQL mode) covers the money rules and the whole order flow against a fake chain: quote, pay, double-pay blocked, approval by a second person (creator blocked, threshold, pay before approval blocked), rejection with a reason, cancellation before sending, approval hash mismatch blocks payment, failed payment and retry, reconciliation match, wrong amount, missing transfer, transfer replay across orders, input validation, CSV, leads consent, sign-in and company isolation.
 
 ## Configuration
 
@@ -140,7 +140,7 @@ Rules API (Java), reached by the browser through the web app's `/api/*` proxy:
 | `POST /api/orders`, `GET /api/orders`, `GET /api/orders/{id}` | Create and quote, list, detail with timeline |
 | `POST /api/orders/{id}/pay` | Send the on-chain payment (atomic claim, cannot double-pay) |
 | `POST /api/orders/{id}/reconcile` | Match the payment against the chain |
-| `GET /api/stats`, `GET /api/proof/{id}`, `GET /api/reports/orders`, `POST /api/leads`, `GET /api/health` | Dashboard numbers, supplier proof, CSV export, calculator leads (email only with consent), health |
+| `GET /api/stats`, `GET /api/proof/{id}`, `GET /api/reports/orders`, `POST /api/leads`, `GET /api/health` | Aggregate numbers for the home screen, supplier proof, CSV export, calculator leads (email only with consent), health |
 | `POST /api/auth/login` | Sign in with email and password; returns a JWT. Five failed attempts lock the email for 15 minutes |
 | `POST /api/auth/refresh`, `GET /api/auth/me` | Renew the token or switch company; current user, company and role |
 

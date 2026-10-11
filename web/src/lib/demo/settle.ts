@@ -5,7 +5,7 @@
 //    and the visitor signed in at /app/login with an account that may pay (owner or approver).
 // Testnet mode covers both networks: Tempo Moderato and Solana devnet, through the same Java and Python services.
 import { base58, cryptoRand, hex } from './codes'
-import type { LiveOrder } from './live'
+import type { LiveOrder, LiveSupplier } from './live'
 import type { Network, Payment, Reconciliation, Settlement, Wallet } from './types'
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -118,6 +118,16 @@ async function existingOrder(reference: string): Promise<LiveOrder | null> {
 }
 
 export const listLiveOrders = () => call<{ orders: LiveOrder[] }>('/api/orders?limit=500', 'GET')
+
+/* suppliers and wallet versions in the rules service (see live.ts) */
+export const listLiveSuppliers = () => call<{ suppliers: LiveSupplier[] }>('/api/suppliers', 'GET')
+export const importDemoSuppliers = (seed: unknown) => post<{ suppliers: LiveSupplier[] }>('/api/suppliers/import-demo', seed)
+export const addLiveSupplier = (body: { name: string; country: string; city: string; port: string; email: string; wallet: { network: Network; address: string } }) =>
+  post<{ supplier: LiveSupplier }>('/api/suppliers', body)
+export const proposeLiveWallet = (supplierLiveId: string, network: Network, address: string) =>
+  post<{ supplier: LiveSupplier }>(`/api/suppliers/${encodeURIComponent(supplierLiveId)}/wallets`, { network, address })
+export const decideLiveWallet = (supplierLiveId: string, walletLiveId: string, action: 'approve' | 'reject') =>
+  post<{ supplier: LiveSupplier }>(`/api/suppliers/${encodeURIComponent(supplierLiveId)}/wallets/${encodeURIComponent(walletLiveId)}/${action}`)
 
 /**
  * Creates the order in the rules service, with this workspace's opaque reference as the memo (same SM-XXXXXXXX

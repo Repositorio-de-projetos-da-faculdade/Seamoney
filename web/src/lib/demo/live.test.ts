@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { type LiveOrder, mergeLiveOrders } from './live.ts'
+import { type LiveOrder, type LiveSupplier, mergeLiveOrders, mergeLiveSuppliers, seedSuppliers } from './live.ts'
 import { activeWallet } from './rules.ts'
 import { buildSeed } from './seed.ts'
 import type { DemoState } from './types.ts'
@@ -66,4 +66,58 @@ test('an order whose supplier wallet is not approved here is left out', () => {
   const state = buildSeed(NOW)
   const next = mergeLiveOrders(state, [orderFor(state, { supplierWallet: '0x' + '1'.repeat(40) })], at)
   assert.equal(next, state)
+})
+
+/** The workspace's own registry as the rules service returns it after importing the seed. */
+function registryOf(state: DemoState): LiveSupplier[] {
+  return seedSuppliers(state).map((s, i) => ({
+    id: `sup_live_${i}`,
+    name: s.name,
+    country: s.country,
+    city: s.city,
+    port: s.port,
+    email: s.email,
+    createdAt: at,
+    wallets: s.wallets.map((w, j) => ({ id: `wal_live_${i}_${j}`, ...w, proposedBy: 'seed', proposedRole: 'SEED', proposedAt: at, approvedBy: null, approvedRole: null, approvedAt: null })),
+  }))
+}
+
+test('the imported seed only links ids: no supplier or wallet is duplicated', () => {
+  const state = buildSeed(NOW)
+  const next = mergeLiveSuppliers(state, registryOf(state), at)
+  assert.equal(next.suppliers.length, state.suppliers.length)
+  assert.deepEqual(next.suppliers.map((s) => s.wallets.length), state.suppliers.map((s) => s.wallets.length))
+  assert.ok(next.suppliers.every((s) => s.liveId && s.wallets.every((w) => w.liveId)))
+})
+
+test('a new version approved at another computer replaces the one in use here', () => {
+  const state = buildSeed(NOW)
+  const registry = registryOf(state)
+  const supplier = registry.find((s) => s.wallets.some((w) => w.network === 'tempo' && w.status === 'approved'))!
+  const current = supplier.wallets.find((w) => w.network === 'tempo' && w.status === 'approved')!
+  current.status = 'revoked'
+  const version = Math.max(...supplier.wallets.filter((w) => w.network === 'tempo').map((w) => w.version)) + 1
+  supplier.wallets.push({
+    id: 'wal_new', network: 'tempo', address: '0x' + 'ab'.repeat(20), version, status: 'approved',
+    proposedBy: 'u1', proposedRole: 'OPERATOR', proposedAt: at, approvedBy: 'u2', approvedRole: 'APPROVER', approvedAt: at,
+  })
+  const next = mergeLiveSuppliers(state, registry, at)
+  const local = next.suppliers.find((s) => s.name === supplier.name)!
+  const inUse = activeWallet(local, 'tempo')!
+  assert.equal(inUse.address, '0x' + 'ab'.repeat(20))
+  assert.equal(next.members.find((m) => m.id === inUse.proposedBy)?.role, 'operator')
+  assert.equal(next.members.find((m) => m.id === inUse.approvedBy)?.role, 'approver')
+  assert.equal(local.wallets.find((w) => w.address === current.address && w.version === current.version)?.status, 'revoked')
+})
+
+test('a supplier added at another computer appears with its proposed wallet', () => {
+  const state = buildSeed(NOW)
+  const next = mergeLiveSuppliers(state, [{
+    id: 'sup_x', name: 'Busan Marine Parts', country: 'KR', city: 'Busan', port: 'KRPUS', email: null, createdAt: at,
+    wallets: [{ id: 'wal_x', network: 'tempo', address: '0x' + 'cd'.repeat(20), version: 1, status: 'proposed', proposedBy: 'u1', proposedRole: 'OPERATOR', proposedAt: at, approvedBy: null, approvedRole: null, approvedAt: null }],
+  }], at)
+  const added = next.suppliers.find((s) => s.name === 'Busan Marine Parts')!
+  assert.equal(added.liveId, 'sup_x')
+  assert.equal(added.wallets[0].status, 'proposed')
+  assert.equal(activeWallet(added, 'tempo'), undefined, 'nobody can pay it before a second person approves')
 })

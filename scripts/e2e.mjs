@@ -78,7 +78,8 @@ console.log('no session: refused (HTTP 401)')
 
 const operator = await signIn('porto.operator@example.com')
 const created = await operator.post('/api/orders', {
-  supplierName: 'Shenzhen Tech Co.',
+  // its own supplier per run: a supplier in the wallet registry is paid only at its approved wallet
+  supplierName: `E2E Supplier ${invoice}`,
   supplierCountry: 'CN',
   supplierWallet: WALLET,
   invoiceNumber: invoice,

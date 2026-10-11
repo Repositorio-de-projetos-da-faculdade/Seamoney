@@ -8,8 +8,23 @@ import * as rules from './rules'
 import { buildSeed, DEMO_VERSION } from './seed'
 import { cryptoRand, orderReference } from './codes'
 import { memberOf, paymentOf, supplierOf, walletOf } from './selectors'
-import { mergeLiveOrders } from './live'
-import { createLiveOrder, goesLive, listLiveOrders, liveDecision, LiveError, matchOnTestnet, sendOnTestnet, simulateMatch, simulateTransfer } from './settle'
+import { mergeLiveOrders, mergeLiveSuppliers, seedSuppliers } from './live'
+import {
+  addLiveSupplier,
+  createLiveOrder,
+  decideLiveWallet,
+  goesLive,
+  importDemoSuppliers,
+  listLiveOrders,
+  listLiveSuppliers,
+  liveDecision,
+  LiveError,
+  matchOnTestnet,
+  proposeLiveWallet,
+  sendOnTestnet,
+  simulateMatch,
+  simulateTransfer,
+} from './settle'
 import type { DemoState, Member, Network, Payment, PaymentStatus, Reconciliation, Role, Settings, Settlement } from './types'
 
 const KEY = 'seamoney.demo'
@@ -66,6 +81,13 @@ const pause = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 /** Connected to the rules service: payments live there too (see live.ts). */
 const isLive = () => current?.settings.settlementMode === 'testnet'
+
+/** Approve or turn down a wallet version in the rules service too, when it is known there. */
+async function decideWallet(supplierId: string, walletId: string, action: 'approve' | 'reject') {
+  const supplier = current?.suppliers.find((s) => s.id === supplierId)
+  const wallet = supplier?.wallets.find((w) => w.id === walletId)
+  if (isLive() && supplier?.liveId && wallet?.liveId) await decideLiveWallet(supplier.liveId, wallet.liveId, action)
+}
 
 /** The rules-service order of a payment, when it has one. */
 const liveOrderOf = (id: string) => current?.payments.find((p) => p.id === id)?.liveOrderId
@@ -186,6 +208,10 @@ export const demo = {
   async syncLive() {
     if (!current || !isLive() || !current.sessionMemberId) return
     try {
+      // suppliers and wallets first: an order made elsewhere only maps onto a supplier and wallet known here
+      let { suppliers } = await listLiveSuppliers()
+      if (suppliers.length === 0 && current.suppliers.length > 0) suppliers = (await importDemoSuppliers(seedSuppliers(current))).suppliers
+      commit((s) => mergeLiveSuppliers(s, suppliers, now()))
       const { orders } = await listLiveOrders()
       commit((s) => mergeLiveOrders(s, orders, now()))
     } catch {
@@ -240,9 +266,17 @@ export const demo = {
   async addSupplier(input: rules.NewSupplier): Promise<string> {
     await pause(300)
     const by = actor()
+    const at = now()
+    rules.addSupplier(current!, input, by, at, 'sup_preview', 'wal_preview')
+    const live = isLive()
+      ? await addLiveSupplier({ name: input.name, country: input.country, city: input.city, port: input.port, email: input.email, wallet: { network: input.network, address: input.wallet.trim() } })
+      : null
     const id = newId('sup')
     const walletId = newId('wal')
-    commit((s) => rules.addSupplier(s, input, by, now(), id, walletId))
+    commit((s) => {
+      const added = rules.addSupplier(s, input, by, at, id, walletId)
+      return live ? mergeLiveSuppliers(added, [live.supplier], at) : added
+    })
     return id
   },
   async updateSupplier(id: string, input: rules.SupplierProfile) {
@@ -252,16 +286,29 @@ export const demo = {
   async proposeWallet(supplierId: string, network: Network, address: string) {
     await pause(300)
     const by = actor()
+    const at = now()
+    rules.proposeWallet(current!, supplierId, network, address, by, at, 'wal_preview')
+    const supplierLive = current!.suppliers.find((s) => s.id === supplierId)?.liveId
+    const live = isLive() && supplierLive ? await proposeLiveWallet(supplierLive, network, address.trim()) : null
     const walletId = newId('wal')
-    commit((s) => rules.proposeWallet(s, supplierId, network, address, by, now(), walletId))
+    commit((s) => {
+      const proposed = rules.proposeWallet(s, supplierId, network, address, by, at, walletId)
+      return live ? mergeLiveSuppliers(proposed, [live.supplier], at) : proposed
+    })
   },
   async approveWallet(supplierId: string, walletId: string) {
     await pause(400)
-    commit((s) => rules.approveWallet(s, supplierId, walletId, actor(), now()))
+    const by = actor()
+    rules.approveWallet(current!, supplierId, walletId, by, now())
+    await decideWallet(supplierId, walletId, 'approve')
+    commit((s) => rules.approveWallet(s, supplierId, walletId, by, now()))
   },
   async rejectWallet(supplierId: string, walletId: string) {
     await pause(300)
-    commit((s) => rules.rejectWallet(s, supplierId, walletId, actor(), now()))
+    const by = actor()
+    rules.rejectWallet(current!, supplierId, walletId, by, now())
+    await decideWallet(supplierId, walletId, 'reject')
+    commit((s) => rules.rejectWallet(s, supplierId, walletId, by, now()))
   },
 
   async inviteMember(input: { name: string; email: string; role: Role }) {

@@ -25,6 +25,8 @@ export type WalletStatus = 'proposed' | 'approved' | 'revoked'
 /** One version of a supplier's receiving address on one network. A new or changed address needs a second person. */
 export interface Wallet {
   id: string
+  /** The same version in the rules service, when the workspace is connected to it. */
+  liveId?: string
   network: Network
   /** 0x hex on Tempo, Base58 on Solana */
   address: string
@@ -39,6 +41,8 @@ export interface Wallet {
 
 export interface Supplier {
   id: string
+  /** The same supplier in the rules service, when the workspace is connected to it. */
+  liveId?: string
   name: string
   /** ISO 3166-1 alpha-2 */
   country: string

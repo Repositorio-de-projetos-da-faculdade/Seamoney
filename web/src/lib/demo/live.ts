@@ -4,7 +4,7 @@
 // No imports from the store on purpose: the merge is a pure function, unit-tested directly by `node --test`.
 import { quote } from './pricing.ts'
 import { activeWallet, approvalHash, logActivity, nextId } from './rules.ts'
-import type { ActivityType, DemoState, Network, Payment, PaymentStatus, ReconChecks, Role } from './types.ts'
+import type { ActivityType, DemoState, Network, Payment, PaymentStatus, ReconChecks, Role, WalletStatus } from './types.ts'
 
 /** A decision as the rules service records it: who (user and role), when, and why or on which data. */
 export interface LiveDecision {
@@ -160,4 +160,100 @@ function actorOf(p: Payment): string | null {
   if (p.status === 'rejected') return p.rejection?.by ?? null
   if (p.status === 'cancelled') return p.cancellation?.by ?? null
   return null
+}
+
+/* ------------------------------ suppliers and wallets ------------------------------ */
+
+/** A wallet version as the rules service records it (see rules-api domain/SupplierView.java). */
+export interface LiveWallet {
+  id: string
+  network: Network
+  address: string
+  version: number
+  status: WalletStatus
+  proposedBy: string | null
+  proposedRole: string | null
+  proposedAt: string
+  approvedBy: string | null
+  approvedRole: string | null
+  approvedAt: string | null
+}
+
+export interface LiveSupplier {
+  id: string
+  name: string
+  country: string | null
+  city: string | null
+  port: string | null
+  email: string | null
+  createdAt: string
+  wallets: LiveWallet[]
+}
+
+/** What a wallet version goes through; merging only ever moves it forward. */
+const WALLET_STAGE: Record<WalletStatus, number> = { proposed: 0, approved: 1, revoked: 2 }
+
+/** The workspace's suppliers and wallet history, to start an empty registry in the rules service (demo seed). */
+export function seedSuppliers(state: DemoState) {
+  return state.suppliers.map((s) => ({
+    name: s.name,
+    country: s.country,
+    city: s.city,
+    port: s.port,
+    email: s.email,
+    wallets: s.wallets.map((w) => ({ network: w.network, address: w.address, version: w.version, status: w.status })),
+  }))
+}
+
+/**
+ * Brings the rules service's suppliers and wallet versions into the workspace: known versions move forward (proposed
+ * to approved or revoked), versions proposed or approved at another computer appear, and so do new suppliers.
+ */
+export function mergeLiveSuppliers(state: DemoState, suppliers: LiveSupplier[], now: string): DemoState {
+  let next = state
+  for (const ls of suppliers) {
+    let local = next.suppliers.find((s) => s.name.toLowerCase() === ls.name.toLowerCase())
+    if (!local) {
+      const issued = nextId(next, 'sup')
+      local = { id: issued.id, liveId: ls.id, name: ls.name, country: ls.country ?? '', port: ls.port ?? '', city: ls.city ?? '', email: ls.email ?? '', wallets: [], createdAt: ls.createdAt }
+      next = logActivity({ ...issued.state, suppliers: [local, ...issued.state.suppliers] }, 'supplier_added', ls.createdAt, null, { supplierId: local.id })
+    }
+    let wallets = local.wallets
+    let changed = local.liveId !== ls.id
+    for (const lw of ls.wallets) {
+      const mine = wallets.find((w) => w.network === lw.network && w.version === lw.version && sameAddress(lw.network, w.address, lw.address))
+      if (mine) {
+        const forward = WALLET_STAGE[lw.status] > WALLET_STAGE[mine.status]
+        if (!forward && mine.liveId === lw.id) continue
+        const moved = forward
+          ? { ...mine, liveId: lw.id, status: lw.status, approvedBy: mine.approvedBy ?? memberFor(next, lw.approvedRole), approvedAt: mine.approvedAt ?? lw.approvedAt }
+          : { ...mine, liveId: lw.id }
+        wallets = wallets.map((w) => (w.id === mine.id ? moved : w))
+        changed = true
+        if (forward && lw.status === 'approved') next = logActivity(next, 'wallet_approved', now, moved.approvedBy, { supplierId: local.id, walletId: mine.id })
+        continue
+      }
+      const issued = nextId(next, 'wal')
+      next = issued.state
+      const added = {
+        id: issued.id,
+        liveId: lw.id,
+        network: lw.network,
+        address: lw.address,
+        version: lw.version,
+        status: lw.status,
+        proposedBy: memberFor(next, lw.proposedRole) ?? next.members[0].id,
+        proposedAt: lw.proposedAt,
+        approvedBy: memberFor(next, lw.approvedRole),
+        approvedAt: lw.approvedAt,
+      }
+      wallets = [...wallets, added]
+      changed = true
+      next = logActivity(next, 'wallet_proposed', lw.proposedAt, added.proposedBy, { supplierId: local.id, walletId: added.id })
+    }
+    if (!changed) continue
+    const id = local.id
+    next = { ...next, suppliers: next.suppliers.map((s) => (s.id === id ? { ...s, liveId: ls.id, wallets } : s)) }
+  }
+  return next
 }
