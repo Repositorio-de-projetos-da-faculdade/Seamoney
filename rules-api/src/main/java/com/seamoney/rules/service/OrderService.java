@@ -26,6 +26,8 @@ import java.time.Clock;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Pattern;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 
 /** The order lifecycle: create and quote, pay, reconcile, report. This is where the business rules live. */
@@ -41,7 +43,21 @@ public class OrderService {
             String dueDate,
             String extractionSource,
             String invoiceFilename,
-            String network) {
+            String network,
+            String reference) {
+
+        public NewOrderInput(
+                String supplierName,
+                String supplierCountry,
+                String supplierWallet,
+                String invoiceNumber,
+                long amountCents,
+                String dueDate,
+                String extractionSource,
+                String invoiceFilename,
+                String network) {
+            this(supplierName, supplierCountry, supplierWallet, invoiceNumber, amountCents, dueDate, extractionSource, invoiceFilename, network, null);
+        }
 
         /** Without a network the order settles on Tempo, the original network. */
         public NewOrderInput(
@@ -53,7 +69,7 @@ public class OrderService {
                 String dueDate,
                 String extractionSource,
                 String invoiceFilename) {
-            this(supplierName, supplierCountry, supplierWallet, invoiceNumber, amountCents, dueDate, extractionSource, invoiceFilename, null);
+            this(supplierName, supplierCountry, supplierWallet, invoiceNumber, amountCents, dueDate, extractionSource, invoiceFilename, null, null);
         }
     }
 
@@ -70,6 +86,10 @@ public class OrderService {
     }
 
     private static final SecureRandom RANDOM = new SecureRandom();
+
+    /** Crockford base32 without the letters that read like digits (I, L, O, U); the same alphabet as the web demo. */
+    private static final String REFERENCE_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+    private static final Pattern REFERENCE = Pattern.compile("^SM-[" + REFERENCE_ALPHABET + "]{8}$");
 
     private final OrderRepository repo;
     private final ChainClient chain;
@@ -137,7 +157,7 @@ public class OrderService {
             throw invalid("The supplier wallet is not a valid " + network.label() + " address.");
         }
 
-        String reference = uniqueReference(orgId, invoice);
+        String reference = reference(in.reference());
         String now = now();
 
         // Supplier: reuse by name. Without a wallet we create a throwaway demo address (public part only);
@@ -180,7 +200,8 @@ public class OrderService {
         event(orgId, id, "fiat_received", "Simulated: authorized partner received the BRL payment and bought USD stablecoin");
         event(orgId, id, "payment_started", "Sending " + order.amountCents() / 100.0 + " USD (" + order.network().token() + ") on " + order.network().label() + " to " + order.supplierWallet());
         try {
-            SentPayment sent = chain.sendPayment(order.network(), order.supplierWallet(), order.amountCents(), order.reference());
+            String key = sendAttemptKey(orgId, id);
+            SentPayment sent = chain.sendPayment(order.network(), order.supplierWallet(), order.amountCents(), order.reference(), key);
             repo.markSent(orgId, id, sent.txHash(), sent.blockNumber(), sent.memoHex(), sent.confirmMs(), now());
             event(orgId, id, "payment_confirmed", "Tx " + sent.txHash() + " in block " + sent.blockNumber() + ", " + sent.confirmMs() + " ms");
         } catch (ChainException e) {
@@ -189,6 +210,25 @@ public class OrderService {
             throw new OrderException(e.getMessage(), Code.CHAIN);
         }
         return get(orgId, id);
+    }
+
+    /**
+     * The Idempotency-Key of this send. The first send is "<id>-1". After a failed send the chain service is asked
+     * about the previous key: a payment it marked failed gets a new key; one that may still have reached the chain
+     * (a timeout) keeps its key, so the chain service answers with that payment instead of sending a second one.
+     */
+    private String sendAttemptKey(String orgId, String id) {
+        String previous = repo.idempotencyKey(orgId, id);
+        String key;
+        if (previous == null) {
+            key = id + "-1";
+        } else if (chain.paymentStatus(previous).filter("failed"::equals).isPresent()) {
+            key = id + "-" + (Integer.parseInt(previous.substring(previous.lastIndexOf('-') + 1)) + 1);
+        } else {
+            return previous;
+        }
+        repo.setIdempotencyKey(orgId, id, key);
+        return key;
     }
 
     // ---------- reconcile ----------
@@ -213,11 +253,13 @@ public class OrderService {
             throw new OrderException(e.getMessage(), Code.CHAIN);
         }
 
+        // The chain service already filtered by recipient and memo; prefer the transfer we sent. Any other one still
+        // has to pass every check below, so a wrong amount is reported as a mismatch, never picked around.
         BigInteger expected = Pricing.centsToUnits(order.amountCents());
         FoundTransfer match = found.stream()
                 .filter(t -> order.network().sameHash(t.txHash(), order.txHash()))
                 .findFirst()
-                .or(() -> found.stream().filter(t -> t.amountUnits().equals(expected)).findFirst())
+                .or(() -> found.stream().findFirst())
                 .orElse(null);
         if (match == null) {
             event(orgId, id, "reconcile_pending", "No matching transfer found on " + order.network().label() + " for this reference yet");
@@ -240,7 +282,7 @@ public class OrderService {
             event(orgId, id, "reconcile_mismatch", checks.toString());
             return ReconcileResult.failed("mismatch", checks);
         }
-        if (repo.alreadyCredited(orgId, match.txHash(), match.logIndex(), id)) {
+        if (repo.alreadyCredited(match.txHash(), match.logIndex(), id)) {
             event(orgId, id, "reconcile_duplicate", "Transfer already credited to another order");
             return ReconcileResult.failed("duplicate", null);
         }
@@ -248,7 +290,13 @@ public class OrderService {
         Recon recon = new Recon(
                 match.txHash(), match.logIndex(), match.blockNumber(), now(), order.amountCents(),
                 Pricing.unitsToCents(match.amountUnits()), checks);
-        repo.markReconciled(orgId, id, match.logIndex(), recon);
+        try {
+            // false: a concurrent reconciliation closed it first, and that result stands
+            if (!repo.markReconciled(orgId, id, match.txHash(), match.logIndex(), recon)) return ReconcileResult.matched(get(orgId, id));
+        } catch (DuplicateKeyException e) {
+            event(orgId, id, "reconcile_duplicate", "Transfer already credited to another order");
+            return ReconcileResult.failed("duplicate", null);
+        }
         event(orgId, id, "reconciled", "Matched tx " + match.txHash() + " log " + match.logIndex());
         return ReconcileResult.matched(get(orgId, id));
     }
@@ -280,17 +328,29 @@ public class OrderService {
 
     // ---------- helpers ----------
 
-    /** The reference is the invoice number written into the 32-byte memo; it must be unique per order. */
-    private String uniqueReference(String orgId, String invoice) {
-        if (byteLength(invoice) > 32) {
-            throw invalid("The invoice number must fit in 32 bytes because it is written into the on-chain memo.");
+    /**
+     * The payment reference written into the public 32-byte memo: an opaque code such as "SM-7K3QX9PA" that says
+     * nothing about the invoice, supplier or amount. The invoice number stays in this database only. A client may
+     * bring its own code in the same format (the web demo does, so its screens show the memo that went on-chain).
+     */
+    private String reference(String requested) {
+        if (requested != null && !requested.isBlank()) {
+            if (!REFERENCE.matcher(requested).matches()) throw invalid("The payment reference must look like SM-7K3QX9PA.");
+            if (repo.referenceExists(requested)) throw new OrderException("This payment reference is already used.", Code.BAD_STATE);
+            return requested;
         }
-        for (int n = 1; n < 100; n++) {
-            String candidate = n == 1 ? invoice : invoice + "-" + n;
-            if (byteLength(candidate) > 32) break;
-            if (!repo.referenceExists(orgId, candidate)) return candidate;
+        for (int n = 0; n < 10; n++) {
+            String candidate = newReference();
+            if (!repo.referenceExists(candidate)) return candidate;
         }
-        throw invalid("Could not derive a unique payment reference for this invoice number.");
+        throw new IllegalStateException("Could not draw a free payment reference.");
+    }
+
+    /** A fresh opaque reference; 32^8 codes, so a collision is checked for but practically never happens. */
+    public static String newReference() {
+        StringBuilder sb = new StringBuilder("SM-");
+        for (int i = 0; i < 8; i++) sb.append(REFERENCE_ALPHABET.charAt(RANDOM.nextInt(REFERENCE_ALPHABET.length())));
+        return sb.toString();
     }
 
     static String decodeReference(String memoHex) {
@@ -310,10 +370,6 @@ public class OrderService {
 
     private static OrderException invalid(String message) {
         return new OrderException(message, Code.INVALID);
-    }
-
-    private static int byteLength(String s) {
-        return s.getBytes(StandardCharsets.UTF_8).length;
     }
 
     private static String blankToNull(String s) {

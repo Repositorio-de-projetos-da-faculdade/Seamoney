@@ -100,7 +100,7 @@ public class DemoSeeder implements ApplicationRunner {
             String id = "ORD-" + orgId + "-" + r.invoice().substring(r.invoice().length() - 4);
             boolean paid = r.status() != OrderStatus.QUOTED;
             repo.insert(new NewOrder(
-                    id, orgId, id + "-" + r.invoice(), supplierIds[r.supplier()], s.name(), s.country(), wallets[r.supplier()], Network.TEMPO, r.invoice(),
+                    id, orgId, OrderService.newReference(), supplierIds[r.supplier()], s.name(), s.country(), wallets[r.supplier()], Network.TEMPO, r.invoice(),
                     r.usdCents(), now.minus(Duration.ofDays(r.daysAgo() - 14L)).toString().substring(0, 10), props.feeBps(), fee,
                     total, props.bankFeePct(), props.usdBrl(), Pricing.usdToBrlCents(total, props.usdBrl()), r.status(), "demo",
                     null, true, r.confirmMs(), paid ? orderCreated : null, r.status() == OrderStatus.RECONCILED ? orderCreated : null, orderCreated));

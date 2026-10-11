@@ -11,7 +11,14 @@ import java.util.Optional;
  */
 public interface ChainClient {
 
-    SentPayment sendPayment(Network network, String to, long amountCents, String reference);
+    /**
+     * Sends the payment. The chain service remembers {@code idempotencyKey}: the same key with the same body returns
+     * the first payment instead of sending a second one, which makes a retry after a timeout safe.
+     */
+    SentPayment sendPayment(Network network, String to, long amountCents, String reference, String idempotencyKey);
+
+    /** What the chain service knows about an earlier send with this key: pending, confirmed or failed; empty if never seen. */
+    Optional<String> paymentStatus(String idempotencyKey);
 
     List<FoundTransfer> findTransfers(Network network, String to, String reference, long fromBlock);
 

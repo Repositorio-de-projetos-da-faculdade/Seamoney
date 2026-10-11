@@ -2,6 +2,7 @@ package com.seamoney.rules.web;
 
 import com.seamoney.rules.domain.Order;
 import com.seamoney.rules.security.JwtPrincipal;
+import com.seamoney.rules.service.AuditService;
 import com.seamoney.rules.service.OrderService;
 import com.seamoney.rules.service.OrderService.NewOrderInput;
 import com.seamoney.rules.service.OrderService.ReconcileResult;
@@ -37,12 +38,15 @@ public class OrdersController {
             @Pattern(regexp = "^$|^\\d{4}-\\d{2}-\\d{2}$") String dueDate,
             @NotNull @Pattern(regexp = "ai|demo|manual") String extractionSource,
             @Size(max = 200) String invoiceFilename,
-            @Pattern(regexp = "^(tempo|solana)?$") String network) {}
+            @Pattern(regexp = "^(tempo|solana)?$") String network,
+            @Pattern(regexp = "^$|^SM-[0-9A-HJKMNP-TV-Z]{8}$") String reference) {}
 
     private final OrderService orders;
+    private final AuditService audit;
 
-    public OrdersController(OrderService orders) {
+    public OrdersController(OrderService orders, AuditService audit) {
         this.orders = orders;
+        this.audit = audit;
     }
 
     @GetMapping
@@ -55,7 +59,8 @@ public class OrdersController {
     public ResponseEntity<Map<String, Order>> create(@AuthenticationPrincipal JwtPrincipal principal, @Valid @RequestBody NewOrderRequest body) {
         Order order = orders.create(principal.orgId(), new NewOrderInput(
                 body.supplierName(), body.supplierCountry(), body.supplierWallet(), body.invoiceNumber(), body.amountCents(),
-                body.dueDate(), body.extractionSource(), body.invoiceFilename(), body.network()));
+                body.dueDate(), body.extractionSource(), body.invoiceFilename(), body.network(), body.reference()));
+        audit.logWrite(principal.orgId(), principal.userId(), "ORDER_CREATED", "ORDER", order.id(), null, order.status().value());
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("order", order));
     }
 
@@ -67,11 +72,17 @@ public class OrdersController {
     @PostMapping("/{id}/pay")
     @PreAuthorize("hasAnyRole('OWNER', 'APPROVER')")
     public Map<String, Order> pay(@AuthenticationPrincipal JwtPrincipal principal, @PathVariable String id) {
-        return Map.of("order", orders.pay(principal.orgId(), id));
+        Order order = orders.pay(principal.orgId(), id);
+        audit.logWrite(principal.orgId(), principal.userId(), "ORDER_PAID", "ORDER", id, "quoted", order.status().value());
+        return Map.of("order", order);
     }
 
     @PostMapping("/{id}/reconcile")
+    @PreAuthorize("hasAnyRole('OWNER', 'APPROVER', 'OPERATOR', 'ACCOUNTANT')")
     public ReconcileResult reconcile(@AuthenticationPrincipal JwtPrincipal principal, @PathVariable String id) {
-        return orders.reconcile(principal.orgId(), id);
+        ReconcileResult result = orders.reconcile(principal.orgId(), id);
+        audit.logWrite(principal.orgId(), principal.userId(), result.ok() ? "ORDER_RECONCILED" : "ORDER_RECONCILE_FAILED", "ORDER", id,
+                "sent", result.ok() ? "reconciled" : result.reason());
+        return result;
     }
 }
