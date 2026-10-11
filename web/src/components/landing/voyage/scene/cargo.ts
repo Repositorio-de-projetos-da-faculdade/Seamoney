@@ -45,6 +45,8 @@ export function createCargo(initial: MemoByte[]) {
 
   let load = 0
   let clock = 0
+  // a box on its way down, so the shadows must follow it every frame
+  let moving = false
 
   const slots: Slot[] = MEMO_SLOTS.map((p) => {
     const label = labelCanvas()
@@ -77,6 +79,7 @@ export function createCargo(initial: MemoByte[]) {
   initial.forEach((b, i) => paint(slots[i], b, i))
 
   function place() {
+    moving = false
     slots.forEach((slot, i) => {
       // scroll-driven: each box gets its own window of the load progress, in reading order
       const start = (i / MEMO_SIZE) * 0.78
@@ -90,6 +93,7 @@ export function createCargo(initial: MemoByte[]) {
       slot.box.rotation.set(swing, (1 - t) * 0.18 * Math.sin(i * 1.7), swing)
       // the spreader lets go once the box has landed
       slot.spreader.visible = slot.box.visible && t < 0.999
+      moving ||= slot.spreader.visible
       slot.spreader.position.copy(slot.box.position)
       slot.spreader.rotation.copy(slot.box.rotation)
     })
@@ -98,6 +102,9 @@ export function createCargo(initial: MemoByte[]) {
 
   return {
     group,
+    get moving() {
+      return moving
+    },
     setLoad(p: number) {
       load = p
       place()

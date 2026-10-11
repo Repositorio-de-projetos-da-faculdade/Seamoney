@@ -1,10 +1,12 @@
 import * as THREE from 'three'
 import { deckAt, halfBreadth, HULL } from './hull'
+import { noiseChunk } from './noise'
 
 // Night ocean. Gerstner waves in the vertex shader; in the fragment shader, a planar reflection of the scene
 // (the ship, its lights and the sky, broken up by the waves), moonlight glitter, and the ship's foam: along the
 // hull, the bow wave, the propeller wash and the Kelvin wake arms. The foam follows the exact waterline of the
-// hull through a lookup texture. The ship stays at the origin; the water flows past it.
+// hull through a lookup texture. The ship stays at the origin; the water flows past it. The noise comes from a baked
+// texture (noise.ts), and the foam noise is only worked out where there is foam to break up.
 
 const vertex = /* glsl */ `
   uniform float uTime;
@@ -69,17 +71,27 @@ const fragment = /* glsl */ `
   varying vec3 vNormal;
   varying vec4 vReflUv;
 
-  float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-  float noise(vec2 p) {
-    vec2 i = floor(p);
-    vec2 f = fract(p);
-    vec2 u = f * f * (3.0 - 2.0 * f);
-    return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);
-  }
+  ${noiseChunk}
   float fbm(vec2 p) {
     float v = 0.0;
     float a = 0.5;
     for (int i = 0; i < 5; i++) { v += a * noise(p); p *= 2.03; a *= 0.5; }
+    return v;
+  }
+  // the same fbm with its slope; the fine octaves are softened (k) the way a difference across 0.3 m blurred them
+  vec3 fbmD(vec2 p) {
+    vec3 v = vec3(0.0);
+    float a = 0.5;
+    float s = 1.0;
+    float k = 1.0;
+    for (int i = 0; i < 5; i++) {
+      vec3 n = noiseD(p);
+      v += a * vec3(n.x, n.yz * s * k);
+      p *= 2.03;
+      s *= 2.03;
+      a *= 0.5;
+      if (i >= 1) k *= 0.7;
+    }
     return v;
   }
 
@@ -92,8 +104,8 @@ const fragment = /* glsl */ `
 
   float foamAt(vec2 p) {
     vec2 q = vec2(p.x + uFlow, p.y);
-    float grain = fbm(q * 0.3 + vec2(uTime * 0.2, 0.0));
-    float fine = fbm(q * 1.3 - vec2(uTime * 0.45, uTime * 0.1));
+    // worked out on first use: most of the sea has no foam and never needs it
+    float grain = -1.0;
     float foam = 0.0;
     float az = abs(p.y);
     float stern = uHull.x;
@@ -115,9 +127,12 @@ const fragment = /* glsl */ `
     float back = stern - p.x;
     if (back > 0.0) {
       float w = 6.0 + back * 0.1;
-      float band = 1.0 - smoothstep(w * 0.3, w, az);
-      float streaks = fbm(vec2(q.x * 0.018, az * 0.32));
-      foam = max(foam, band * exp(-back * (0.008 - 0.003 * uSpeed)) * smoothstep(0.32, 0.78, grain * 0.6 + streaks * 0.7));
+      float wash = (1.0 - smoothstep(w * 0.3, w, az)) * exp(-back * (0.008 - 0.003 * uSpeed));
+      if (wash > 0.001) {
+        grain = fbm(q * 0.3 + vec2(uTime * 0.2, 0.0));
+        float streaks = fbm(vec2(q.x * 0.018, az * 0.32));
+        foam = max(foam, wash * smoothstep(0.32, 0.78, grain * 0.6 + streaks * 0.7));
+      }
     }
 
     // Kelvin wake: two arms leaving the bow shoulders at about 19.5 degrees, broken into crests
@@ -126,21 +141,21 @@ const fragment = /* glsl */ `
       float armZ = beam * 0.85 + along * 0.354;
       float dist = abs(az - armZ);
       float width = 1.4 + along * 0.02;
-      float crest = smoothstep(0.35, 0.8, fbm(vec2(along * 0.09 + uFlow * 0.09, az * 0.2)));
-      foam = max(foam, (1.0 - smoothstep(0.0, width, dist)) * exp(-along * 0.0045) * crest * (0.25 + 0.25 * uSpeed));
+      float arm = (1.0 - smoothstep(0.0, width, dist)) * exp(-along * 0.0045) * (0.25 + 0.25 * uSpeed);
+      if (arm > 0.001) foam = max(foam, arm * smoothstep(0.35, 0.8, fbm(vec2(along * 0.09 + uFlow * 0.09, az * 0.2))));
     }
 
+    if (foam <= 0.0) return 0.0;
+    if (grain < 0.0) grain = fbm(q * 0.3 + vec2(uTime * 0.2, 0.0));
+    float fine = fbm(q * 1.3 - vec2(uTime * 0.45, uTime * 0.1));
     return clamp(foam * smoothstep(0.25, 0.75, grain + fine * 0.6), 0.0, 1.0);
   }
 
   void main() {
     vec2 q = vec2(vWorld.x + uFlow, vWorld.z);
-    // small ripples: they break the reflection up and make the moonlight sparkle
-    float e = 0.3;
-    float n0 = fbm(q * 0.24 + uTime * 0.12);
-    float nx = fbm((q + vec2(e, 0.0)) * 0.24 + uTime * 0.12);
-    float nz = fbm((q + vec2(0.0, e)) * 0.24 + uTime * 0.12);
-    vec3 ripple = vec3(n0 - nx, 0.0, n0 - nz) * 1.7;
+    // small ripples: they break the reflection up and make the moonlight sparkle (0.1224 = 0.3 m x 0.24 x 1.7)
+    vec3 slope = fbmD(q * 0.24 + uTime * 0.12);
+    vec3 ripple = vec3(-slope.y, 0.0, -slope.z) * 0.1224;
     vec3 n = normalize(vNormal + ripple);
 
     vec3 v = normalize(cameraPosition - vWorld);
@@ -148,10 +163,9 @@ const fragment = /* glsl */ `
 
     // reflection of the scene, displaced by the surface normal; stretched vertically like light on real water
     vec2 distort = vec2(n.x, n.z * 2.2) * 0.07;
-    vec3 refl = texture2DProj(tReflection, vec4(vReflUv.xy + distort * vReflUv.w, vReflUv.zw)).rgb;
     vec3 r = reflect(-v, n);
-    vec3 sky = mix(uHorizon, uZenith, smoothstep(0.0, 0.45, r.y));
-    refl = mix(sky, refl, uReflect);
+    vec3 refl = mix(uHorizon, uZenith, smoothstep(0.0, 0.45, r.y));
+    if (uReflect > 0.0) refl = mix(refl, texture2DProj(tReflection, vec4(vReflUv.xy + distort * vReflUv.w, vReflUv.zw)).rgb, uReflect);
 
     vec3 water = mix(uDeep, uSurface, clamp(vWorld.y * 0.1 + 0.35, 0.0, 1.0));
     vec3 col = mix(water, refl, clamp(fres * 1.15, 0.0, 1.0));
@@ -223,7 +237,7 @@ function beamTexture() {
   return { texture: t, stem }
 }
 
-export function createOcean(palette: OceanPalette, moonDir: THREE.Vector3, rings: number, fogDensity: number, fogColor: THREE.Color) {
+export function createOcean(palette: OceanPalette, moonDir: THREE.Vector3, rings: number, fogDensity: number, fogColor: THREE.Color, noise: THREE.Texture) {
   const geometry = polarGrid(900, rings, Math.round(rings * 2.2), 16000)
   const beam = beamTexture()
   const material = new THREE.ShaderMaterial({
@@ -237,6 +251,7 @@ export function createOcean(palette: OceanPalette, moonDir: THREE.Vector3, rings
       tReflection: { value: null },
       uReflect: { value: 0 },
       tBeam: { value: beam.texture },
+      tNoise: { value: noise },
       uHull: { value: new THREE.Vector4(HULL.stern, HULL.shoulder, beam.stem, HULL.beam / 2) },
       uDeep: { value: new THREE.Color(palette.deep) },
       uSurface: { value: new THREE.Color(palette.surface) },

@@ -1,8 +1,10 @@
 import * as THREE from 'three'
+import { noiseChunk } from './noise'
 
 // The night sky dome: navy to black with a teal glow on the horizon, drifting clouds with moonlit edges, the moon
 // and its halo, stars, and the world on the horizon line: the lights of the port the ship left (Santos, astern),
 // a lighthouse flashing on the coast and a few other ships far away. The dome follows the camera and writes no depth.
+// Cloud noise comes from the baked texture (noise.ts).
 
 const vertex = /* glsl */ `
   varying vec3 vDir;
@@ -24,12 +26,7 @@ const fragment = /* glsl */ `
 
   float hash(vec3 p) { return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }
   float hash2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-  float noise(vec2 p) {
-    vec2 i = floor(p);
-    vec2 f = fract(p);
-    vec2 u = f * f * (3.0 - 2.0 * f);
-    return mix(mix(hash2(i), hash2(i + vec2(1.0, 0.0)), u.x), mix(hash2(i + vec2(0.0, 1.0)), hash2(i + vec2(1.0, 1.0)), u.x), u.y);
-  }
+  ${noiseChunk}
   float fbm(vec2 p) {
     float v = 0.0;
     float a = 0.5;
@@ -70,9 +67,11 @@ const fragment = /* glsl */ `
 
     // the moon: a disc with faint maria, its corona and a wide halo
     float disc = smoothstep(0.99935, 0.99955, m);
-    vec2 mp = (d - moonDir).xy * 900.0;
-    float maria = 0.82 + 0.18 * fbm(mp * 0.25);
-    col += uMoonColor * (disc * 3.4 * maria * (1.0 - cloud * 0.7) + pow(m, 500.0) * 0.3 + pow(m, 70.0) * 0.018);
+    if (disc > 0.0) {
+      vec2 mp = (d - moonDir).xy * 900.0;
+      col += uMoonColor * disc * 3.4 * (0.82 + 0.18 * fbm(mp * 0.25)) * (1.0 - cloud * 0.7);
+    }
+    col += uMoonColor * (pow(m, 500.0) * 0.3 + pow(m, 70.0) * 0.018);
 
     // on the horizon: the port astern, a lighthouse, a few ships
     if (abs(d.y) < 0.03) {
@@ -99,7 +98,7 @@ const fragment = /* glsl */ `
   }
 `
 
-export function createSky(colors: { horizon: string; zenith: string; glow: string; moon: string }, moonDir: THREE.Vector3) {
+export function createSky(colors: { horizon: string; zenith: string; glow: string; moon: string }, moonDir: THREE.Vector3, noise: THREE.Texture) {
   const geometry = new THREE.SphereGeometry(15000, 64, 32)
   const material = new THREE.ShaderMaterial({
     vertexShader: vertex,
@@ -113,6 +112,7 @@ export function createSky(colors: { horizon: string; zenith: string; glow: strin
       uMoonDir: { value: moonDir.clone().normalize() },
       uMoonColor: { value: new THREE.Color(colors.moon) },
       uTime: { value: 0 },
+      tNoise: { value: noise },
     },
   })
   const mesh = new THREE.Mesh(geometry, material)
