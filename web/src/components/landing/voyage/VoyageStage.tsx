@@ -1,15 +1,15 @@
 'use client'
 
 import { useCallback, useMemo, useRef, useState } from 'react'
+import { cryptoRand, orderReference } from '@/lib/demo/codes'
 import { encodeMemo, MEMO_SIZE } from '@/lib/memo'
 import { ShipScene } from '../../ShipScene'
+import { SAMPLE_REFERENCE } from '../sample'
 import { MemoFrame } from './cargo/MemoFrame'
 import { CargoCopy } from './CargoCopy'
 import { HeroCopy } from './HeroCopy'
 import { SpeedChapter } from './SpeedChapter'
 import { LENGTH, useVoyage } from './useVoyage'
-
-const SAMPLE_REFERENCE = 'INV-2026-0845'
 
 /**
  * The first three chapters share one WebGL scene fixed behind the page: the opening shot, the memo being loaded
@@ -46,12 +46,11 @@ export function VoyageStage() {
       <section id="cargo" data-chapter="cargo" className="relative z-10" style={{ height: `${LENGTH.cargo}vh` }}>
         <div className="sticky top-0 h-[100svh] overflow-hidden">
           <CargoCopy
-            reference={reference}
             memo={memo}
             landed={edited ? MEMO_SIZE : landed}
-            onChange={(value) => {
+            onReissue={() => {
               setEdited(true)
-              setReference(value)
+              setReference(orderReference(cryptoRand))
             }}
           />
         </div>

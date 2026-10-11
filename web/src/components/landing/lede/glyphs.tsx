@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react'
 import { encodeMemo } from '@/lib/memo'
+import { SAMPLE_REFERENCE as SAMPLE } from '../sample'
 
 // The things the copy talks about, drawn inside the sentence at the size of the text (everything is in em). Each one
 // has a data-g name that lede/motion.ts animates as the reading reaches it. The accent is --lede-accent (mint on the
 // night chapters, the action green on paper). Chips carry real text and are read out; the drawings are decorative.
 
-const SAMPLE = 'INV-2026-0845'
 const USED = encodeMemo(SAMPLE).used
 
 function Chip({ name, children }: { name: string; children: string }) {

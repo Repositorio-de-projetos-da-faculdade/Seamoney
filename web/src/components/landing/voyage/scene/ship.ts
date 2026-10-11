@@ -14,7 +14,7 @@ import { doorTexture, roofTexture, sideTextures } from './steel'
 import { BAYS, BOX40, FORWARD_BAYS, MEMO_ROWS, rowZ, tierY, type Bay } from './stowage'
 
 // The container ship: hull, deck gear, the stacks of ordinary cargo and the superstructure. The memo tier on top
-// of the forward bays is built separately (cargo.ts) because it changes with the invoice number.
+// of the forward bays is built separately (cargo.ts) because it changes with the order code.
 
 // muted, weathered shipping colours, so the lit memo tier reads first
 const CARGO_COLORS = ['#7c3428', '#2f5d80', '#9a7a2c', '#35684e', '#5b6770', '#a9b2b7', '#20384f', '#1f6b67', '#6a2934', '#8f4a26', '#3e4a5c', '#47523a']

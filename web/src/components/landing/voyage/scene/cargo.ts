@@ -5,8 +5,8 @@ import { doorTexture, sideTextures } from './steel'
 import { BOX20, MEMO_SLOTS } from './stowage'
 
 // The memo tier: 32 boxes of 20 ft on top of the forward bays, one per byte, read like text from above. They are
-// lowered by crane as the visitor scrolls (setLoad), and lowered again one by one when the visitor types a new
-// invoice number (setBytes). Bytes of the reference are mint and lit; the zero padding is plain steel.
+// lowered by crane as the visitor scrolls (setLoad), and lowered again one by one when the visitor issues another
+// order code (setBytes). Bytes of the reference are mint and lit; the zero padding is plain steel.
 
 const DROP = 38
 const REDROP_SECONDS = 0.75

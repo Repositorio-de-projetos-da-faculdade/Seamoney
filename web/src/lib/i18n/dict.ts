@@ -20,7 +20,7 @@ const base = {
   'hero.lead': 'Pay your suppliers in Asia',
   'hero.accent': 'with lower fees, faster, and automatic reconciliation.',
   'hero.sub':
-    'A new way to pay import invoices: stablecoin settlement, built to run through authorized partners, with the invoice number written into every payment.',
+    'A new way to pay import invoices: stablecoin settlement, built to run through authorized partners, with an opaque order code written into every payment that points back to the invoice.',
   'hero.cta': 'Start now',
   'hero.cta2': 'Try the calculator',
   'hero.demo': 'Live demo on the Tempo testnet',
@@ -56,7 +56,7 @@ const base = {
   'role.ACCOUNTANT': 'Accountant',
 
   'story.title': 'From invoice to reconciled in four steps',
-  'story.sub': 'The invoice number travels inside the payment, so the proof is already attached.',
+  'story.sub': 'An order code travels inside the payment and points back to the invoice, so the proof is already attached.',
   'story.sample': 'Sample data',
 
   'tech.lead': 'Technology that connects Brazil',
@@ -82,7 +82,7 @@ const base = {
   'perk.speed.title': 'Settles in seconds',
   'perk.speed.desc': 'vs 1-5 business days by bank wire',
   'perk.recon.title': 'Automatic reconciliation',
-  'perk.recon.desc': 'The invoice number travels with the payment',
+  'perk.recon.desc': 'An order code travels with the payment',
   'perk.trust.title': 'Built for authorized partners',
   'perk.trust.desc': 'In production, currency conversion would be done by licensed institutions, never by us',
 
@@ -92,15 +92,15 @@ const base = {
   'how.2.title': 'Upload the invoice',
   'how.2.desc': 'AI reads the supplier, number, amount and due date. You confirm.',
   'how.3.title': 'Pay by stablecoin',
-  'how.3.desc': 'The supplier receives dollars in seconds, with your invoice number in the transaction.',
+  'how.3.desc': 'The supplier receives dollars in seconds, with the order code in the transaction.',
   'how.4.title': 'Reconcile automatically',
   'how.4.desc': 'We find the payment on the blockchain by its reference, check it and close the invoice.',
 
   // landing page (src/app/page.tsx, src/components/landing)
   'lp.loader': 'Loading the memo',
-  'lp.hero.title': 'The payment that carries *its own invoice.*',
+  'lp.hero.title': 'The payment that *finds its own invoice.*',
   'lp.hero.sub':
-    'Brazilian importers pay suppliers in Asia {route} in *stablecoins*, on Tempo or Solana. The invoice number {memo} rides *inside the transfer*, so every payment reconciles itself {check}.',
+    'Brazilian importers pay suppliers in Asia {route} in *stablecoins*, on Tempo or Solana. An order code {memo} rides *inside the transfer* and points back to the invoice, so every payment reconciles itself {check}.',
   'lp.cta': 'Create a payment order',
   'lp.cta2': 'Estimate your savings',
   'lp.live': 'Live on Tempo testnet and Solana devnet',
@@ -114,13 +114,13 @@ const base = {
   'lp.ch.5': 'Savings',
   'lp.rail': 'Chapters of the voyage',
 
-  'lp.cargo.title': 'The cargo *is the invoice.*',
+  'lp.cargo.title': 'The cargo *points to the invoice.*',
   'lp.cargo.body':
-    'Every payment carries a *32-byte memo* {bytes}, on Tempo or on Solana. We load your invoice number into it, byte by byte, before the money leaves.',
+    'Every payment carries a *32-byte memo* {bytes}, on Tempo or on Solana. We load a fresh order code into it, byte by byte, before the money leaves. Only your books say which invoice it pays.',
   'lp.cargo.bytes': '{n} of 32 bytes',
   'lp.cargo.over': '{n} of 32 bytes. It does not fit in the memo.',
-  'lp.cargo.try': 'Load your own invoice number',
-  'lp.cargo.public': 'Anyone can read the memo on the blockchain, so it carries only the invoice number, never customer data.',
+  'lp.cargo.try': 'Issue another order code',
+  'lp.cargo.public': 'Anyone can read the memo on the blockchain, so it carries only an opaque code. The invoice number, the supplier and the amount behind it stay off-chain.',
 
   'lp.speed.title': 'Seconds, *not days.*',
   'lp.speed.bank': 'Bank wire',
@@ -170,7 +170,7 @@ const base = {
   'lp.save.leak.bank.via': 'Through correspondent banks',
   'lp.save.leak.bank.note': 'FX spread plus intermediary bank fees. The figure is our assumption; typical estimates run from 2% to 5%.',
   'lp.save.leak.route': 'Stablecoin on Tempo',
-  'lp.save.leak.route.via': 'Straight to the supplier, with the invoice in the memo',
+  'lp.save.leak.route.via': 'Straight to the supplier, with the order code in the memo',
   'lp.save.leak.route.note': 'Seamoney’s fee is 1% of the amount, the same rate used to price every order.',
   'lp.save.leak.per': '{lost} on every {amount} sent',
   'lp.save.leak.diff': '{pp} percentage points apart on every payment.',
@@ -353,7 +353,7 @@ const base = {
   'od.recon.token': 'Token contract is AlphaUSD',
   'od.recon.recipient': 'Recipient is the supplier wallet',
   'od.recon.amount': 'Amount equals the invoice',
-  'od.recon.memo': 'Memo equals the invoice reference',
+  'od.recon.memo': 'Memo equals the order reference',
   'od.recon.receipt': 'Transaction succeeded',
   'od.recon.run': 'Reconcile now',
   'od.event.created': 'Order created',
@@ -394,7 +394,7 @@ const base = {
   'proof.sub': 'Checked live on the public blockchain, not on our word.',
   'proof.how': 'How to verify it yourself',
   'proof.how.desc':
-    'Open the transaction in the block explorer and check that the amount, the recipient and the memo match your invoice.',
+    'Open the transaction in the block explorer and check that the amount, the recipient and the memo match this page.',
 
   'notfound.text': 'We could not find this page. It may have moved, or the link is wrong.',
   'error.generic': 'Something went wrong.',
@@ -424,7 +424,7 @@ const basePt: Record<keyof typeof base, string> = {
   'hero.lead': 'Pague seus fornecedores na Ásia',
   'hero.accent': 'com menos taxas, mais rapidez e conciliação automática.',
   'hero.sub':
-    'Uma nova forma de pagar faturas de importação: liquidação em stablecoin, pensada para rodar com parceiros autorizados, com o número da fatura gravado em cada pagamento.',
+    'Uma nova forma de pagar faturas de importação: liquidação em stablecoin, pensada para rodar com parceiros autorizados, com um código opaco da ordem gravado em cada pagamento, que aponta para a fatura.',
   'hero.cta': 'Começar agora',
   'hero.cta2': 'Testar a calculadora',
   'hero.demo': 'Demo ao vivo na testnet do Tempo',
@@ -462,7 +462,7 @@ const basePt: Record<keyof typeof base, string> = {
   'banner.testnet': 'Pagamentos em testnet. Perna BRL-USD é simulada.',
 
   'story.title': 'Da fatura à conciliação em quatro passos',
-  'story.sub': 'O número da fatura viaja dentro do pagamento, então a prova já vai junto.',
+  'story.sub': 'Um código da ordem viaja dentro do pagamento e aponta para a fatura, então a prova já vai junto.',
   'story.sample': 'Dados de exemplo',
 
   'tech.lead': 'Tecnologia que conecta o Brasil',
@@ -488,7 +488,7 @@ const basePt: Record<keyof typeof base, string> = {
   'perk.speed.title': 'Liquida em segundos',
   'perk.speed.desc': 'contra 1-5 dias úteis pelo banco',
   'perk.recon.title': 'Conciliação automática',
-  'perk.recon.desc': 'O número da fatura viaja junto com o pagamento',
+  'perk.recon.desc': 'Um código da ordem viaja junto com o pagamento',
   'perk.trust.title': 'Feito para parceiros autorizados',
   'perk.trust.desc': 'Em produção, a conversão de moeda seria feita por instituições autorizadas, nunca por nós',
 
@@ -498,15 +498,15 @@ const basePt: Record<keyof typeof base, string> = {
   'how.2.title': 'Envie a fatura',
   'how.2.desc': 'A IA lê fornecedor, número, valor e vencimento. Você confirma.',
   'how.3.title': 'Pague em stablecoin',
-  'how.3.desc': 'O fornecedor recebe dólares em segundos, com o número da fatura na transação.',
+  'how.3.desc': 'O fornecedor recebe dólares em segundos, com o código da ordem na transação.',
   'how.4.title': 'Concilie automaticamente',
   'how.4.desc': 'Achamos o pagamento na blockchain pela referência, conferimos e fechamos a fatura.',
 
   // landing page (src/app/page.tsx, src/components/landing)
   'lp.loader': 'Carregando o memo',
-  'lp.hero.title': 'O pagamento que leva *a própria fatura.*',
+  'lp.hero.title': 'O pagamento que *encontra a própria fatura.*',
   'lp.hero.sub':
-    'Importadoras brasileiras pagam fornecedores na Ásia {route} em *stablecoin*, no Tempo ou na Solana. O número da fatura {memo} vai *dentro da transferência*, então cada pagamento se concilia sozinho {check}.',
+    'Importadoras brasileiras pagam fornecedores na Ásia {route} em *stablecoin*, no Tempo ou na Solana. Um código da ordem {memo} vai *dentro da transferência* e aponta para a fatura, então cada pagamento se concilia sozinho {check}.',
   'lp.cta': 'Criar ordem de pagamento',
   'lp.cta2': 'Estimar sua economia',
   'lp.live': 'Ao vivo na testnet do Tempo e na devnet da Solana',
@@ -520,13 +520,13 @@ const basePt: Record<keyof typeof base, string> = {
   'lp.ch.5': 'Economia',
   'lp.rail': 'Capítulos da viagem',
 
-  'lp.cargo.title': 'A carga *é a fatura.*',
+  'lp.cargo.title': 'A carga *aponta para a fatura.*',
   'lp.cargo.body':
-    'Todo pagamento leva um *memo de 32 bytes* {bytes}, no Tempo ou na Solana. Carregamos nele o número da sua fatura, byte a byte, antes de o dinheiro sair.',
+    'Todo pagamento leva um *memo de 32 bytes* {bytes}, no Tempo ou na Solana. Carregamos nele um código novo da ordem, byte a byte, antes de o dinheiro sair. Só os seus registros dizem qual fatura ele paga.',
   'lp.cargo.bytes': '{n} de 32 bytes',
   'lp.cargo.over': '{n} de 32 bytes. Não cabe no memo.',
-  'lp.cargo.try': 'Carregue o número da sua fatura',
-  'lp.cargo.public': 'Qualquer pessoa pode ler o memo na blockchain, por isso ele leva só o número da fatura, nunca dados de clientes.',
+  'lp.cargo.try': 'Emitir outro código',
+  'lp.cargo.public': 'Qualquer pessoa pode ler o memo na blockchain, por isso ele leva só um código opaco. O número da fatura, o fornecedor e o valor por trás dele ficam fora da rede.',
 
   'lp.speed.title': 'Segundos, *não dias.*',
   'lp.speed.bank': 'Transferência bancária',
@@ -576,7 +576,7 @@ const basePt: Record<keyof typeof base, string> = {
   'lp.save.leak.bank.via': 'Por bancos correspondentes',
   'lp.save.leak.bank.note': 'Spread de câmbio mais tarifas dos bancos intermediários. O número é uma suposição nossa; as estimativas típicas vão de 2% a 5%.',
   'lp.save.leak.route': 'Stablecoin no Tempo',
-  'lp.save.leak.route.via': 'Direto ao fornecedor, com a fatura no memo',
+  'lp.save.leak.route.via': 'Direto ao fornecedor, com o código da ordem no memo',
   'lp.save.leak.route.note': 'A tarifa da Seamoney é 1% do valor, a mesma usada no preço de cada ordem.',
   'lp.save.leak.per': '{lost} a cada {amount} enviados',
   'lp.save.leak.diff': '{pp} pontos percentuais de diferença em cada pagamento.',
@@ -758,7 +758,7 @@ const basePt: Record<keyof typeof base, string> = {
   'od.recon.token': 'O contrato do token é o AlphaUSD',
   'od.recon.recipient': 'O destinatário é a carteira do fornecedor',
   'od.recon.amount': 'O valor é igual ao da fatura',
-  'od.recon.memo': 'O memo é igual à referência da fatura',
+  'od.recon.memo': 'O memo é igual à referência da ordem',
   'od.recon.receipt': 'A transação foi bem-sucedida',
   'od.recon.run': 'Conciliar agora',
   'od.event.created': 'Ordem criada',
@@ -799,7 +799,7 @@ const basePt: Record<keyof typeof base, string> = {
   'proof.sub': 'Conferido ao vivo na blockchain pública, não pela nossa palavra.',
   'proof.how': 'Como verificar você mesmo',
   'proof.how.desc':
-    'Abra a transação no explorador de blocos e confira se o valor, o destinatário e o memo batem com a sua fatura.',
+    'Abra a transação no explorador de blocos e confira se o valor, o destinatário e o memo batem com esta página.',
 
   'notfound.text': 'Não encontramos esta página. Ela pode ter mudado de lugar, ou o link está errado.',
   'error.generic': 'Algo deu errado.',
