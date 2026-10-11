@@ -135,7 +135,7 @@ export function Calculator({ variant = 'page' }: { variant?: 'page' | 'teaser' }
       )}
 
       <p className={clsx('text-xs leading-relaxed', dark ? 'text-white/60' : 'text-muted')}>{t('calc.note')}</p>
-      <Link href="/dashboard/orders/new" className={btnPrimary}>
+      <Link href="/app/payments/new" className={btnPrimary}>
         {t('calc.cta')} <ArrowRight size={16} aria-hidden="true" />
       </Link>
     </div>

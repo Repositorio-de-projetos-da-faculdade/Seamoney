@@ -10,7 +10,7 @@ Built for the Colosseum **Crypto World's Fair** hackathon (Tempo track). Brazili
 
 | Service | Language | Owns |
 |---|---|---|
-| [`web/`](../web) | TypeScript, Next.js | The interface (landing, calculator, dashboard, order wizard, supplier proof page) and AI invoice reading. No database, no keys. |
+| [`web/`](../web) | TypeScript, Next.js | The interface (landing, calculator, the `/app` workspace, supplier proof page) and AI invoice reading. No database, no keys. |
 | [`rules-api/`](../rules-api) | **Java 21**, Spring Boot | **Business rules**: pricing and savings, order lifecycle, atomic pay claim, reconciliation decisions, reports, leads, JWT sign-in with company isolation, persistence (PostgreSQL, schema versioned with Flyway). |
 | [`chain-service/`](../chain-service) | **Python 3.12**, FastAPI, pytempo | **Blockchain**: sends the payment with a 32-byte memo, finds transfers by memo, reads transactions. Stateless. Holds the testnet key. |
 
@@ -95,7 +95,7 @@ The look follows the team's mockup: deep navy, teal and mint accents, green acti
 | Ship imagery | `web/src/components/ShipScene.tsx`: a hand-built vector scene of a container ship (with the Seamoney mark on its funnel), quay cranes, a distant port and the reflection on the water. It replaces photography so the repo has no image licences to track. To use real photos, replace the `ShipScene` usages with `next/image` and keep the dark gradient overlays for legibility. |
 | Favicon, app icon, share image | `web/src/app/icon.svg`, `favicon.ico`, `apple-icon.png`, `opengraph-image.png` |
 | Landing page sections | `web/src/app/page.tsx` and `web/src/components/landing/*` |
-| Dashboard shell | `Sidebar` (desktop), `BottomNav` (phones) and `Topbar` in `web/src/components` |
+| Workspace shell | `/app`: night rail and top bar in `web/src/components/app/shell` (the first `/dashboard` prototype was folded into it; old links redirect) |
 
 Work on the interface without Java, Python or Docker: `node web/scripts/mock-rules.mjs` starts a stand-in for the rules API with the same JSON shapes (port 8089), then `cd web && RULES_API_URL=http://localhost:8089 npm run dev`. It is for UI work only, never for demos.
 

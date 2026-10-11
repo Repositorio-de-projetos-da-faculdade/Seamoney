@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { dateTime, shortHash, usd } from '@/lib/format'
 import { useT } from '@/lib/i18n/client'
 import { approvalIsStale, needsApproval } from '@/lib/demo/rules'
-import { memberOf } from '@/lib/demo/selectors'
+import { memberOf, proofHref } from '@/lib/demo/selectors'
 import type { DemoState, Payment } from '@/lib/demo/types'
 import { Facts, type Row } from '../../kit/Fields'
 import { Note, Panel, PanelHead } from '../../kit/Panel'
@@ -47,7 +47,7 @@ export function ProofPanel({ payment: p }: { payment: Payment }) {
   const toast = useToast()
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(`${window.location.origin}/app/proof/${p.id}`)
+      await navigator.clipboard.writeText(`${window.location.origin}${proofHref(p)}`)
       toast.ok(t('app.copied'))
     } catch {
       toast.bad(t('app.err.generic'))
@@ -57,7 +57,7 @@ export function ProofPanel({ payment: p }: { payment: Payment }) {
     <Panel aria-labelledby="doc-proof">
       <PanelHead id="doc-proof" title={t('app.doc.proof')} meta={t('app.doc.proofMeta')} />
       <div className="flex flex-wrap gap-2 px-5 py-4">
-        <Link href={`/app/proof/${p.id}`} className={`${btnLine} ${btnSmall}`}>
+        <Link href={proofHref(p)} className={`${btnLine} ${btnSmall}`}>
           {t('app.doc.openProof')}
         </Link>
         <button type="button" onClick={copy} className={`${btnLine} ${btnSmall}`}>

@@ -5,6 +5,7 @@ import { LogOut, NavArrowDown, OpenNewWindow, Undo } from 'iconoir-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useT } from '@/lib/i18n/client'
+import { signOutLive } from '@/lib/demo/backend'
 import { demo } from '@/lib/demo/store'
 import type { DemoState, Member } from '@/lib/demo/types'
 import { Initials } from '../kit/Initials'
@@ -70,10 +71,6 @@ export function PersonaCard({ state, me }: { state: DemoState; me: Member }) {
               <Undo width={16} height={16} aria-hidden="true" />
               {t('app.persona.reset')}
             </button>
-            <Link href="/dashboard" className={ROW}>
-              <OpenNewWindow width={16} height={16} aria-hidden="true" />
-              {t('app.nav.live')}
-            </Link>
             <Link href="/" className={ROW}>
               <OpenNewWindow width={16} height={16} aria-hidden="true" />
               {t('app.nav.site')}
@@ -82,6 +79,7 @@ export function PersonaCard({ state, me }: { state: DemoState; me: Member }) {
               type="button"
               onClick={() => {
                 demo.signOut()
+                void signOutLive()
                 router.push('/app/login')
               }}
               className={ROW}

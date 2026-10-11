@@ -97,6 +97,21 @@ export const demo = {
   signIn(memberId: string) {
     commit((s) => ({ ...s, sessionMemberId: memberId }))
   },
+  /**
+   * Signed in with a real account of the rules service: sit at the desk as the member with the same role and settle
+   * Tempo payments on the testnet. The people, suppliers and history stay the fictitious ones of this browser.
+   */
+  connect(role: Role) {
+    commit((s) => {
+      const m = s.members.find((x) => x.role === role && x.status === 'active')
+      if (!m) throw new rules.DemoRuleError('role')
+      return { ...s, sessionMemberId: m.id, settings: { ...s.settings, settlementMode: 'testnet' } }
+    })
+  },
+  /** Offline: sit at the desk as anyone, with simulated settlement (no account of the rules service involved). */
+  signInOffline(memberId: string) {
+    commit((s) => ({ ...s, sessionMemberId: memberId, settings: { ...s.settings, settlementMode: 'simulated' } }))
+  },
   signOut() {
     commit((s) => ({ ...s, sessionMemberId: null }))
   },

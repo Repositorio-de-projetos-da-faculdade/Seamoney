@@ -64,7 +64,6 @@ export async function SiteFooter() {
               ['/#how', t('nav.how')],
               ['/calculator', t('nav.calculator')],
               ['/app', t('nav.dashboard')],
-              ['/dashboard', t('app.nav.live')],
             ].map(([href, label]) => (
               <li key={href}>
                 <Link href={href} className="inline-flex min-h-9 items-center text-white/75 transition hover:text-white">

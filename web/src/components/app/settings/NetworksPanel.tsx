@@ -76,7 +76,7 @@ export function NetworksPanel({ settings, canEdit }: { settings: Settings; canEd
               {live === 'signin' ? (
                 <>
                   {' '}
-                  <Link href="/login?next=/app/settings" className="font-medium underline underline-offset-2">
+                  <Link href="/app/login" className="font-medium underline underline-offset-2">
                     {t('app.set.signIn')}
                   </Link>
                 </>

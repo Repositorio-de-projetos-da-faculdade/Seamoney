@@ -16,7 +16,7 @@ export interface SiteLink {
 export const primaryCta = (t: T): SiteLink =>
   STATIC_SITE ? { href: REPO_URL, label: t('lp.code') } : { href: '/app', label: t('lp.cta') }
 
-/** The app in the menus: the SaaS demo; the source code on the static site. The live testnet prototype stays at /dashboard. */
+/** The app in the menus: the workspace at /app (live on the testnet once signed in); the source code on the static site. */
 export const appLink = (t: T): SiteLink =>
   STATIC_SITE ? { href: REPO_URL, label: t('lp.code.nav') } : { href: '/app', label: t('nav.dashboard') }
 

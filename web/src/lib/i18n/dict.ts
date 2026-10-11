@@ -180,7 +180,6 @@ const base = {
   'lp.save.month': 'per month',
 
 
-  'lp.close.cta2': 'Open the dashboard',
   'lp.code': 'View the source code',
   'lp.code.nav': 'Code',
 
@@ -586,7 +585,6 @@ const basePt: Record<keyof typeof base, string> = {
   'lp.save.month': 'por mês',
 
 
-  'lp.close.cta2': 'Abrir o painel',
   'lp.code': 'Ver o código-fonte',
   'lp.code.nav': 'Código',
 

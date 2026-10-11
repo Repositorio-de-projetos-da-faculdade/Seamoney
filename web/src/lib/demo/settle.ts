@@ -2,7 +2,7 @@
 //  - simulated: nothing leaves the browser. A random hash stands in for the transaction and is labelled simulated.
 //  - testnet: the same payment is created in the Java rules API and sent for real on the Tempo testnet through the
 //    existing /api proxy (web -> Java -> Python -> Tempo). Only works when that stack is running (docker compose)
-//    and the visitor signed in at /login with an account that may pay (owner or approver).
+//    and the visitor signed in at /app/login with an account that may pay (owner or approver).
 // Solana payments are always simulated here: its adapter is not wired to the Java service yet.
 import { base58, cryptoRand, hex } from './codes'
 import type { Network, Payment, Reconciliation, Settlement, Wallet } from './types'
@@ -61,7 +61,7 @@ export async function liveAvailable(): Promise<'ok' | 'signin' | 'no'> {
 
 /** Errors of the Java service, in words a person can act on. */
 function liveMessage(status: number, error: string | undefined): string {
-  if (status === 401) return 'Sign in at /login to pay on the testnet.'
+  if (status === 401) return 'The testnet session ended. Sign in again to pay on the testnet.'
   if (status === 403) return 'The signed-in testnet account may not do this. Use an owner or approver account.'
   return error ?? `The rules service answered ${status}.`
 }
