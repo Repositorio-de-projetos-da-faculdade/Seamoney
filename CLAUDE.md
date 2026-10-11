@@ -16,9 +16,9 @@ A perna reais para dólar é **simulada** (não há parceiro licenciado integrad
 
 | Pasta | Linguagem | Responsabilidade |
 |---|---|---|
-| `web/` | TypeScript, Next.js 16, Tailwind v4, React 19 | Só interface e leitura de fatura por IA. Sem banco, sem chaves. Proxy `/api/*` com lista de rotas permitidas. |
-| `rules-api/` | Java 21, Spring Boot 3.5, JdbcTemplate, SQLite | **Regras de negócio**: preço, ciclo de vida da ordem, reserva atômica do pagamento, conciliação, relatórios. Todo SQL fica em `store/OrderRepository`. |
-| `chain-service/` | Python 3.12, FastAPI, pytempo, web3 | **Blockchain**: envia o pagamento com memo, busca transferências por memo, lê transações. Sem estado. Guarda a chave de teste. |
+| `web/` | TypeScript, Next.js 16, Tailwind v4, React 19 | Só interface e leitura de fatura por IA. Sem banco, sem chaves. Proxy `/api/*` com lista de rotas permitidas, que repassa a sessão (JWT em cookie `httpOnly`) como `Authorization: Bearer`. |
+| `rules-api/` | Java 21, Spring Boot 3.5, JdbcTemplate, PostgreSQL + Flyway | **Regras de negócio**: login e papéis, preço, ciclo de vida da ordem, reserva atômica do pagamento, conciliação, relatórios, auditoria. SQL em `store/` (`OrderRepository`, `UserRepository`). |
+| `chain-service/` | Python 3.12, FastAPI, pytempo, web3 | **Blockchain** (Tempo testnet e Solana devnet): envia o pagamento com memo, busca transferências por memo, lê transações. Único estado: o arquivo de idempotência em `/app/data` (volume `chain-data`). Guarda a chave de teste. |
 
 Fluxo: Navegador → web → rules-api (Java) → chain-service (Python) → Tempo. Só o `web` é publicado pelo `docker-compose.yml`. O Java chama o Python com o cabeçalho `X-Internal-Token`.
 
@@ -28,13 +28,15 @@ Regra da separação: **nenhuma regra de negócio no Python, nenhuma chamada de 
 
 - Dinheiro sempre em **centavos inteiros**. Tarifa de 1% (100 bps, arredondamento half-up). Custo bancário assumido de 3%. Unidades do token = centavos x 10.000 (tokens TIP-20 têm 6 casas). Câmbio simulado 5,40 (`DEMO_USD_BRL`).
 - Memo de 32 **bytes** (não caracteres). O memo é público na rede.
-- Ordem: `quoted -> sending (reserva atômica) -> sent -> reconciled`. Conciliação independente: achar o evento `TransferWithMemo` por destinatário e memo, e checar token, destinatário, valor, memo e recibo. O par (hash da transação, índice do log) só concilia uma ordem.
+- Ordem: `quoted -> sending (reserva atômica) -> sent -> reconciled`. Conciliação independente: achar o evento `TransferWithMemo` por destinatário e memo (preferindo o hash enviado, sem "escolher pelo valor"), e checar token, destinatário, valor, memo e recibo. O par (hash da transação, índice do log) só concilia uma ordem, garantido também por índice único no banco (`V2`).
+- Memo = referência opaca da ordem (`SM-XXXXXXXX`, base32 de Crockford), **nunca o número da fatura**, no Java e no `/app`. O `POST /api/orders` aceita `reference` nesse formato (o `/app` manda a dele); sem ela o Java sorteia uma.
+- Pagamento idempotente: o Java manda `Idempotency-Key: <id da ordem>-<tentativa>` ao Python. Depois de uma falha, consulta `GET /payments/{key}`: se o Python marcou `failed`, usa nova chave; senão (timeout) reusa a mesma, e o Python devolve o pagamento já feito em vez de pagar de novo. O Python **exige** o cabeçalho.
 - `amount_units` volta como **string** da API Python (passa do inteiro seguro do JavaScript).
 - O cliente HTTP do Java usa **HTTP/1.1 forçado**: o upgrade h2c padrão do JDK é rejeitado pelo uvicorn e quebra todo POST.
 - Rede: Tempo Moderato, chain id 42431, RPC `https://rpc.moderato.tempo.xyz`, explorer `https://explore.testnet.tempo.xyz/tx/<hash>`. Token de teste AlphaUSD `0x20c0000000000000000000000000000000000001`. A carteira se reabastece pelo faucet (`tempo_fundAddress`).
 - Identidade: Multi-tenant implementado com isolamento no nível da aplicação (`organization_id` explícito nas consultas), já que RLS puro pelo Spring JDBC esbarra em complexidade de connection pooling.
-- Segurança: Autenticação via JWT (HS256) próprio com papéis granulares mapeados da demo, limites de tentativa de login (em memória) e auditoria no nível de serviço.
-- Banco de Dados: Migração do SQLite para PostgreSQL via Flyway e Testcontainers para testes de integração.
+- Segurança: Autenticação via JWT (HS256, 1 h) próprio com papéis (criar: Dono, Aprovador, Operador; pagar: Dono, Aprovador; CSV: Dono, Aprovador, Contador), limite de tentativas de login (em memória, por e-mail) e `audit_log` com login, falha de login, troca de empresa e cada transição da ordem. `JWT_SECRET` é obrigatório (32+ caracteres; o Java não sobe sem ele). Na web o token fica só em cookie `httpOnly` (`seamoney_api`); `/login` e `/api/session` (GET quem está logado, POST entrar, DELETE sair). Contas fictícias do seed: `porto.*@example.com` e `acme.*@example.com` (owner, approver, operator, accountant), senha `demo123`. O seed só roda com o perfil `demo` (padrão do compose); `SEED_DEMO=false` desliga.
+- Banco de Dados: PostgreSQL via Flyway (`V1`, `V2`; nunca edite uma migração já aplicada, crie a próxima). Os testes Java rodam em H2 no modo PostgreSQL (não Testcontainers): diferenças de dialeto só aparecem no Docker e no e2e.
 - Interface em inglês por padrão, português pelo seletor (cookie `lang`). Textos em `web/src/lib/i18n/dict.ts`.
 
 ## Interface e identidade visual
@@ -65,7 +67,7 @@ Exceção decidida pelo time: a landing tem tipografia própria, o resto do app 
 Versão "produto" que roda **sem backend**: dados fictícios no navegador de cada visitante (localStorage), sem chaves. O modelo segue o "Plano do backend do protótipo real" do time (versão de 10/10 noite, com Tempo e Solana): tabela de permissões por papel (Dono, Aprovador, Operador, Contador; o Operador cria e propõe carteiras mas não envia), carteira do fornecedor versionada por rede e aprovada por outra pessoa, uma ordem ativa por fatura, leitura por IA só vale com revisão humana, aprovação presa ao SHA-256 dos dados (inclui rede e versão da carteira), memo = referência opaca da ordem (`SM-XXXXXXXX`, nunca o número da fatura), envio com reserva atômica, conciliação automática com cinco verificações e caso de revisão (`in_review`) quando uma falha, cancelamento antes do envio. O landing deste branch aponta para `/app`; o `/dashboard` continua sendo o protótipo real na testnet.
 
 - Dados e regras: `web/src/lib/demo/` (`types`, `pricing` espelha `Pricing.java`, `rules` são funções puras, `seed`, `store`, `settle`). Testes em `pricing.test.ts` e `rules.test.ts` (rodam no `npm test`). Mudou `Pricing.java`? Atualize `pricing.ts` junto.
-- Liquidação: "simulada" por padrão (hash aleatório, rotulado, sem link de explorador). Em Configurações dá para escolher "Tempo testnet", que cria a ordem no Java (com a referência opaca no campo da fatura, que vira o memo) e paga de verdade pelo proxy `/api` (só com a pilha do Docker no ar). Pagamentos na Solana são sempre simulados aqui: o adaptador ainda não está ligado ao Java.
+- Liquidação: "simulada" por padrão (hash aleatório, rotulado, sem link de explorador). Em Configurações dá para escolher "Tempo testnet", que cria a ordem no Java (a referência opaca vai no campo `reference` e vira o memo; o número da fatura fica fora da rede) e paga de verdade pelo proxy `/api`. Só funciona com a pilha do Docker no ar **e** com login em `/login` com conta de dono ou aprovador (Configurações mostra "Falta entrar" com o link). Um novo envio depois de falha reusa a ordem já criada no Java. Pagamentos na Solana são sempre simulados aqui no `/app`; Java e Python já pagam na Solana devnet (`network: solana`, ver o e2e).
 - Visual: **a identidade da landing publicada** (getseamoney.web.app; o código da landing está em `web/src/components/landing/`), decisão do usuário em 10/10/2026. Mesmos tokens e nomes (`abyss`, `night`, `tide`, `foam`, `paper`, `paper-hi`, `paper-line`, `signal`) e a mesma tipografia: Funnel Display nos títulos e números (leve), palavras entre `*asteriscos*` no texto em Instrument Serif itálico (classe `desk-display`), Funnel Sans no texto, Geist Mono em rótulos e códigos. Barra lateral noturna recolhida em 72 px que abre sobre a página ao passar o mouse (ou com foco do teclado), com o trilho e o losango do ChapterRail da landing, relógios de Santos e Shenzhen e ícones Iconoir (`iconoir-react`; regras de abertura em `shell/reveal.ts`), folhas de papel quadradas (`Panel`), ações em pílula verde, âmbar com losango para tudo que é simulado (`Simulated`). A carta noturna (Natural Earth, `web/scripts/build-chart.mjs`) fica no Início. Kit em `web/src/components/app/kit/`, casca em `shell/`.
 - Organização: Início (o que espera por você, a carta, números, atividade), Pagamentos (visões por vez de quem: esperando você, aguardando aprovação, prontos, em revisão, conciliados, todos; `/app/approvals` e `/app/reconciliation` redirecionam para elas), página do pagamento (próximo passo com os botões, caminho da ordem, painéis por pergunta: para onde vai, valores, o que é pago, na rede; ao lado aprovação, comprovante e histórico), Fornecedores (carteiras por rede e aprovações pendentes), Relatórios (resumo e trilha de auditoria), Equipe e Configurações.
 - Textos: um arquivo por área em `web/src/lib/i18n/app/`, juntados no `dict.ts`.
@@ -80,19 +82,19 @@ Esta versão tem mudanças que quebram o que você conhece. Leia `web/node_modul
 ```bash
 cp .env.example .env            # preencha TEMPO_PARTNER_PRIVATE_KEY (carteira de TESTNET)
 docker compose up --build       # abre em http://localhost:3000
-node scripts/e2e.mjs            # ponta a ponta contra a testnet real: web -> Java -> Python -> chain
+node scripts/e2e.mjs http://localhost:3000 tempo   # ponta a ponta na testnet real (ou: solana). Com o portão ligado, exporte DEMO_SESSION_SECRET
 ```
 
 Testes por serviço:
 
 ```bash
 cd web && npm run typecheck && npm run lint && npm test
-cd rules-api && mvn verify                  # 27 testes; ou: docker build --target test ./rules-api
-cd chain-service && pytest -q               # 15 testes offline
+docker build --target test ./rules-api      # 37 testes Java (ou mvn verify com JDK 21 e Maven)
+cd chain-service && pytest -q               # 34 testes offline
 cd chain-service && python -m scripts.smoke # testnet real
 ```
 
-Estado verificado: Java 27, Python 15, web 31 (inclui as regras e os relatórios do `/app`) + tsc + lint + next build passam; a pilha Docker foi testada ponta a ponta na testnet real (criar, pagar, pagar de novo bloqueado com 409, conciliar com 5 verificações, prova, CSV). Em 10/10 o `/app` em modo "Tempo testnet" também pagou e conciliou na testnet real com a referência opaca como memo.
+Estado verificado em 11/10/2026: Java 37, Python 34, web 36 + tsc + lint passam. A pilha Docker (Postgres) passou o `scripts/e2e.mjs` na testnet real do Tempo: sem sessão 401, operador cria e não paga (403), aprovador paga com memo opaco, pagar de novo 409, conciliação com 5 verificações, prova, CSV e isolamento entre empresas. Na Solana o mesmo e2e parou no faucet da devnet (limite de taxa): a carteira pagadora precisa de SOL à mão em faucet.solana.com.
 
 ## Segredos
 
@@ -102,15 +104,16 @@ Estado verificado: Java 27, Python 15, web 31 (inclui as regras e os relatórios
 ## O que ainda não foi verificado
 
 - Leitura de fatura por IA com chave real.
-- `mvn spring-boot:run` fora do Docker (a máquina só tinha Java 8; o Dockerfile usa JDK 21).
+- `mvn spring-boot:run` fora do Docker (os testes Java rodam pelo `docker build --target test`).
 - Qualquer deploy em nuvem real e a execução do GitHub Actions (`.github/workflows/ci.yml`).
-- Não há login: a demo pública precisa de senha ou lista de IPs, porque qualquer pessoa poderia disparar pagamentos de testnet.
+- Login existe (JWT), mas as contas do seed têm senha pública (`demo123`): qualquer demo acessível por outras pessoas precisa do portão (`DEMO_ACCESS_PASSWORD` e `DEMO_SESSION_SECRET`), senão qualquer um dispara pagamentos de testnet.
+- O bloqueio de login e o limite de taxa do portão ficam em memória (somem ao reiniciar, não valem com várias instâncias).
 
 ## Próximo passo do produto: protótipo real
 
 O plano completo (módulos, mapa de entidades, estrutura da chain, acesso individual, segurança, fases) está no documento "Plano do backend real" do time, que fica fora do repositório.
 
-Resumo: monólito modular em Java com Postgres, migrações versionadas e isolamento por empresa; login por OIDC com papéis (Dono, Aprovador, Operador, Contador, Admin da plataforma); aprovação de quem não criou a ordem, presa ao hash dos dados; fila com outbox; no Python, chave de acesso com expiração e limite e leitor de eventos; memo = código opaco da ordem, nunca o número da fatura. Só começar depois da entrega do hackathon.
+Resumo: monólito modular em Java com Postgres, migrações versionadas e isolamento por empresa; login por OIDC com papéis (Dono, Aprovador, Operador, Contador, Admin da plataforma); aprovação de quem não criou a ordem, presa ao hash dos dados; fila com outbox; no Python, chave de acesso com expiração e limite e leitor de eventos; memo = código opaco da ordem, nunca o número da fatura. A fase B1 (Postgres, JWT, várias empresas) e partes do B2 (segredo JWT obrigatório, memo opaco, idempotência Java→Python, índice único de crédito, auditoria das transições, e2e com login) já estão na base; o roteiro das fases B2 e B3 fica fora do repositório. O resto (carteiras versionadas, faturas, aprovação presa a hash, cotação com validade, ledger, outbox, caso de revisão, RLS) fica para depois da entrega.
 
 O documento de apresentação do time (hackathon, projeto, roteiro) também fica fora do repositório.
 
@@ -121,3 +124,4 @@ O documento de apresentação do time (hackathon, projeto, roteiro) também fica
 - Mudou contrato entre Java e Python? Os testes com chain falsa não pegam problemas de transporte: rode `scripts/e2e.mjs`.
 - Mantenha tudo o que é simulado rotulado como simulado.
 - Antes de qualquer commit, confirme que nenhum `.env` entrou.
+- Subagentes: sempre use o modelo **Haiku 5.5** (`model: "haiku"` na ferramenta Agent), nunca Opus. Decisão do time.

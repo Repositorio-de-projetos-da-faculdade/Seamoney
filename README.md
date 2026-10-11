@@ -50,12 +50,12 @@ Three services, each owned by one workstream:
 | Folder | Stack | Responsibility |
 |---|---|---|
 | [`web/`](web) | TypeScript, Next.js, Tailwind | Interface (English and Portuguese) and AI invoice reading |
-| [`rules-api/`](rules-api) | Java 21, Spring Boot, SQLite | Business rules: pricing, order status, reconciliation decisions, reports |
+| [`rules-api/`](rules-api) | Java 21, Spring Boot, PostgreSQL (Flyway) | Business rules: pricing, order status, reconciliation decisions, reports, sign-in and company isolation |
 | [`chain-service/`](chain-service) | Python 3.12, FastAPI, pytempo | Tempo testnet: send payments with a memo, find transfers, read transactions |
 
-The prototype stores data in a SQLite file. PostgreSQL is the planned database for the next phase. Hosting: to be selected by the team (options in [docs/prototype.md](docs/prototype.md)).
+The rules-api stores its data in PostgreSQL, with schema versions managed by Flyway (`rules-api/src/main/resources/db/migration`). Hosting: to be selected by the team (options in [docs/prototype.md](docs/prototype.md)).
 
-**Update (Phase B1):** The rules-api has been upgraded to a real backend with PostgreSQL (via Flyway), JWT Authentication, Multi-tenant isolation (by application filters), and Audit logging. See [docs/backend-api.md](docs/backend-api.md) for the API contract.
+**Update (Phase B1):** The rules-api is a backend with PostgreSQL (via Flyway), JWT sign-in, multi-company isolation (every order query is filtered by the company of the token), and audit logging. See [docs/backend-api.md](docs/backend-api.md) for the API contract.
 
 ## Team workstreams
 
@@ -132,8 +132,19 @@ docker compose up --build
 To create and fund a testnet wallet, and for the per-service commands, environment variables and tests, see [docs/prototype.md](docs/prototype.md). To verify the whole flow against the real testnet after starting the stack:
 
 ```bash
-node scripts/e2e.mjs
+node scripts/e2e.mjs http://localhost:3000 tempo
 ```
+
+The script creates an order as an operator (who may not pay: 403), then pays as an approver, blocks a second payment (409), reconciles with all five checks, and confirms that a user from another company cannot see the order. If the demo password gate is on, set `DEMO_SESSION_SECRET` for the script.
+
+### Sign in
+
+Sign in at `http://localhost:3000/login`. The demo accounts are fictitious, every one uses the password `demo123`, and they are created only when the database is empty and the `demo` profile is active (the docker compose default; `SEED_DEMO=false` turns it off):
+
+- Porto Claro Importadora: `porto.owner@example.com`, `porto.approver@example.com`, `porto.operator@example.com`, `porto.accountant@example.com`
+- Acme Corp: `acme.owner@example.com`, `acme.approver@example.com`, `acme.operator@example.com`, `acme.accountant@example.com`
+
+`JWT_SECRET` is required (32 characters or more); the rules-api does not start without a valid one. Sessions last one hour. For any deployment that other people can reach, also set `DEMO_ACCESS_PASSWORD` and `DEMO_SESSION_SECRET` to put a password gate in front of the app. See [docs/backend-api.md](docs/backend-api.md) for the roles.
 
 To work on the interface without the other services: `node web/scripts/mock-rules.mjs`, then `cd web && RULES_API_URL=http://localhost:8089 npm run dev`.
 
@@ -149,7 +160,7 @@ Do not commit API credentials, wallet private keys, seed phrases, database passw
 - Processing the same transfer again does not duplicate the payment.
 - Testnet receipts are clearly identified as test payments.
 
-These cases are covered by automated tests in `rules-api` (`OrderApiTest`) and exercised against the real testnet by `scripts/e2e.mjs`.
+These cases are covered by automated tests in `rules-api` (`OrderApiTest`; 37 Java tests in total) and exercised against the real testnet by `scripts/e2e.mjs`.
 
 ## License
 
