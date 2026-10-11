@@ -145,12 +145,15 @@ O token carrega a empresa e o papel do usuário. Toda consulta de ordens é filt
 * Download de CSV com todas as ordens.
 * **Resposta (200)**: Corpo em texto/csv.
 
-### [PLANEJADO, NÃO IMPLEMENTADO] Fase B2: Fornecedores e Ledger
-Estes endpoints ainda não existem no código; são o plano da próxima fase. (Aprovação e cancelamento de ordens já estão implementados, acima.)
+### Fornecedores e carteiras versionadas (`/api/suppliers`)
+Carteira nova ou trocada é uma proposta (`proposed`) até outra pessoa aprovar; ao aprovar uma versão, a anterior da mesma rede vira `revoked`. Uma ordem para um fornecedor do registro só vai para a carteira aprovada daquela rede (senão 400). Migração `V4__supplier_wallets.sql`.
 
-* **GET /api/suppliers**: Listar fornecedores. (Qualquer Autenticado)
-* **GET /api/suppliers/{id}**: Detalhes do fornecedor e suas carteiras versionadas. (Qualquer Autenticado)
-* **POST /api/suppliers**: Criar novo fornecedor com proposta de carteira. (OWNER, APPROVER, OPERATOR)
-* **POST /api/suppliers/{id}/wallets**: Propor nova carteira na rede. (OWNER, APPROVER, OPERATOR)
-* **POST /api/suppliers/{id}/wallets/{walletId}/approve**: Aprovar uma carteira proposta. (OWNER, APPROVER)
+* **GET /api/suppliers**: fornecedores do registro da empresa, com `wallets[]` = `{id, network, address, version, status, proposedBy, proposedRole, proposedAt, approvedBy, approvedRole, approvedAt}`. (Qualquer autenticado)
+* **POST /api/suppliers**: `{"name", "country", "city", "port", "email", "wallet": {"network", "address"}}` cria o fornecedor com a primeira carteira como proposta. 201; 409 se já existe no registro; 400 com endereço inválido para a rede. (OWNER, APPROVER, OPERATOR)
+* **POST /api/suppliers/{id}/wallets**: `{"network", "address"}` propõe nova versão (descarta uma proposta aberta na mesma rede). 409 se for o endereço já em uso. (OWNER, APPROVER, OPERATOR)
+* **POST /api/suppliers/{id}/wallets/{walletId}/approve**: aprova; 403 para quem propôs ou outros papéis; 409 se já não é proposta. (OWNER, APPROVER)
+* **POST /api/suppliers/{id}/wallets/{walletId}/reject**: recusa (aprovador) ou retira (quem propôs). (OWNER, APPROVER, OPERATOR)
+* **POST /api/suppliers/import-demo**: lista de fornecedores com o histórico de carteiras; importa uma vez num registro vazio, só com o seed de demo ligado (o `/app` usa na primeira sincronização). (OWNER, APPROVER, OPERATOR)
+
+### [PLANEJADO, NÃO IMPLEMENTADO] Ledger
 * **GET /api/ledger**: Listagem de todas as movimentações on-chain de stablecoin conciliadas (Ledger). (Qualquer Autenticado)
