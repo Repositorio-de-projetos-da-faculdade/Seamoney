@@ -1,10 +1,13 @@
 import * as THREE from 'three'
 import type { MemoByte } from '@/lib/memo'
 import { createCargo } from './cargo'
+import { createGovernor } from './governor'
 import { FONTS } from './livery'
 import { projectMemo, type ScreenRect } from './memoBounds'
+import { createNoiseTexture } from './noise'
 import { createOcean } from './ocean'
 import { createPost } from './post'
+import { pickTier, profileFor, type Profile } from './quality'
 import { createReflection } from './reflection'
 import type { Shot } from './shots'
 import { createShip } from './ship'
@@ -13,7 +16,11 @@ import { createSmoke } from './smoke'
 
 // The whole night scene: sky, ocean with reflections, the ship and its memo cargo, moonlight with shadows, an
 // environment map made from the sky itself, smoke and post-processing. React only feeds it a camera shot, the
-// load progress, the ship's speed and the memo bytes. It renders only while it is on screen.
+// load progress, the ship's speed and the memo bytes. It renders only while it is on screen, at most 60 times a
+// second, at the low tier unless ?quality= asks otherwise (quality.ts), trimmed further if frames run slow (governor.ts).
+
+/** Faster screens (90, 120, 144 Hz) skip frames: the scene moves slowly and the GPU is spared. */
+const FRAME_MS = 1000 / 60
 
 const PALETTE = {
   deep: '#010811',
@@ -49,15 +56,17 @@ async function fontsReady() {
 
 export async function createVoyageScene(canvas: HTMLCanvasElement, bytes: MemoByte[], reduced: boolean): Promise<VoyageScene> {
   await fontsReady()
-  const small = window.matchMedia('(max-width: 767px)').matches
-  const quality = small ? 'low' : 'high'
-
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: !small, powerPreference: 'high-performance' })
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, small ? 1.4 : 1.75))
+  // no antialias on the canvas: the scene is drawn into the post-processing targets, and the canvas only ever
+  // receives the final full-screen pass, so multisampling it would cost memory and buy nothing
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' })
+  const profile: Profile = profileFor(pickTier())
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, profile.pixelRatio.max))
   renderer.toneMapping = THREE.ACESFilmicToneMapping
   renderer.toneMappingExposure = 1.1
   renderer.shadowMap.enabled = true
   renderer.shadowMap.type = THREE.PCFShadowMap
+  // redrawn on demand (see render): the moon never moves
+  renderer.shadowMap.autoUpdate = false
 
   const scene = new THREE.Scene()
   // the water, the standard materials and the sky meet in one horizon colour
@@ -66,9 +75,10 @@ export async function createVoyageScene(canvas: HTMLCanvasElement, bytes: MemoBy
   const camera = new THREE.PerspectiveCamera(36, 1, 0.5, 20000)
 
   const moonDir = new THREE.Vector3(1, 0.24, -0.5).normalize()
-  const sky = createSky({ horizon: PALETTE.horizon, zenith: PALETTE.zenith, glow: PALETTE.glow, moon: PALETTE.moon }, moonDir)
-  const ocean = createOcean(PALETTE, moonDir, small ? 120 : 190, 0.00085, fogColor)
-  const ship = createShip(quality)
+  const noise = createNoiseTexture()
+  const sky = createSky({ horizon: PALETTE.horizon, zenith: PALETTE.zenith, glow: PALETTE.glow, moon: PALETTE.moon }, moonDir, noise)
+  const ocean = createOcean(PALETTE, moonDir, profile.oceanRings, 0.00085, fogColor, noise)
+  const ship = createShip(profile.ship)
   const cargo = createCargo(bytes)
   const smoke = createSmoke()
   const vessel = new THREE.Group()
@@ -87,7 +97,7 @@ export async function createVoyageScene(canvas: HTMLCanvasElement, bytes: MemoBy
   const moon = new THREE.DirectionalLight('#c3d6ff', 1.35)
   moon.position.copy(moonDir).multiplyScalar(320)
   moon.castShadow = true
-  moon.shadow.mapSize.setScalar(small ? 1024 : 4096)
+  moon.shadow.mapSize.setScalar(profile.shadowSize)
   Object.assign(moon.shadow.camera, { left: -130, right: 130, top: 80, bottom: -80, near: 10, far: 800 })
   moon.shadow.bias = -0.0004
   moon.shadow.normalBias = 0.6
@@ -95,9 +105,10 @@ export async function createVoyageScene(canvas: HTMLCanvasElement, bytes: MemoBy
   fill.position.set(60, 80, 220)
   scene.add(moon, moon.target, fill, new THREE.HemisphereLight('#2f5a7c', '#020a12', 0.5))
 
-  const reflection = small ? null : createReflection(0.5)
+  let reflection = profile.reflection > 0 ? createReflection(profile.reflection) : null
   if (reflection) ocean.setReflection(reflection.texture, reflection.textureMatrix)
-  const post = createPost(renderer, scene, camera, true)
+  const post = createPost(renderer, scene, camera, profile.bloom)
+  const governor = createGovernor(trimSteps())
 
   const target = new THREE.Vector3()
   const pointer = new THREE.Vector2()
@@ -109,7 +120,40 @@ export async function createVoyageScene(canvas: HTMLCanvasElement, bytes: MemoBy
   let frame = 0
   let overlay: ((memo: ScreenRect) => void) | null = null
   let last = 0
+  let lastFrame = 0
+  let lastRender = 0
+  let owed = 0
+  let shadowAge = Infinity
+  let shadowSail = NaN
   const timer = new THREE.Timer()
+
+  /**
+   * What the governor may give up, in order: resolution down to 1x, then the reflection (a second render of the
+   * whole scene), then resolution below 1x, then the bloom.
+   */
+  function trimSteps() {
+    const ratio = (r: number) => () => {
+      renderer.setPixelRatio(r)
+      resize()
+    }
+    const sharp: (() => void)[] = []
+    const soft: (() => void)[] = []
+    const { min } = profile.pixelRatio
+    for (let r = renderer.getPixelRatio() - 0.25; r > min - 0.1; r -= 0.25) {
+      const next = Math.max(r, min)
+      ;(next >= 1 ? sharp : soft).push(ratio(next))
+    }
+    const steps = [...sharp]
+    if (reflection)
+      steps.push(() => {
+        reflection?.dispose()
+        reflection = null
+        ocean.setReflection(null)
+      })
+    steps.push(...soft)
+    if (profile.bloom) steps.push(() => post.setBloom(false))
+    return steps
+  }
 
   function resize() {
     const w = canvas.clientWidth
@@ -162,17 +206,37 @@ export async function createVoyageScene(canvas: HTMLCanvasElement, bytes: MemoBy
     vessel.rotation.z = Math.sin(time * 0.31 + 1) * 0.005
     placeCamera(time)
     overlay?.(projectMemo(vessel, camera, canvas.clientWidth, canvas.clientHeight))
-    if (reflection) reflection.render(renderer, scene, camera, [ocean.mesh, smoke.points])
+    // not on the first frame: the shadow map does not exist yet, and the reflection must not be the pass that
+    // draws it (it renders with a clipping plane)
+    if (reflection && shadowAge !== Infinity) reflection.render(renderer, scene, camera, [ocean.mesh, smoke.points])
+    // the shadow map is redrawn every few frames, and every frame while something on board moves (a box being
+    // lowered, the ship sailing off)
+    if (++shadowAge >= profile.shadowEvery || cargo.moving || shot.sail !== shadowSail) {
+      renderer.shadowMap.needsUpdate = true
+      shadowAge = 0
+      shadowSail = shot.sail
+    }
     post.render(time)
   }
 
-  function loop() {
+  function loop(now: number) {
     frame = requestAnimationFrame(loop)
-    if (active) render()
+    if (!active) {
+      lastFrame = 0
+      return
+    }
+    owed += lastFrame ? now - lastFrame : FRAME_MS
+    lastFrame = now
+    if (owed < FRAME_MS - 2) return
+    // keep the remainder, so a 90 Hz screen draws two frames out of three, but never a backlog
+    owed = Math.max(0, Math.min(owed - FRAME_MS, FRAME_MS))
+    if (lastRender) governor.frame(now - lastRender)
+    lastRender = now
+    render()
   }
 
   resize()
-  loop()
+  frame = requestAnimationFrame(loop)
 
   const api: VoyageScene = {
     setShot(s) {
@@ -207,6 +271,7 @@ export async function createVoyageScene(canvas: HTMLCanvasElement, bytes: MemoBy
       cargo.dispose()
       smoke.dispose()
       reflection?.dispose()
+      noise.dispose()
       env.dispose()
       pmrem.dispose()
       post.dispose()
