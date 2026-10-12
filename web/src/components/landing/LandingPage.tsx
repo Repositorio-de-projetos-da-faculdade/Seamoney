@@ -1,6 +1,9 @@
 import type { Locale } from '@/lib/i18n/dict'
 import type { T } from '@/lib/i18n/server'
 import { ChapterRail } from './ChapterRail'
+import { Business } from './dossier/Business'
+import { Networks } from './dossier/Networks'
+import { Rules } from './dossier/Rules'
 import { Finale } from './Finale'
 import { LandingFooter } from './LandingFooter'
 import { LandingNav } from './LandingNav'
@@ -12,8 +15,8 @@ import { SmoothScroll } from './SmoothScroll'
 import { Voyage } from './Voyage'
 
 // The landing page is one voyage: a WebGL ship carries the 32-byte memo (Voyage), the old route is drawn on a map
-// (RouteMap), the payment reconciles itself on paper (Reconcile), the calculator (Savings) and the ship sails
-// off (Finale). Rendered by src/app/page.tsx (Next) and by landing-static/ (the
+// (RouteMap), the payment reconciles itself on paper (Reconcile), the calculator (Savings); then the dossier (the
+// networks, the rules with their sources, the business and roadmap) and the ship sails off (Finale). Rendered by src/app/page.tsx (Next) and by landing-static/ (the
 // static build for Firebase Hosting), so it takes the translations as props and imports nothing server-only.
 export function LandingPage({ t, locale }: { t: T; locale: Locale }) {
   return (
@@ -33,6 +36,9 @@ export function LandingPage({ t, locale }: { t: T; locale: Locale }) {
         <RouteMap t={t} />
         <Reconcile t={t} locale={locale} />
         <Savings />
+        <Networks t={t} />
+        <Rules t={t} />
+        <Business t={t} />
         <Finale t={t} />
       </main>
       <LandingFooter t={t} />

@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import { useT } from '@/lib/i18n/client'
 import type { Key } from '@/lib/i18n/dict'
 
-// The voyage's log, fixed on the left edge: the five chapters as a numbered scale (they are a sequence), the current
+// The voyage's log, fixed on the left edge: the chapters as a numbered scale (they are a sequence), the current
 // one lit, a hairline track with the ship's position between Santos and Shenzhen, and its coordinates.
 
 const CHAPTERS: { id: string; label: Key }[] = [
@@ -14,6 +14,9 @@ const CHAPTERS: { id: string; label: Key }[] = [
   { id: 'route', label: 'lp.ch.3' },
   { id: 'arrival', label: 'lp.ch.4' },
   { id: 'savings', label: 'lp.ch.5' },
+  { id: 'networks', label: 'lp.ch.6' },
+  { id: 'rules', label: 'lp.ch.7' },
+  { id: 'business', label: 'lp.ch.8' },
 ]
 
 const SANTOS = { lat: -23.96, lon: -46.33 }

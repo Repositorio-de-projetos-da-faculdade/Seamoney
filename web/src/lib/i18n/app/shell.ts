@@ -18,7 +18,7 @@ export const en = {
   'app.testnet': 'Tempo testnet',
 
   'app.nav.label': 'Workspace',
-  'app.nav.home': 'Home',
+  'app.nav.home': 'Dashboard',
   'app.nav.payments': 'Payments',
   'app.nav.suppliers': 'Suppliers',
   'app.nav.reports': 'Reports',
@@ -147,7 +147,7 @@ export const pt: Record<keyof typeof en, string> = {
   'app.testnet': 'Testnet Tempo',
 
   'app.nav.label': 'Espaço de trabalho',
-  'app.nav.home': 'Início',
+  'app.nav.home': 'Painel',
   'app.nav.payments': 'Pagamentos',
   'app.nav.suppliers': 'Fornecedores',
   'app.nav.reports': 'Relatórios',
