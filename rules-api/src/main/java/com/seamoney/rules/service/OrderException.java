@@ -4,6 +4,7 @@ public class OrderException extends RuntimeException {
 
     public enum Code {
         NOT_FOUND("not_found", 404),
+        FORBIDDEN("forbidden", 403),
         BAD_STATE("bad_state", 409),
         INVALID("invalid", 400),
         CHAIN("chain", 502);

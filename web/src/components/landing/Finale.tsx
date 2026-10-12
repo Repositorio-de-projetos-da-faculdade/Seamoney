@@ -2,7 +2,7 @@ import clsx from 'clsx'
 import type { T } from '@/lib/i18n/server'
 import { Cta } from './Cta'
 import { Reveal } from './Reveal'
-import { primaryCta, STATIC_SITE } from './site'
+import { primaryCta } from './site'
 import { Lede } from './lede/Lede'
 import { displayXL, label, starLast } from './type'
 
@@ -20,11 +20,6 @@ export function Finale({ t }: { t: T }) {
           <Reveal as="p" start="top 5%" text={starLast(t('brand.closing'))} className={clsx(displayXL, 'mt-6 max-w-[9em] text-white')} />
           <div className="mt-10 flex flex-wrap items-center gap-3">
             <Cta href={primaryCta(t).href}>{primaryCta(t).label}</Cta>
-            {!STATIC_SITE && (
-              <Cta href="/dashboard" tone="ghost">
-                {t('lp.close.cta2')}
-              </Cta>
-            )}
             <p className={clsx(label, 'flex items-center gap-2.5 text-signal md:ml-auto')}>
               <span className="size-2 rotate-45 bg-signal" aria-hidden="true" />
               {t('lp.sim')}

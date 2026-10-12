@@ -32,7 +32,9 @@ export function NewPayment() {
   const me = useMe()
   const params = useSearchParams()
   const preset = params.get('supplier')
-  const { run, busy } = useRun()
+  const { run } = useRun()
+  // from the click until the page has moved to the new order (the order must not show as a duplicate of itself)
+  const [submitting, setSubmitting] = useState(false)
   const [step, setStep] = useState<Step>('invoice')
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT)
   const [readNote, setReadNote] = useState<{ tone: 'info' | 'warn'; text: string } | null>(null)
@@ -100,6 +102,7 @@ export function NewPayment() {
     const cents = parseMoneyToCents(draft.amount)
     if (!cents || !draft.network) return
     const network = draft.network
+    setSubmitting(true)
     const id = await run(
       'create',
       () =>
@@ -116,6 +119,7 @@ export function NewPayment() {
       () => t('app.np.created', { invoice: draft.invoiceNumber.trim() }),
     )
     if (id) router.push(`/app/payments/${id}`)
+    else setSubmitting(false)
   }
 
   const cents = parseMoneyToCents(draft.amount) ?? 0
@@ -146,7 +150,7 @@ export function NewPayment() {
               <div className="space-y-5">
                 {fromFile ? <FileChip filename={draft.filename} source={draft.source} onReplace={() => setStep('invoice')} /> : null}
                 {readNote ? <Note tone={readNote.tone}>{readNote.text}</Note> : null}
-                <DetailsForm state={state} draft={draft} set={set} />
+                <DetailsForm state={state} draft={draft} set={set} submitting={submitting} />
               </div>
             )}
           </div>
@@ -155,8 +159,8 @@ export function NewPayment() {
               <button type="button" className={btnLine} onClick={() => setStep('invoice')}>
                 {t('app.back')}
               </button>
-              <button type="button" className={btnGo} disabled={!isDraftValid(state, draft) || busy === 'create'} onClick={() => void submit()}>
-                {busy === 'create' ? <Spinner className="size-4" /> : null}
+              <button type="button" className={btnGo} disabled={submitting || !isDraftValid(state, draft)} onClick={() => void submit()}>
+                {submitting ? <Spinner className="size-4" /> : null}
                 {needsApproval(cents, state.settings) ? t('app.np.submit.approval') : t('app.np.submit.create')}
               </button>
             </div>

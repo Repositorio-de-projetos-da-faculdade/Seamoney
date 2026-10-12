@@ -139,3 +139,12 @@ export function nextActors(state: DemoState, payment: Payment): Member[] {
 /** Who can approve a proposed wallet: an owner or approver other than whoever proposed it. */
 export const walletApprovers = (state: DemoState, wallet: Wallet): Member[] =>
   state.members.filter((m) => m.status === 'active' && roleCan(m.role, 'approve_wallet') && m.id !== wallet.proposedBy)
+
+/**
+ * Where the supplier's proof lives. A testnet payment has a public page served from the rules service, which checks
+ * the transaction on-chain and opens from any browser; a simulated one only has the slip kept in this browser.
+ */
+export function proofHref(p: Payment): string {
+  const live = p.settlement?.mode === 'testnet' ? p.settlement.liveOrderId : undefined
+  return live ? `/proof/${encodeURIComponent(live)}` : `/app/proof/${p.id}`
+}

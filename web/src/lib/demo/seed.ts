@@ -1,12 +1,12 @@
 // Fictitious starting data for the SaaS demo: one importer, its team, six suppliers and seven months of payments.
 // Names, e-mails (on the reserved .example domain), wallets and hashes are invented. Dates are relative to `now`
 // so the demo always looks current. Seeded settlements are simulated: they never touched a chain.
-import { base58, hex, orderReference } from './codes.ts'
+import { base58, hex, orderReference, solanaAddress } from './codes.ts'
 import { approvalHash } from './rules.ts'
 import { quote } from './pricing.ts'
 import type { Activity, DemoState, Member, Network, Payment, PaymentStatus, Settings, Supplier, Wallet } from './types.ts'
 
-export const DEMO_VERSION = 3
+export const DEMO_VERSION = 4
 
 const HOUR = 3_600_000
 const DAY = 24 * HOUR
@@ -142,7 +142,7 @@ const iso = (ms: number) => new Date(ms).toISOString()
 export function buildSeed(nowMs: number): DemoState {
   // same wallets, references and hashes on every reset
   const rnd = lcg(20261012)
-  const address = (network: Network) => (network === 'tempo' ? hex(20, rnd) : base58(44, rnd))
+  const address = (network: Network) => (network === 'tempo' ? hex(20, rnd) : solanaAddress(rnd))
   const txId = (network: Network) => (network === 'tempo' ? hex(32, rnd) : base58(88, rnd))
   /** Moves a timestamp into Brazilian office hours (13:00-20:00 UTC) so the history reads like a real week. */
   const officeHours = (ms: number) => {

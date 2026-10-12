@@ -4,7 +4,7 @@ import clsx from 'clsx'
 import { Check, ExternalLink, X } from 'lucide-react'
 import { dateTime, seconds, usd } from '@/lib/format'
 import { useT } from '@/lib/i18n/client'
-import { explorerTx } from '@/lib/links'
+import { explorerTxOn } from '@/lib/links'
 import type { Payment, ReconChecks } from '@/lib/demo/types'
 import { Live, Simulated } from '../../kit/Status'
 import { CopyButton } from './CopyButton'
@@ -46,7 +46,7 @@ export function NetworkPanel({ payment: p }: { payment: Payment }) {
         <h2 id="doc-net" className="font-grotesk text-[17px] font-medium tracking-[-0.015em] text-white">
           {t('app.doc.onNetwork')}
         </h2>
-        {s ? live ? <Live onNight>{t('app.net.tempo.long')}</Live> : <Simulated onNight>{t('app.doc.n.simulated', { network: t(`app.net.${s.network}`) })}</Simulated> : null}
+        {s ? live ? <Live onNight>{t(`app.net.${s.network}.long`)}</Live> : <Simulated onNight>{t('app.doc.n.simulated', { network: t(`app.net.${s.network}`) })}</Simulated> : null}
       </div>
 
       {!s ? (
@@ -63,7 +63,7 @@ export function NetworkPanel({ payment: p }: { payment: Payment }) {
           </dl>
           <p className="border-t border-foam/12 px-5 py-3 text-[13px] leading-relaxed text-foam/60">
             {live ? (
-              <a href={explorerTx(s.txHash)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-mint underline decoration-mint/40 underline-offset-4 hover:decoration-mint">
+              <a href={explorerTxOn(s.network, s.txHash)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-mint underline decoration-mint/40 underline-offset-4 hover:decoration-mint">
                 {t('app.doc.n.explorer')}
                 <ExternalLink size={13} aria-hidden="true" />
               </a>

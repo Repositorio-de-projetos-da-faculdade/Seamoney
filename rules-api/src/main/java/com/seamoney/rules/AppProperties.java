@@ -11,4 +11,6 @@ public record AppProperties(
         boolean seedDemo,
         int feeBps,
         double bankFeePct,
-        long maxAmountCents) {}
+        long maxAmountCents,
+        /** From this amount up an order needs a second person to approve it; below it the policy approves. */
+        long approvalThresholdCents) {}

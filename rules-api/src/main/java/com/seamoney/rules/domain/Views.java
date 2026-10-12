@@ -30,5 +30,14 @@ public final class Views {
             String reference,
             Network network,
             String txHash,
-            String paidAt) {}
+            String paidAt,
+            /** The paying company, the address paid and where the supplier ships from (for the route). */
+            String companyName,
+            String supplierWallet,
+            String supplierCity,
+            String supplierPort,
+            Long blockNumber,
+            String reconciledAt,
+            /** The five checks that closed the invoice, once reconciled. */
+            Recon recon) {}
 }

@@ -8,7 +8,25 @@ import * as rules from './rules'
 import { buildSeed, DEMO_VERSION } from './seed'
 import { cryptoRand, orderReference } from './codes'
 import { memberOf, paymentOf, supplierOf, walletOf } from './selectors'
-import { goesLive, LiveError, matchOnTestnet, sendOnTestnet, simulateMatch, simulateTransfer } from './settle'
+import { mergeLiveOrders, mergeLiveSuppliers, seedSuppliers } from './live'
+import {
+  addLiveSupplier,
+  createLiveOrder,
+  decideLiveWallet,
+  goesLive,
+  getLiveSettings,
+  importDemoSuppliers,
+  listLiveOrders,
+  listLiveSuppliers,
+  liveDecision,
+  LiveError,
+  matchOnTestnet,
+  proposeLiveWallet,
+  putLiveThreshold,
+  sendOnTestnet,
+  simulateMatch,
+  simulateTransfer,
+} from './settle'
 import type { DemoState, Member, Network, Payment, PaymentStatus, Reconciliation, Role, Settings, Settlement } from './types'
 
 const KEY = 'seamoney.demo'
@@ -63,6 +81,19 @@ function commit(change: (s: DemoState) => DemoState): DemoState {
 const now = () => new Date().toISOString()
 const pause = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
+/** Connected to the rules service: payments live there too (see live.ts). */
+const isLive = () => current?.settings.settlementMode === 'testnet'
+
+/** Approve or turn down a wallet version in the rules service too, when it is known there. */
+async function decideWallet(supplierId: string, walletId: string, action: 'approve' | 'reject') {
+  const supplier = current?.suppliers.find((s) => s.id === supplierId)
+  const wallet = supplier?.wallets.find((w) => w.id === walletId)
+  if (isLive() && supplier?.liveId && wallet?.liveId) await decideLiveWallet(supplier.liveId, wallet.liveId, action)
+}
+
+/** The rules-service order of a payment, when it has one. */
+const liveOrderOf = (id: string) => current?.payments.find((p) => p.id === id)?.liveOrderId
+
 function actor(): string {
   const id = current?.sessionMemberId
   if (!id) throw new rules.DemoRuleError('role')
@@ -97,6 +128,21 @@ export const demo = {
   signIn(memberId: string) {
     commit((s) => ({ ...s, sessionMemberId: memberId }))
   },
+  /**
+   * Signed in with a real account of the rules service: sit at the desk as the member with the same role and settle
+   * Tempo payments on the testnet. The people, suppliers and history stay the fictitious ones of this browser.
+   */
+  connect(role: Role) {
+    commit((s) => {
+      const m = s.members.find((x) => x.role === role && x.status === 'active')
+      if (!m) throw new rules.DemoRuleError('role')
+      return { ...s, sessionMemberId: m.id, settings: { ...s.settings, settlementMode: 'testnet' } }
+    })
+  },
+  /** Offline: sit at the desk as anyone, with simulated settlement (no account of the rules service involved). */
+  signInOffline(memberId: string) {
+    commit((s) => ({ ...s, sessionMemberId: memberId, settings: { ...s.settings, settlementMode: 'simulated' } }))
+  },
   signOut() {
     commit((s) => ({ ...s, sessionMemberId: null }))
   },
@@ -111,24 +157,73 @@ export const demo = {
     commit((s) => ({ ...s, readAt: now() }))
   },
 
+  /**
+   * Connected to the rules service, the order is created there too (and comes back with its id), so the approver can
+   * act from another computer. The local rules run first, so nothing they refuse ever reaches the service.
+   */
   async createPayment(input: rules.NewPayment): Promise<string> {
     await pause(450)
     const by = actor()
+    const reference = orderReference(cryptoRand)
+    if (!isLive()) {
+      const id = newId('pay')
+      commit((s) => rules.createPayment(s, input, by, now(), id, reference))
+      return id
+    }
+    const at = now()
+    const preview = rules.createPayment(current!, input, by, at, 'pay_preview', reference)
+    const draft = paymentOf(preview, 'pay_preview')!
+    const order = await createLiveOrder(draft, supplierOf(preview, draft)!, walletOf(preview, draft)!)
     const id = newId('pay')
-    commit((s) => rules.createPayment(s, input, by, now(), id, orderReference(cryptoRand)))
+    commit((s) => mergeLiveOrders(rules.createPayment(s, input, by, at, id, reference), [order], at))
     return id
   },
   async approve(id: string) {
     await pause(350)
-    commit((s) => rules.approvePayment(s, id, actor(), now()))
+    const by = actor()
+    const live = liveOrderOf(id)
+    // the local rules first (they throw on a refusal), so the service never records what this workspace would not
+    rules.approvePayment(current!, id, by, now())
+    if (live) await liveDecision(live, 'approve')
+    commit((s) => rules.approvePayment(s, id, by, now()))
   },
   async reject(id: string, reason: string) {
     await pause(350)
-    commit((s) => rules.rejectPayment(s, id, actor(), now(), reason))
+    const by = actor()
+    const live = liveOrderOf(id)
+    rules.rejectPayment(current!, id, by, now(), reason)
+    if (live) await liveDecision(live, 'reject', reason)
+    commit((s) => rules.rejectPayment(s, id, by, now(), reason))
   },
   async cancel(id: string, reason: string) {
     await pause(300)
-    commit((s) => rules.cancelPayment(s, id, actor(), now(), reason))
+    const by = actor()
+    const live = liveOrderOf(id)
+    rules.cancelPayment(current!, id, by, now(), reason)
+    if (live) await liveDecision(live, 'cancel', reason)
+    commit((s) => rules.cancelPayment(s, id, by, now(), reason))
+  },
+  /**
+   * Brings what happened in the rules service into this browser: orders created, approved, rejected, cancelled or
+   * paid by someone at another computer. Only when connected; a failed call just waits for the next one.
+   */
+  async syncLive() {
+    if (!current || !isLive() || !current.sessionMemberId) return
+    try {
+      // suppliers and wallets first: an order made elsewhere only maps onto a supplier and wallet known here
+      let { suppliers } = await listLiveSuppliers()
+      if (suppliers.length === 0 && current.suppliers.length > 0) suppliers = (await importDemoSuppliers(seedSuppliers(current))).suppliers
+      commit((s) => mergeLiveSuppliers(s, suppliers, now()))
+      // the approval threshold is the company's, kept by the service: follow it here
+      const { approvalThresholdCents } = await getLiveSettings()
+      if (current.settings.approvalThresholdCents !== approvalThresholdCents) {
+        commit((s) => ({ ...s, settings: { ...s.settings, approvalThresholdCents } }))
+      }
+      const { orders } = await listLiveOrders()
+      commit((s) => mergeLiveOrders(s, orders, now()))
+    } catch {
+      // not signed in any more, or the stack is down: the settings page says which
+    }
   },
   async requestReapproval(id: string) {
     await pause(250)
@@ -178,9 +273,17 @@ export const demo = {
   async addSupplier(input: rules.NewSupplier): Promise<string> {
     await pause(300)
     const by = actor()
+    const at = now()
+    rules.addSupplier(current!, input, by, at, 'sup_preview', 'wal_preview')
+    const live = isLive()
+      ? await addLiveSupplier({ name: input.name, country: input.country, city: input.city, port: input.port, email: input.email, wallet: { network: input.network, address: input.wallet.trim() } })
+      : null
     const id = newId('sup')
     const walletId = newId('wal')
-    commit((s) => rules.addSupplier(s, input, by, now(), id, walletId))
+    commit((s) => {
+      const added = rules.addSupplier(s, input, by, at, id, walletId)
+      return live ? mergeLiveSuppliers(added, [live.supplier], at) : added
+    })
     return id
   },
   async updateSupplier(id: string, input: rules.SupplierProfile) {
@@ -190,16 +293,29 @@ export const demo = {
   async proposeWallet(supplierId: string, network: Network, address: string) {
     await pause(300)
     const by = actor()
+    const at = now()
+    rules.proposeWallet(current!, supplierId, network, address, by, at, 'wal_preview')
+    const supplierLive = current!.suppliers.find((s) => s.id === supplierId)?.liveId
+    const live = isLive() && supplierLive ? await proposeLiveWallet(supplierLive, network, address.trim()) : null
     const walletId = newId('wal')
-    commit((s) => rules.proposeWallet(s, supplierId, network, address, by, now(), walletId))
+    commit((s) => {
+      const proposed = rules.proposeWallet(s, supplierId, network, address, by, at, walletId)
+      return live ? mergeLiveSuppliers(proposed, [live.supplier], at) : proposed
+    })
   },
   async approveWallet(supplierId: string, walletId: string) {
     await pause(400)
-    commit((s) => rules.approveWallet(s, supplierId, walletId, actor(), now()))
+    const by = actor()
+    rules.approveWallet(current!, supplierId, walletId, by, now())
+    await decideWallet(supplierId, walletId, 'approve')
+    commit((s) => rules.approveWallet(s, supplierId, walletId, by, now()))
   },
   async rejectWallet(supplierId: string, walletId: string) {
     await pause(300)
-    commit((s) => rules.rejectWallet(s, supplierId, walletId, actor(), now()))
+    const by = actor()
+    rules.rejectWallet(current!, supplierId, walletId, by, now())
+    await decideWallet(supplierId, walletId, 'reject')
+    commit((s) => rules.rejectWallet(s, supplierId, walletId, by, now()))
   },
 
   async inviteMember(input: { name: string; email: string; role: Role }) {
@@ -214,7 +330,13 @@ export const demo = {
   },
   async updateSettings(patch: Partial<Settings>) {
     await pause(300)
-    commit((s) => rules.updateSettings(s, patch, actor(), now()))
+    const by = actor()
+    rules.updateSettings(current!, patch, by, now())
+    // connected, the approval threshold belongs to the company in the rules service (owners only)
+    if (isLive() && patch.approvalThresholdCents != null && patch.approvalThresholdCents !== current!.settings.approvalThresholdCents) {
+      await putLiveThreshold(patch.approvalThresholdCents)
+    }
+    commit((s) => rules.updateSettings(s, patch, by, now()))
   },
 }
 
@@ -234,7 +356,16 @@ export function DemoBoot() {
       }
     }
     window.addEventListener('storage', onStorage)
-    return () => window.removeEventListener('storage', onStorage)
+    // connected to the rules service: pick up what others did, on opening, every few seconds and on coming back
+    const sync = () => void demo.syncLive()
+    sync()
+    const timer = window.setInterval(sync, 8_000)
+    window.addEventListener('focus', sync)
+    return () => {
+      window.removeEventListener('storage', onStorage)
+      window.removeEventListener('focus', sync)
+      window.clearInterval(timer)
+    }
   }, [])
   return null
 }

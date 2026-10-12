@@ -18,7 +18,7 @@ export const en = {
   'app.testnet': 'Tempo testnet',
 
   'app.nav.label': 'Workspace',
-  'app.nav.home': 'Home',
+  'app.nav.home': 'Dashboard',
   'app.nav.payments': 'Payments',
   'app.nav.suppliers': 'Suppliers',
   'app.nav.reports': 'Reports',
@@ -73,7 +73,7 @@ export const en = {
   'app.side.verified': 'Verified company',
   'app.side.santos': 'Santos',
   'app.side.shenzhen': 'Shenzhen',
-  'app.side.settleLive': 'Tempo testnet live, Solana simulated',
+  'app.side.settleLive': 'Live on Tempo testnet and Solana devnet',
   'app.side.settleSim': 'Settlement simulated on Tempo and Solana',
 
   'app.err.role': 'Your role cannot do this.',
@@ -147,7 +147,7 @@ export const pt: Record<keyof typeof en, string> = {
   'app.testnet': 'Testnet Tempo',
 
   'app.nav.label': 'Espaço de trabalho',
-  'app.nav.home': 'Início',
+  'app.nav.home': 'Painel',
   'app.nav.payments': 'Pagamentos',
   'app.nav.suppliers': 'Fornecedores',
   'app.nav.reports': 'Relatórios',
@@ -202,7 +202,7 @@ export const pt: Record<keyof typeof en, string> = {
   'app.side.verified': 'Empresa verificada',
   'app.side.santos': 'Santos',
   'app.side.shenzhen': 'Shenzhen',
-  'app.side.settleLive': 'Testnet Tempo ao vivo, Solana simulada',
+  'app.side.settleLive': 'Ao vivo na testnet Tempo e na devnet Solana',
   'app.side.settleSim': 'Liquidação simulada na rede Tempo e na Solana',
 
   'app.err.role': 'Seu papel não permite esta ação.',

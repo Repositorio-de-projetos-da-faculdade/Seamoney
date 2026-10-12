@@ -7,6 +7,8 @@ import com.seamoney.rules.chain.ChainClient.FoundTransfer;
 import com.seamoney.rules.chain.ChainClient.SentPayment;
 import com.seamoney.rules.chain.ChainClient.TxInfo;
 import com.seamoney.rules.chain.ChainException;
+import com.seamoney.rules.domain.Actor;
+import com.seamoney.rules.domain.Decision;
 import com.seamoney.rules.domain.Network;
 import com.seamoney.rules.domain.Order;
 import com.seamoney.rules.domain.OrderStatus;
@@ -17,6 +19,7 @@ import com.seamoney.rules.domain.Views.ProofOrder;
 import com.seamoney.rules.domain.Views.StatsResponse;
 import com.seamoney.rules.service.OrderException.Code;
 import com.seamoney.rules.store.OrderRepository;
+import com.seamoney.rules.store.SupplierRepository;
 import com.seamoney.rules.store.OrderRepository.NewOrder;
 import com.seamoney.rules.store.OrderRepository.Supplier;
 import java.math.BigInteger;
@@ -92,12 +95,16 @@ public class OrderService {
     private static final Pattern REFERENCE = Pattern.compile("^SM-[" + REFERENCE_ALPHABET + "]{8}$");
 
     private final OrderRepository repo;
+    private final SupplierRepository suppliers;
+    private final SettingsService settings;
     private final ChainClient chain;
     private final AppProperties props;
     private final Clock clock;
 
-    public OrderService(OrderRepository repo, ChainClient chain, AppProperties props, Clock clock) {
+    public OrderService(OrderRepository repo, SupplierRepository suppliers, SettingsService settings, ChainClient chain, AppProperties props, Clock clock) {
         this.repo = repo;
+        this.suppliers = suppliers;
+        this.settings = settings;
         this.chain = chain;
         this.props = props;
         this.clock = clock;
@@ -133,13 +140,25 @@ public class OrderService {
         } catch (ChainException e) {
             tx = null; // unverified, and the page says so
         }
+        OrderRepository.ProofParties parties = repo.proofParties(id);
         return new Proof(
-                new ProofOrder(o.id(), o.invoiceNumber(), o.amountCents(), o.supplierName(), o.reference(), o.network(), o.txHash(), o.paidAt()), tx);
+                new ProofOrder(o.id(), o.invoiceNumber(), o.amountCents(), o.supplierName(), o.reference(), o.network(), o.txHash(), o.paidAt(),
+                        parties.companyName(), o.supplierWallet(), parties.supplierCity(), parties.supplierPort(), o.blockNumber(), o.reconciledAt(), o.recon()),
+                tx);
     }
 
     // ---------- create + quote ----------
 
+    /** Created by the system (tests, tools): the creator is nobody, so any approver may approve it. */
     public Order create(String orgId, NewOrderInput in) {
+        return create(orgId, Actor.SYSTEM, in);
+    }
+
+    /**
+     * Creates and quotes an order. From the approval threshold up it waits for a second person; below it the policy
+     * approves it at once, bound to the same data hash a person's approval would be.
+     */
+    public Order create(String orgId, Actor actor, NewOrderInput in) {
         String invoice = in.invoiceNumber() == null ? "" : in.invoiceNumber().trim();
         String supplierName = in.supplierName() == null ? "" : in.supplierName().trim();
         if (invoice.isEmpty()) throw invalid("Invoice number is required.");
@@ -160,33 +179,96 @@ public class OrderService {
         String reference = reference(in.reference());
         String now = now();
 
-        // Supplier: reuse by name. Without a wallet we create a throwaway demo address (public part only);
-        // a wallet saved for another network is of no use here.
         Optional<Supplier> existing = repo.findSupplierByName(orgId, supplierName);
-        String wallet = hasWallet
-                ? in.supplierWallet()
-                : existing.filter(s -> s.network() == network).map(Supplier::walletAddress).orElseGet(network::randomAddress);
         String country = blankToNull(in.supplierCountry());
+        String wallet;
         String supplierId;
-        if (existing.isPresent()) {
+        if (existing.isPresent() && suppliers.hasWallets(orgId, existing.get().id())) {
+            // a supplier in the wallet registry is paid only at the address a second person approved on this network
             supplierId = existing.get().id();
-            repo.updateSupplier(orgId, supplierId, wallet, network, country);
+            wallet = suppliers.approvedAddress(orgId, supplierId, network)
+                    .orElseThrow(() -> invalid("This supplier has no approved wallet on " + network.label() + "."));
+            if (hasWallet && !network.sameAddress(in.supplierWallet(), wallet)) {
+                throw invalid("Payments to this supplier go only to its approved wallet on " + network.label() + ".");
+            }
         } else {
-            supplierId = "sup_" + randomHex(4);
-            repo.insertSupplier(orgId, supplierId, supplierName, country, wallet, network, now);
+            // Supplier outside the registry: reuse by name. Without a wallet we create a throwaway demo address (public
+            // part only); a wallet saved for another network is of no use here.
+            wallet = hasWallet
+                    ? in.supplierWallet()
+                    : existing.filter(s -> s.network() == network).map(Supplier::walletAddress).orElseGet(network::randomAddress);
+            if (existing.isPresent()) {
+                supplierId = existing.get().id();
+                repo.updateSupplier(orgId, supplierId, wallet, network, country);
+            } else {
+                supplierId = "sup_" + randomHex(4);
+                repo.insertSupplier(orgId, supplierId, supplierName, country, wallet, network, now);
+            }
         }
 
         int feeBps = props.feeBps();
         long fee = Pricing.feeCents(in.amountCents(), feeBps);
         long total = in.amountCents() + fee;
         String id = "ORD-" + randomHex(3).toUpperCase();
+        long threshold = settings.approvalThreshold(orgId);
+        boolean needsApproval = in.amountCents() >= threshold;
+        Decision policy = needsApproval
+                ? null
+                : new Decision(null, null, now, approvalHash(in.amountCents(), network, wallet, reference), null, true);
 
         repo.insert(new NewOrder(
                 id, orgId, reference, supplierId, supplierName, country, wallet, network, invoice, in.amountCents(), blankToNull(in.dueDate()),
                 feeBps, fee, total, props.bankFeePct(), props.usdBrl(), Pricing.usdToBrlCents(total, props.usdBrl()),
-                OrderStatus.QUOTED, in.extractionSource(), blankToNull(in.invoiceFilename()), false, null, null, null, now));
+                needsApproval ? OrderStatus.PENDING_APPROVAL : OrderStatus.APPROVED, in.extractionSource(), blankToNull(in.invoiceFilename()),
+                false, null, null, null, now, actor.userId(), actor.role(), policy));
         event(orgId, id, "created", "Invoice " + invoice + ", extraction: " + in.extractionSource() + ", network: " + network.label());
         event(orgId, id, "quoted", "Route fee " + feeBps / 100.0 + "%, simulated USD/BRL " + props.usdBrl());
+        event(orgId, id, needsApproval ? "approval_requested" : "auto_approved",
+                needsApproval ? "Needs a second person from US$ " + threshold / 100 : "Below the approval threshold: approved by the policy");
+        return get(orgId, id);
+    }
+
+    // ---------- approve, reject, cancel ----------
+
+    /** A second person approves: not the creator, and bound to a hash of the amount, network, wallet and memo. */
+    public Order approve(String orgId, Actor actor, String id) {
+        Order order = get(orgId, id);
+        if (!actor.canApprove()) throw new OrderException("Only owners and approvers approve payments.", Code.FORBIDDEN);
+        if (order.status() != OrderStatus.PENDING_APPROVAL) throw new OrderException("Order is " + order.status().value() + "; it is not waiting for approval.", Code.BAD_STATE);
+        if (actor.userId() != null && actor.userId().equals(order.createdBy())) {
+            throw new OrderException("The person who created a payment cannot approve it.", Code.FORBIDDEN);
+        }
+        if (!repo.approve(orgId, id, actor, approvalHash(order), now())) throw new OrderException("Order is no longer waiting for approval.", Code.BAD_STATE);
+        event(orgId, id, "approved", "Approved by " + actor.role());
+        return get(orgId, id);
+    }
+
+    public Order reject(String orgId, Actor actor, String id, String reason) {
+        Order order = get(orgId, id);
+        if (!actor.canApprove()) throw new OrderException("Only owners and approvers reject payments.", Code.FORBIDDEN);
+        if (reason == null || reason.isBlank()) throw invalid("Say why the payment is rejected.");
+        if (actor.userId() != null && actor.userId().equals(order.createdBy())) {
+            throw new OrderException("The person who created a payment cannot reject it; cancel it instead.", Code.FORBIDDEN);
+        }
+        if (!repo.close(orgId, id, OrderStatus.REJECTED, actor, reason.trim(), now(), List.of(OrderStatus.PENDING_APPROVAL))) {
+            throw new OrderException("Order is " + order.status().value() + "; it is not waiting for approval.", Code.BAD_STATE);
+        }
+        event(orgId, id, "rejected", reason.trim());
+        return get(orgId, id);
+    }
+
+    /** Before any money moves: owners and approvers cancel any order, an operator only the ones they created. */
+    public Order cancel(String orgId, Actor actor, String id, String reason) {
+        Order order = get(orgId, id);
+        boolean own = actor.userId() != null && actor.userId().equals(order.createdBy());
+        if (!actor.canApprove() && !(own && "OPERATOR".equals(actor.role()))) {
+            throw new OrderException("Only owners, approvers or the operator who created it can cancel this payment.", Code.FORBIDDEN);
+        }
+        String why = reason == null ? "" : reason.trim();
+        if (!repo.close(orgId, id, OrderStatus.CANCELLED, actor, why, now(), List.of(OrderStatus.PENDING_APPROVAL, OrderStatus.APPROVED))) {
+            throw new OrderException("Order is " + order.status().value() + "; only orders not sent yet can be cancelled.", Code.BAD_STATE);
+        }
+        event(orgId, id, "cancelled", why.isEmpty() ? "Cancelled" : why);
         return get(orgId, id);
     }
 
@@ -196,6 +278,12 @@ public class OrderService {
         Order order = get(orgId, id);
         if (!repo.claimForSending(orgId, id, now())) {
             throw new OrderException("Order is " + order.status().value() + "; it cannot be paid now.", Code.BAD_STATE);
+        }
+        // the data must still be what was approved (orders approved before approvals were hashed carry no hash)
+        Decision approval = order.approval();
+        if (approval == null || (approval.dataHash() != null && !approval.dataHash().equals(approvalHash(order)))) {
+            repo.releaseClaim(orgId, id, "The payment data no longer matches what was approved.", now());
+            throw new OrderException("The payment data no longer matches what was approved.", Code.BAD_STATE);
         }
         event(orgId, id, "fiat_received", "Simulated: authorized partner received the BRL payment and bought USD stablecoin");
         event(orgId, id, "payment_started", "Sending " + order.amountCents() / 100.0 + " USD (" + order.network().token() + ") on " + order.network().label() + " to " + order.supplierWallet());
@@ -351,6 +439,21 @@ public class OrderService {
         StringBuilder sb = new StringBuilder("SM-");
         for (int i = 0; i < 8; i++) sb.append(REFERENCE_ALPHABET.charAt(RANDOM.nextInt(REFERENCE_ALPHABET.length())));
         return sb.toString();
+    }
+
+    private static String approvalHash(Order o) {
+        return approvalHash(o.amountCents(), o.network(), o.supplierWallet(), o.reference());
+    }
+
+    /** SHA-256 of what an approval covers: amount, network, the supplier's wallet and the memo it will carry. */
+    static String approvalHash(long amountCents, Network network, String wallet, String reference) {
+        try {
+            byte[] digest = java.security.MessageDigest.getInstance("SHA-256")
+                    .digest((amountCents + "|" + network.value() + "|" + wallet + "|" + reference).getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(digest);
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     static String decodeReference(String memoHex) {

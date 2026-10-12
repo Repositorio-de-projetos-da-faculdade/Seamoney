@@ -2,26 +2,39 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { Logo } from '@/components/ui'
 import { useT } from '@/lib/i18n/client'
+import { signOutLive } from '@/lib/demo/backend'
+import { liveAvailable } from '@/lib/demo/settle'
 import { demo, useDemoState } from '@/lib/demo/store'
 import { Rich } from '../kit/Rich'
 import { Simulated } from '../kit/Status'
 import { display } from '../kit/styles'
 import { LangSwitch } from '../shell/LangSwitch'
+import { LiveSignIn } from './LiveSignIn'
 import { MemberRow } from './MemberRow'
 import { SeaChart } from './SeaChart'
 import { TaskLine } from './TaskLine'
 import { TrySteps } from './TrySteps'
 
-/** The door of the demo: pick who sits at the desk. No password; everything lives in this browser. */
+/**
+ * The door of the workspace. With the Docker stack up, a real sign-in with the rules service comes first and payments
+ * settle on the Tempo testnet; below it (or alone, without a backend) the offline demo: pick who sits at the desk.
+ */
 export function LoginScreen() {
   const { t } = useT()
   const router = useRouter()
   const state = useDemoState()
+  const [live, setLive] = useState(false)
+  useEffect(() => {
+    void liveAvailable().then((a) => setLive(a !== 'no'))
+  }, [])
 
+  // picking a person here is the offline demo: any real session is closed and settlement goes back to simulated
   const pick = (id: string) => {
-    demo.signIn(id)
+    if (live) void signOutLive()
+    demo.signInOffline(id)
     router.push('/app')
   }
 
@@ -39,7 +52,14 @@ export function LoginScreen() {
           <p className="mt-5 max-w-[52ch] text-[1.0625rem] leading-[1.6] text-foam/70">{t('app.login.lede')}</p>
         </div>
 
-        <ul className="mt-10 border-t border-foam/10 md:mt-12">
+        {live ? (
+          <div className="mt-10 md:mt-12">
+            <LiveSignIn />
+            <p className="mt-8 max-w-[52ch] text-[14px] leading-relaxed text-foam/60">{t('app.live.offline')}</p>
+          </div>
+        ) : null}
+
+        <ul className={live ? 'mt-4 border-t border-foam/10' : 'mt-10 border-t border-foam/10 md:mt-12'}>
           {state
             ? state.members.map((m) => (
                 <MemberRow

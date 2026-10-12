@@ -15,6 +15,10 @@ export const en = {
   'app.login2.sea.kicker': 'Porto Claro Importadora, payments at sea',
   'app.login2.sea.note': 'Each vessel is a fictitious payment on its way. Nothing moves real money.',
   'app.login2.chart.title': 'Night chart of open payments, drawn as vessels at sea',
+  'app.live.title': 'Sign in to pay on Tempo testnet and Solana devnet',
+  'app.live.lede': 'A real account of the rules service. Payments you send go out on the Tempo testnet or the Solana devnet with test tokens and reconcile against the chain. The BRL-to-USD leg is simulated.',
+  'app.live.accounts': 'Demo accounts, fictitious company, password demo123',
+  'app.live.offline': 'Or explore offline: pick a person below. Everything stays in this browser and settlement is simulated.',
 }
 
 export const pt: Record<keyof typeof en, string> = {
@@ -33,4 +37,8 @@ export const pt: Record<keyof typeof en, string> = {
   'app.login2.sea.kicker': 'Porto Claro Importadora, pagamentos no mar',
   'app.login2.sea.note': 'Cada embarcação é um pagamento fictício em trânsito. Nada movimenta dinheiro real.',
   'app.login2.chart.title': 'Carta noturna dos pagamentos em aberto, desenhados como embarcações no mar',
+  'app.live.title': 'Entre para pagar na testnet do Tempo e na devnet da Solana',
+  'app.live.lede': 'Uma conta real do serviço de regras. Os pagamentos que você enviar saem na testnet do Tempo ou na devnet da Solana, com tokens de teste, e são conciliados contra a rede. A perna de reais para dólar é simulada.',
+  'app.live.accounts': 'Contas de demonstração, empresa fictícia, senha demo123',
+  'app.live.offline': 'Ou explore sem o backend: escolha uma pessoa abaixo. Tudo fica neste navegador e a liquidação é simulada.',
 }

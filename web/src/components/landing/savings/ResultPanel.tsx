@@ -1,15 +1,13 @@
 import clsx from 'clsx'
 import { usd, type Locale } from '@/lib/format'
 import type { Key } from '@/lib/i18n/dict'
-import { Cta } from '../Cta'
-import type { SiteLink } from '../site'
 import { label } from '../type'
 import { CompareBars } from './CompareBars'
 import { Odometer } from './Odometer'
 
 /**
  * The answer: the yearly odometer (sized to its column, so even the largest figure fits), the monthly comparison,
- * the honest caveats and the way in.
+ * and the honest caveats.
  */
 export function ResultPanel({
   t,
@@ -18,7 +16,6 @@ export function ResultPanel({
   savingsCents,
   bankCents,
   routeCents,
-  cta,
 }: {
   t: (key: Key) => string
   locale: Locale
@@ -26,7 +23,6 @@ export function ResultPanel({
   savingsCents: number
   bankCents: number
   routeCents: number
-  cta: SiteLink
 }) {
   const negative = savingsCents < 0
 
@@ -55,10 +51,6 @@ export function ResultPanel({
         <span className="mt-[0.45em] size-2 shrink-0 rotate-45 bg-signal" aria-hidden="true" />
         {t('calc.note')}
       </p>
-
-      <Cta href={cta.href} className="mt-10">
-        {cta.label}
-      </Cta>
     </div>
   )
 }

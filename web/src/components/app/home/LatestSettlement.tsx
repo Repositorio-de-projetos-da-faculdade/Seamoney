@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { seconds, shortHash } from '@/lib/format'
-import { explorerTx } from '@/lib/links'
+import { explorerTxOn } from '@/lib/links'
 import { useT } from '@/lib/i18n/client'
 import { latestSettlement } from '@/lib/demo/insights'
 import type { DemoState } from '@/lib/demo/types'
@@ -47,7 +47,7 @@ export function LatestSettlement({ state }: { state: DemoState }) {
           {s.mode === 'simulated' ? (
             <Simulated />
           ) : (
-            <Link href={explorerTx(s.txHash)} target="_blank" rel="noopener noreferrer" className={`${textLink} text-[13.5px]`}>
+            <Link href={explorerTxOn(s.network, s.txHash)} target="_blank" rel="noopener noreferrer" className={`${textLink} text-[13.5px]`}>
               {t('app.home.receipt.view')}
             </Link>
           )}

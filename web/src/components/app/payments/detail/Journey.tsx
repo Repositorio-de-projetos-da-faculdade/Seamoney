@@ -33,7 +33,8 @@ function stagesOf(p: Payment): Stage[] {
   const moving = p.status === 'sending'
   return [
     created,
-    { key: 'app.journey.approved', mark: p.approval ? 'done' : 'now', at: p.approval?.at },
+    // until someone approves, the current step reads as waiting, not as already approved
+    p.approval ? { key: 'app.journey.approved', mark: 'done', at: p.approval.at } : { key: 'app.journey.awaiting', mark: 'now' },
     { key: 'app.journey.funds', mark: paid || moving ? 'done' : 'todo', simulated: true },
     { key: 'app.journey.converted', mark: paid || moving ? 'done' : 'todo', simulated: true },
     { key: 'app.journey.sent', mark: paid ? 'done' : moving ? 'now' : 'todo', at: p.settlement?.paidAt },

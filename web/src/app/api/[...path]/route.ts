@@ -7,7 +7,7 @@ export const maxDuration = 60
 // The browser talks to this app only; this proxy forwards the business endpoints to the Java rules API.
 // The target is read at request time, so the same image works in any environment. The signed-in session travels
 // as an httpOnly cookie and is forwarded to Java as a Bearer token; Java decides what each role may do.
-const ALLOWED = new Set(['orders', 'stats', 'compare', 'proof', 'reports', 'leads'])
+const ALLOWED = new Set(['orders', 'suppliers', 'settings', 'audit', 'stats', 'compare', 'proof', 'reports', 'leads'])
 
 async function forward(req: Request, ctx: { params: Promise<{ path: string[] }> }) {
   const { path } = await ctx.params
@@ -34,4 +34,4 @@ async function forward(req: Request, ctx: { params: Promise<{ path: string[] }> 
   }
 }
 
-export { forward as GET, forward as POST }
+export { forward as GET, forward as POST, forward as PUT }

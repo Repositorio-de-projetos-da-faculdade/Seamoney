@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usd } from '@/lib/format'
 import { useT } from '@/lib/i18n/client'
 import { approvalIsStale, checkApprove, checkCancel, checkRecheck, checkSend, roleCan } from '@/lib/demo/rules'
+import { proofHref } from '@/lib/demo/selectors'
 import { demo } from '@/lib/demo/store'
 import type { DemoState, Member, Payment } from '@/lib/demo/types'
 import { Spinner } from '../../../ui'
@@ -87,7 +88,7 @@ export function PaymentButtons({ actions: a, onReject, small = false }: { action
         </button>
       ) : null}
       {p.status === 'reconciled' ? (
-        <Link href={`/app/proof/${p.id}`} className={`${btnLine}${size}`}>
+        <Link href={proofHref(p)} className={`${btnLine}${size}`}>
           {t('app.doc.openProof')}
         </Link>
       ) : null}

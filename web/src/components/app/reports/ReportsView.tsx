@@ -8,6 +8,7 @@ import { useDemoState, useMe } from '@/lib/demo/store'
 import { Segments } from '../kit/Segments'
 import { Page } from '../shell/DeskShell'
 import { AuditView } from './AuditView'
+import { ServiceAuditPanel } from './ServiceAuditPanel'
 import { SummaryView } from './SummaryView'
 
 type View = 'summary' | 'audit'
@@ -37,7 +38,14 @@ export function ReportsView() {
             ]}
           />
         ) : null}
-        {current === 'audit' ? <AuditView state={state} /> : <SummaryView state={state} me={me} />}
+        {current === 'audit' ? (
+          <div className="space-y-6">
+            <AuditView state={state} />
+            {state.settings.settlementMode === 'testnet' ? <ServiceAuditPanel /> : null}
+          </div>
+        ) : (
+          <SummaryView state={state} me={me} />
+        )}
       </div>
     </Page>
   )

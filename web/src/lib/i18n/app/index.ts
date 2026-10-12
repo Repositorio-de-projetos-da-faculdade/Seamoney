@@ -1,5 +1,6 @@
 // Copy of the SaaS demo (/app), one file per area. Each file types its Portuguese half against its English half,
 // so a missing translation is a compile error in that file.
+import * as audit from './audit'
 import * as login from './login'
 import * as overview from './overview'
 import * as payDoc from './payDoc'
@@ -30,6 +31,7 @@ export const appEn = {
   ...supList.en,
   ...supDoc.en,
   ...login.en,
+  ...audit.en,
 }
 
 export const appPt: Record<keyof typeof appEn, string> = {
@@ -47,4 +49,5 @@ export const appPt: Record<keyof typeof appEn, string> = {
   ...supList.pt,
   ...supDoc.pt,
   ...login.pt,
+  ...audit.pt,
 }
