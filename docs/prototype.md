@@ -108,7 +108,7 @@ cd chain-service && pytest -q                                 # Python: 34 offli
 cd chain-service && python -m scripts.smoke                   # REAL testnet: pay with memo, find it by memo
 ```
 
-The Java suite (H2 in PostgreSQL mode) covers the money rules and the whole order flow against a fake chain: quote, pay, double-pay blocked, approval by a second person (creator blocked, threshold, pay before approval blocked), rejection with a reason, cancellation before sending, approval hash mismatch blocks payment, failed payment and retry, reconciliation match, wrong amount, missing transfer, transfer replay across orders, input validation, CSV, leads consent, sign-in and company isolation.
+The Java suite (H2 in PostgreSQL mode) covers the money rules and the whole order flow against a fake chain: quote, pay, double-pay blocked, approval by a second person (creator blocked, threshold, pay before approval blocked), rejection with a reason, cancellation before sending, approval hash mismatch blocks payment, failed payment and retry, reconciliation match, wrong amount, missing transfer, transfer replay across orders, input validation, CSV (formula-safe), leads consent, sign-in (lockout per email and source) and company isolation, look-alike supplier names, signed proof links, and the recovery of orders stuck in `sending`.
 
 ## Configuration
 
@@ -120,6 +120,9 @@ The Java suite (H2 in PostgreSQL mode) covers the money rules and the whole orde
 | `CHAIN_SERVICE_TOKEN` | chain-service, rules-api | Shared secret for service-to-service calls. Change it for any shared deployment. |
 | `CHAIN_SERVICE_URL` | rules-api | Where the Python service runs. |
 | `JWT_SECRET` | rules-api | Required. Signs the HS256 sign-in tokens. 32 characters or more; the service does not start without a valid value. Secret. |
+| `PROOF_SECRET` | rules-api | Optional. Signs the public proof links; empty means derived from `JWT_SECRET`. Changing it breaks the links already shared. Secret. |
+| `RECOVERY_ENABLED` | rules-api | `false` stops the background job that settles orders left in `sending` from the chain (default `true`). |
+| `PAYMENT_PENDING_GRACE_SECONDS` | chain-service | How long an unconfirmed payment is kept pending, and not sent again, before it is treated as lost (default `600`). |
 | `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | rules-api | PostgreSQL connection (defaults `localhost`, `5432`, `seamoney`, `postgres`, `postgres`; compose points `DB_HOST` at the `postgres` service). Schema is versioned with Flyway. Secret for the password. |
 | `DEMO_USD_BRL` | rules-api | Simulated FX rate shown in quotes. |
 | `SEED_DEMO` | rules-api | Creates the fictitious demo companies and accounts (`demo123`) when the database is empty. Compose default is `true`; `false` starts with an empty database. |
@@ -129,6 +132,7 @@ The Java suite (H2 in PostgreSQL mode) covers the money rules and the whole orde
 | `SITE_URL` | web | Public address (for example `https://seamoney.example`), used to build absolute links for the share image. Defaults to `http://localhost:3000`. |
 | `DEMO_ACCESS_PASSWORD` | web | Optional. If set, blocks all pages and APIs behind a password wall. |
 | `DEMO_SESSION_SECRET` | web | Secret used to sign the session cookie. Required if password is set. |
+| `COOKIE_SECURE` | web | Optional. `true` or `false` forces the Secure flag of the session cookies; empty means Secure only when the request arrived as HTTPS (`X-Forwarded-Proto`). |
 
 ## API
 
@@ -140,13 +144,14 @@ Rules API (Java), reached by the browser through the web app's `/api/*` proxy:
 | `POST /api/orders`, `GET /api/orders`, `GET /api/orders/{id}` | Create and quote, list, detail with timeline |
 | `POST /api/orders/{id}/pay` | Send the on-chain payment (atomic claim, cannot double-pay) |
 | `POST /api/orders/{id}/reconcile` | Match the payment against the chain |
-| `GET /api/stats`, `GET /api/proof/{id}`, `GET /api/reports/orders`, `POST /api/leads`, `GET /api/health` | Aggregate numbers for the home screen, supplier proof, CSV export, calculator leads (email only with consent), health |
-| `POST /api/auth/login` | Sign in with email and password; returns a JWT. Five failed attempts lock the email for 15 minutes |
+| `POST /api/orders/{id}/recover` | Owner or approver: settle an order stuck in `sending` from the chain (found on the chain: sent; never reached it: back to approved; may still land: keeps waiting). A background job does the same every minute |
+| `GET /api/stats`, `GET /api/proof/{proofId}` (the signed link of the order, not its id), `GET /api/reports/orders`, `POST /api/leads`, `GET /api/health` | Aggregate numbers for the home screen, supplier proof, CSV export, calculator leads (email only with consent), health |
+| `POST /api/auth/login` | Sign in with email and password; returns a JWT. Failed tries are counted per email and source (5 lock that pair for 15 minutes), per email from anywhere (20) and per source (30), so a stranger cannot lock the owner out with a few guesses |
 | `POST /api/auth/refresh`, `GET /api/auth/me` | Renew the token or switch company; current user, company and role |
 
 The web app also has its own `/api/session` route (GET, POST, DELETE) that manages the optional demo password gate.
 
-Chain service (Python), internal: `POST /payments` (send with an `Idempotency-Key` header; a reused key with a different body returns 409), `GET /payments/{key}` (look up a previous send; 404 if unknown), `GET /transfers`, `GET /transactions/{hash}`, `GET /health`. Interactive docs at `/docs` when run locally.
+Chain service (Python), internal: `POST /payments` (send with an `Idempotency-Key` header; a reused key with a different body returns 409; a retry of a key whose first attempt never got confirmed is **not** sent again: it returns the first payment once that shows on the chain, answers 409 while it may still land, and after the grace period records it as failed so the caller uses a new key), `GET /payments/{key}` (look up a previous send, settling a pending one from the chain; 404 if unknown), `GET /transfers`, `GET /transactions/{hash}`, `GET /health`. Interactive docs at `/docs` when run locally.
 
 ## Deploy: options for the team
 
@@ -158,7 +163,7 @@ The system is three services plus a PostgreSQL database, so any of these work; n
 
 `.github/workflows/ci.yml` runs all tests, builds, and the three Docker images on every push. Deployment is intentionally not wired up until the team picks a host.
 
-Security notes for a public deployment: the demo accounts (`demo123`, seeded only into an empty database) are public, so anyone who can reach the rules-api can sign in and trigger testnet payments from the partner wallet (it refills itself from the faucet). Set `DEMO_ACCESS_PASSWORD` or an allow-list in front of the web app, and set `SEED_DEMO=false` if the demo accounts should not exist. The Python and Java services must not be exposed publicly.
+Security notes for a public deployment: the demo accounts (`demo123`, seeded only into an empty database) are public, so anyone who can reach the rules-api can sign in and trigger testnet payments from the partner wallet (it refills itself from the faucet). Set `DEMO_ACCESS_PASSWORD` or an allow-list in front of the web app, and set `SEED_DEMO=false` if the demo accounts should not exist. The Python and Java services must not be exposed publicly. Put HTTPS in front of the web app: a Secure session cookie set over plain HTTP is discarded by the browser, so sign-in would silently fail. The unlock password and the sign-in are rate limited per address and over everybody, but use a strong password anyway.
 
 ## Hackathon disclosures
 
