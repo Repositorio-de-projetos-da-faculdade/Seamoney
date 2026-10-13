@@ -8,7 +8,7 @@ import { SourceLink } from './SourceLink'
 
 /**
  * Chapter 07, on paper: the rules the route has to live within, each with what it sets, what it means for Seamoney
- * and a link to the official text. Then what is real and what is simulated.
+ * and a link to the official text. What is still simulated is told in the roadmap (Business.tsx).
  */
 export function Rules({ t }: { t: T }) {
   return (
@@ -32,19 +32,7 @@ export function Rules({ t }: { t: T }) {
           </li>
         ))}
       </ol>
-      <div className="mt-10 grid max-w-[64rem] gap-6 md:grid-cols-2">
-        <div className="border border-ink/15 bg-paper-hi p-6">
-          <p className={clsx(label, 'text-brand-600')}>{t('lp.law.real.title')}</p>
-          <p className="mt-3 font-text text-[15px] leading-relaxed text-ink/80">{t('lp.law.real.body')}</p>
-        </div>
-        <div className="border border-signal/50 bg-paper-hi p-6">
-          <p className={clsx(label, 'flex items-center gap-2 text-ink')}>
-            <span aria-hidden="true" className="size-2 rotate-45 bg-signal" />
-            {t('lp.law.sim.title')}
-          </p>
-          <p className="mt-3 font-text text-[15px] leading-relaxed text-ink/80">{t('lp.law.sim.body')}</p>
-        </div>
-      </div>
+      <p className="mt-8 max-w-[64rem] font-text text-[15px] leading-relaxed text-ink/70">{t('lp.law.note')}</p>
     </Chapter>
   )
 }

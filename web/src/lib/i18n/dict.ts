@@ -104,7 +104,6 @@ const base = {
   'lp.cta': 'Request early access',
   'lp.cta2': 'Estimate your savings',
   'lp.live': 'Live on Tempo testnet and Solana devnet',
-  'lp.sim': 'BRL-to-USD conversion simulated',
   'lp.scroll': 'Scroll to load the cargo',
   'lp.clock': 'Local time',
   'lp.ch.1': 'Loading',
@@ -173,10 +172,7 @@ const base = {
   'lp.law.r561.date': 'Published 30 Apr 2026 · in force 1 Oct 2026',
   'lp.law.r561.what': 'Updates the eFX rules (international payment and transfer services). Payments between an eFX provider and its counterparty abroad must go through a foreign exchange operation or a non-resident’s account in reais, and the use of virtual assets is prohibited (art. 50).',
   'lp.law.r561.us': 'the stablecoin route cannot be the settlement of an eFX provider. It only works with an authorized partner and a structure validated by lawyers, which is why the reais leg is simulated today.',
-  'lp.law.real.title': 'What is real',
-  'lp.law.real.body': 'Sign-in and roles, approval by a second person, versioned supplier wallets, payments sent with test tokens on the Tempo testnet and the Solana devnet, reconciliation against the chain, the public proof page and the audit trail.',
-  'lp.law.sim.title': 'What is simulated',
-  'lp.law.sim.body': 'The reais-to-dollar exchange and the partner that would carry it out. No real money moves, and nothing here is legal advice: the summaries above are our reading of the official texts.',
+  'lp.law.note': 'Nothing here is legal advice: the summaries above are our reading of the official texts.',
 
   'lp.biz.title': 'A business *on every payment.*',
   'lp.biz.body': 'Seamoney charges on what it moves and saves the importer’s team the hours spent matching statements. Here is how it earns, the market, what must exist before real money moves, and *where it goes next.*',
@@ -208,7 +204,7 @@ const base = {
   'lp.biz.roadmap': 'Roadmap',
   'lp.biz.phase.now': 'Working prototype',
   'lp.biz.phase.now.when': 'Now · Oct 2026',
-  'lp.biz.phase.now.what': 'Sign-in, approval by a second person, versioned wallets, payments and reconciliation on the Tempo testnet and Solana devnet, public proof, audit trail.',
+  'lp.biz.phase.now.what': 'Sign-in, approval by a second person, versioned wallets, payments and reconciliation on the Tempo testnet and Solana devnet, public proof, audit trail. The reais-to-dollar exchange is still simulated, so no real money moves yet.',
   'lp.biz.phase.next': 'Finish the backend',
   'lp.biz.phase.next.when': 'Next',
   'lp.biz.phase.next.what': 'Ledger, outbox and review cases for mismatches; single sign-on for companies; team management on the server.',
@@ -219,7 +215,7 @@ const base = {
   'lp.biz.phase.scale.when': 'Then',
   'lp.biz.phase.scale.what': 'Mainnet, suppliers in more Asian countries, and integrations with the ERPs importers already use.',
   'lp.biz.docs': 'Documentation',
-  'lp.biz.docs.body': 'How to run the stack, the API with its rules and errors, and what is real and simulated, kept next to the code.',
+  'lp.biz.docs.body': 'How to run the stack, the API with its rules and errors, and the prototype notes, kept next to the code.',
   'lp.biz.docs.readme': 'README',
   'lp.biz.docs.api': 'API reference',
   'lp.biz.docs.prototype': 'Prototype notes',
@@ -272,8 +268,6 @@ const base = {
   'lp.save.title': 'What stays *in your company.*',
   'lp.save.body':
     'Drag to what you pay suppliers each month. The numbers come from *the same rules engine* that prices every order.',
-  'lp.save.body.static':
-    'Drag to what you pay suppliers each month. This page has no server, so the Java rules engine’s *pricing math* runs in your browser instead.',
   'lp.save.leak.kicker': 'What each route loses on the way',
   'lp.save.leak.no': 'Route {n}',
   'lp.save.leak.lost': 'Lost on the way',
@@ -285,7 +279,7 @@ const base = {
   'lp.save.leak.route.note': 'Seamoney’s fee is 1% of the amount, the same rate used to price every order.',
   'lp.save.leak.per': '{lost} on every {amount} sent',
   'lp.save.leak.diff': '{pp} percentage points apart on every payment.',
-  'lp.save.leak.note': 'Estimates, not quotes. Taxes such as IOF are not included, and the BRL-to-USD conversion is simulated.',
+  'lp.save.leak.note': 'Estimates, not quotes. Taxes such as IOF are not included.',
   'lp.save.yours': 'Now with your numbers',
   'lp.save.year': 'saved per year',
   'lp.save.month': 'per month',
@@ -296,6 +290,7 @@ const base = {
   'banner.testnet': 'Testnet payments. BRL-to-USD leg is simulated.',
   'disclaimer.demo':
     'Running on the Tempo testnet and Solana devnet. The BRL-to-USD conversion is simulated and no real money moves. Figures are estimates, not quotes, and taxes such as IOF are not included.',
+  'lp.footer.about': 'Running on the Tempo testnet and Solana devnet. Figures are estimates, not quotes, and taxes such as IOF are not included.',
   'footer.built': 'Built for the Colosseum Crypto World’s Fair hackathon.',
 
   'calc.title': 'Savings calculator',
@@ -619,7 +614,6 @@ const basePt: Record<keyof typeof base, string> = {
   'lp.cta': 'Solicite acesso antecipado',
   'lp.cta2': 'Estimar sua economia',
   'lp.live': 'Ao vivo na testnet do Tempo e na devnet da Solana',
-  'lp.sim': 'Conversão de reais para dólar simulada',
   'lp.scroll': 'Role para embarcar a carga',
   'lp.clock': 'Hora local',
   'lp.ch.1': 'Carregamento',
@@ -688,10 +682,7 @@ const basePt: Record<keyof typeof base, string> = {
   'lp.law.r561.date': 'Publicada em 30/04/2026 · vigência em 01/10/2026',
   'lp.law.r561.what': 'Atualiza as regras do eFX (serviço de pagamento ou transferência internacional). O pagamento entre o prestador de eFX e sua contraparte no exterior deve ser feito por operação de câmbio ou conta em reais de não residente, sendo vedado o uso de ativos virtuais (art. 50).',
   'lp.law.r561.us': 'a rota com stablecoin não pode ser a liquidação de um prestador de eFX. Ela só funciona com parceiro autorizado e uma estrutura validada por advogados, e é por isso que a perna em reais é simulada hoje.',
-  'lp.law.real.title': 'O que é real',
-  'lp.law.real.body': 'Login e papéis, aprovação por uma segunda pessoa, carteiras de fornecedor versionadas, pagamentos com tokens de teste na testnet do Tempo e na devnet da Solana, conciliação contra a rede, a página pública de prova e a trilha de auditoria.',
-  'lp.law.sim.title': 'O que é simulado',
-  'lp.law.sim.body': 'O câmbio de reais para dólares e o parceiro que faria essa operação. Nenhum dinheiro real se move, e nada aqui é parecer jurídico: os resumos acima são a nossa leitura dos textos oficiais.',
+  'lp.law.note': 'Nada aqui é parecer jurídico: os resumos acima são a nossa leitura dos textos oficiais.',
 
   'lp.biz.title': 'Um negócio *em cada pagamento.*',
   'lp.biz.body': 'A Seamoney cobra sobre o que movimenta e poupa ao time da importadora as horas de conciliação. Aqui está como ela ganha, o mercado, o que precisa existir antes de dinheiro real e *para onde vai depois.*',
@@ -723,7 +714,7 @@ const basePt: Record<keyof typeof base, string> = {
   'lp.biz.roadmap': 'Roadmap',
   'lp.biz.phase.now': 'Protótipo funcionando',
   'lp.biz.phase.now.when': 'Agora · out. 2026',
-  'lp.biz.phase.now.what': 'Login, aprovação por segunda pessoa, carteiras versionadas, pagamentos e conciliação na testnet do Tempo e na devnet da Solana, prova pública, trilha de auditoria.',
+  'lp.biz.phase.now.what': 'Login, aprovação por segunda pessoa, carteiras versionadas, pagamentos e conciliação na testnet do Tempo e na devnet da Solana, prova pública, trilha de auditoria. O câmbio de reais para dólar ainda é simulado, então nenhum dinheiro real se move por enquanto.',
   'lp.biz.phase.next': 'Terminar o backend',
   'lp.biz.phase.next.when': 'Próximo',
   'lp.biz.phase.next.what': 'Ledger, outbox e casos de revisão para divergências; login único para empresas; gestão da equipe no servidor.',
@@ -734,7 +725,7 @@ const basePt: Record<keyof typeof base, string> = {
   'lp.biz.phase.scale.when': 'Depois',
   'lp.biz.phase.scale.what': 'Mainnet, fornecedores em mais países da Ásia e integração com os ERPs que as importadoras já usam.',
   'lp.biz.docs': 'Documentação',
-  'lp.biz.docs.body': 'Como subir a pilha, a API com regras e erros, e o que é real e simulado, guardados junto do código.',
+  'lp.biz.docs.body': 'Como subir a pilha, a API com regras e erros, e as notas do protótipo, guardados junto do código.',
   'lp.biz.docs.readme': 'README',
   'lp.biz.docs.api': 'Referência da API',
   'lp.biz.docs.prototype': 'Notas do protótipo',
@@ -787,8 +778,6 @@ const basePt: Record<keyof typeof base, string> = {
   'lp.save.title': 'O que fica *na sua empresa.*',
   'lp.save.body':
     'Arraste até o valor que você paga a fornecedores por mês. Os números vêm *do mesmo motor de regras* que precifica cada ordem.',
-  'lp.save.body.static':
-    'Arraste até o valor que você paga a fornecedores por mês. Como esta página não tem servidor, *a mesma conta* do motor de regras em Java roda no seu navegador.',
   'lp.save.leak.kicker': 'O que cada rota perde no caminho',
   'lp.save.leak.no': 'Rota {n}',
   'lp.save.leak.lost': 'Perdido no caminho',
@@ -800,7 +789,7 @@ const basePt: Record<keyof typeof base, string> = {
   'lp.save.leak.route.note': 'A tarifa da Seamoney é 1% do valor, a mesma usada no preço de cada ordem.',
   'lp.save.leak.per': '{lost} a cada {amount} enviados',
   'lp.save.leak.diff': '{pp} pontos percentuais de diferença em cada pagamento.',
-  'lp.save.leak.note': 'Estimativas, não cotação. Tributos como o IOF não estão incluídos, e a conversão de reais para dólar é simulada.',
+  'lp.save.leak.note': 'Estimativas, não cotação. Tributos como o IOF não estão incluídos.',
   'lp.save.yours': 'Agora com os seus números',
   'lp.save.year': 'economizados por ano',
   'lp.save.month': 'por mês',
@@ -810,6 +799,7 @@ const basePt: Record<keyof typeof base, string> = {
 
   'disclaimer.demo':
     'Rodando na testnet do Tempo e na devnet da Solana. A conversão de reais para dólar é simulada e nenhum dinheiro real é movimentado. Os valores são estimativas, não cotações, e tributos como o IOF não estão incluídos.',
+  'lp.footer.about': 'Rodando na testnet do Tempo e na devnet da Solana. Os valores são estimativas, não cotações, e tributos como o IOF não estão incluídos.',
   'footer.built': 'Feito para o hackathon Crypto World’s Fair da Colosseum.',
 
   'calc.title': 'Calculadora de economia',

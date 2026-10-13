@@ -4,7 +4,7 @@ import { Cta } from './Cta'
 import { Reveal } from './Reveal'
 import { primaryCta } from './site'
 import { Lede } from './lede/Lede'
-import { displayXL, label, starLast } from './type'
+import { displayXL, starLast } from './type'
 
 /**
  * The ship sails off towards the moon (the WebGL scene comes back behind this transparent section) under the
@@ -20,10 +20,6 @@ export function Finale({ t }: { t: T }) {
           <Reveal as="p" start="top 5%" text={starLast(t('brand.closing'))} className={clsx(displayXL, 'mt-6 max-w-[9em] text-white')} />
           <div className="mt-10 flex flex-wrap items-center gap-3">
             <Cta href={primaryCta(t).href}>{primaryCta(t).label}</Cta>
-            <p className={clsx(label, 'flex items-center gap-2.5 text-signal md:ml-auto')}>
-              <span className="size-2 rotate-45 bg-signal" aria-hidden="true" />
-              {t('lp.sim')}
-            </p>
           </div>
         </div>
       </div>

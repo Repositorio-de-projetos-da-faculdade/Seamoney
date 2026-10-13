@@ -36,11 +36,8 @@ export function LandingFooter({ t }: { t: T }) {
           </ul>
         </nav>
         <div className="md:col-span-3 md:col-start-10">
-          <h2 className={clsx(label, 'flex items-center gap-2.5 text-signal')}>
-            <span className="size-2 rotate-45 bg-signal" aria-hidden="true" />
-            {t('footer.disclosure')}
-          </h2>
-          <p className="mt-4 font-text text-[14px] leading-relaxed text-foam/65">{t('disclaimer.demo')}</p>
+          <h2 className={clsx(label, 'text-mint')}>{t('footer.disclosure')}</h2>
+          <p className="mt-4 font-text text-[14px] leading-relaxed text-foam/65">{t('lp.footer.about')}</p>
         </div>
       </div>
 
