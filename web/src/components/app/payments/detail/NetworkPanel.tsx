@@ -64,7 +64,7 @@ export function NetworkPanel({ payment: p }: { payment: Payment }) {
           <p className="border-t border-foam/12 px-5 py-3 text-[13px] leading-relaxed text-foam/60">
             {live ? (
               <a href={explorerTxOn(s.network, s.txHash)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-mint underline decoration-mint/40 underline-offset-4 hover:decoration-mint">
-                {t('app.doc.n.explorer')}
+                {t('app.doc.n.explorer', { network: t(`app.net.${s.network}.long`) })}
                 <ExternalLink size={13} aria-hidden="true" />
               </a>
             ) : (

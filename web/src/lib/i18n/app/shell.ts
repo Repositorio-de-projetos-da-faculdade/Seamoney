@@ -15,7 +15,7 @@ export const en = {
   'app.system': 'Seamoney',
   'app.policy': 'Approval policy',
   'app.simulated': 'Simulated',
-  'app.testnet': 'Tempo testnet',
+  'app.testnet': 'Tempo testnet · Solana devnet',
 
   'app.nav.label': 'Workspace',
   'app.nav.home': 'Dashboard',
@@ -144,7 +144,7 @@ export const pt: Record<keyof typeof en, string> = {
   'app.system': 'Seamoney',
   'app.policy': 'Política de aprovação',
   'app.simulated': 'Simulado',
-  'app.testnet': 'Testnet Tempo',
+  'app.testnet': 'Testnet Tempo · devnet Solana',
 
   'app.nav.label': 'Espaço de trabalho',
   'app.nav.home': 'Painel',
