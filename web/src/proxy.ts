@@ -13,9 +13,11 @@ export function proxy(request: NextRequest) {
     if (secret.length < 16) {
       return NextResponse.json({ error: 'Gate misconfigured' }, { status: 503 })
     }
-    // Exclude /unlock and Next.js static files
+    // Exclude /unlock, the legal pages (readable before entering) and Next.js static files
     if (
       !pathname.startsWith('/unlock') &&
+      pathname !== '/terms' &&
+      pathname !== '/privacy' &&
       !pathname.startsWith('/_next') &&
       !pathname.startsWith('/favicon.ico') &&
       !pathname.startsWith('/brand/')

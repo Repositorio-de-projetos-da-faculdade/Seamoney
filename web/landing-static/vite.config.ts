@@ -42,5 +42,13 @@ export default defineConfig({
     emptyOutDir: true,
     // three.js is split into its own chunk by the dynamic import in useVoyage; it is large on purpose
     chunkSizeWarningLimit: 900,
+    // the landing plus the legal pages; Firebase's cleanUrls serves terms.html at /terms
+    rollupOptions: {
+      input: {
+        index: path.join(__dirname, 'index.html'),
+        terms: path.join(__dirname, 'terms.html'),
+        privacy: path.join(__dirname, 'privacy.html'),
+      },
+    },
   },
 })

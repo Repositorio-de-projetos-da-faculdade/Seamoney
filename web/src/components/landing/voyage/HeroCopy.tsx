@@ -9,7 +9,7 @@ import { primaryCta } from '../site'
 import { Lede } from '../lede/Lede'
 import { displayXL, fadeDelay, label } from '../type'
 
-/** Over the opening shot: the promise, what is live and what is simulated, the two ways in and the two ports' clocks. */
+/** Over the opening shot: the promise, where it runs, the two ways in and the two ports' clocks. */
 export function HeroCopy() {
   const { t } = useT()
 
@@ -35,10 +35,6 @@ export function HeroCopy() {
               <span className="relative size-2 rounded-full bg-mint" />
             </span>
             {t('lp.live')}
-          </p>
-          <p className="flex items-center gap-2.5 text-signal">
-            <span className="size-2 rotate-45 bg-signal" aria-hidden="true" />
-            {t('lp.sim')}
           </p>
           <dl className="mt-4 flex gap-8 border-t border-foam/15 pt-4 text-foam/55 max-md:hidden" aria-label={t('lp.clock')}>
             <div>

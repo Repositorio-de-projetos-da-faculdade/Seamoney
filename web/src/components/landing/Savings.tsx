@@ -39,7 +39,7 @@ export function Savings() {
             <ChapterTag n={5} name={t('lp.ch.5')} className="text-foam/60" />
             <Reveal text={t('lp.save.title')} className={clsx(displayL, 'mt-5 text-white')} />
           </div>
-          <Lede size="md" text={t(STATIC_SITE ? 'lp.save.body.static' : 'lp.save.body')} className="md:pb-3" />
+          <Lede size="md" text={t('lp.save.body')} className="md:pb-3" />
         </div>
       }
       tickets={<RouteTickets t={t} locale={locale} />}
