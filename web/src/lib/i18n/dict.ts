@@ -23,13 +23,13 @@ const base = {
     'A new way to pay import invoices: stablecoin settlement, built to run through authorized partners, with an opaque order code written into every payment that points back to the invoice.',
   'hero.cta': 'Start now',
   'hero.cta2': 'Try the calculator',
-  'hero.demo': 'Live demo on the Tempo testnet',
+  'hero.demo': 'Live on the Tempo testnet',
   'hero.note': 'Example, not a real transaction',
 
   'fact.fees': 'Fees of about 1% vs 2-5%*',
   'fact.speed': 'Settles in seconds',
   'fact.recon': 'Automatic reconciliation',
-  'fact.footnote': '* Estimates for a bank wire. Demo on the testnet.',
+  'fact.footnote': '* Estimates for a bank wire. Payments run on the testnet.',
 
   'unlock.title': 'Demo access',
   'unlock.desc': 'This is a private demo. Please enter the access password.',
@@ -75,7 +75,7 @@ const base = {
   'cta.title': 'Create your first payment order',
   'cta.sub': 'Upload an invoice and watch it pay and reconcile itself on the testnet. No real money moves.',
   'footer.nav': 'Explore',
-  'footer.disclosure': 'About this demo',
+  'footer.disclosure': 'About this project',
 
   'perk.fees.title': 'Lower fees',
   'perk.fees.desc': 'About 1% vs 2-5% by bank wire (estimates)',
@@ -160,7 +160,7 @@ const base = {
   'lp.law.l14286.name': 'Law 14,286/2021',
   'lp.law.l14286.date': 'Foreign exchange market · 29 Dec 2021',
   'lp.law.l14286.what': 'Rules the Brazilian foreign exchange market, Brazilian capital abroad and foreign capital in the country (art. 1), regulated by Banco Central Resolution 277/2022.',
-  'lp.law.l14286.us': 'turning reais into dollars is a foreign exchange operation: it is done by an authorized institution. In this demo that step is simulated.',
+  'lp.law.l14286.us': 'turning reais into dollars is a foreign exchange operation: it is done by an authorized institution. Here that step is simulated.',
   'lp.law.r519.name': 'BCB Resolutions 519 and 520',
   'lp.law.r519.date': 'Published 10 Nov 2025 · in force 2 Feb 2026',
   'lp.law.r519.what': 'Set the authorization process and the rules for constituting and running virtual asset service providers (SPSAVs).',
@@ -173,9 +173,9 @@ const base = {
   'lp.law.r561.date': 'Published 30 Apr 2026 · in force 1 Oct 2026',
   'lp.law.r561.what': 'Updates the eFX rules (international payment and transfer services). Payments between an eFX provider and its counterparty abroad must go through a foreign exchange operation or a non-resident’s account in reais, and the use of virtual assets is prohibited (art. 50).',
   'lp.law.r561.us': 'the stablecoin route cannot be the settlement of an eFX provider. It only works with an authorized partner and a structure validated by lawyers, which is why the reais leg is simulated today.',
-  'lp.law.real.title': 'Real in this demo',
+  'lp.law.real.title': 'What is real',
   'lp.law.real.body': 'Sign-in and roles, approval by a second person, versioned supplier wallets, payments sent with test tokens on the Tempo testnet and the Solana devnet, reconciliation against the chain, the public proof page and the audit trail.',
-  'lp.law.sim.title': 'Simulated in this demo',
+  'lp.law.sim.title': 'What is simulated',
   'lp.law.sim.body': 'The reais-to-dollar exchange and the partner that would carry it out. No real money moves, and nothing here is legal advice: the summaries above are our reading of the official texts.',
 
   'lp.biz.title': 'A business *on every payment.*',
@@ -295,7 +295,7 @@ const base = {
 
   'banner.testnet': 'Testnet payments. BRL-to-USD leg is simulated.',
   'disclaimer.demo':
-    'Demo on the Tempo testnet and Solana devnet. The BRL-to-USD conversion is simulated and no real money moves. Figures are estimates, not quotes, and taxes such as IOF are not included.',
+    'Running on the Tempo testnet and Solana devnet. The BRL-to-USD conversion is simulated and no real money moves. Figures are estimates, not quotes, and taxes such as IOF are not included.',
   'footer.built': 'Built for the Colosseum Crypto World’s Fair hackathon.',
 
   'calc.title': 'Savings calculator',
@@ -536,13 +536,13 @@ const basePt: Record<keyof typeof base, string> = {
     'Uma nova forma de pagar faturas de importação: liquidação em stablecoin, pensada para rodar com parceiros autorizados, com um código opaco da ordem gravado em cada pagamento, que aponta para a fatura.',
   'hero.cta': 'Começar agora',
   'hero.cta2': 'Testar a calculadora',
-  'hero.demo': 'Demo ao vivo na testnet do Tempo',
+  'hero.demo': 'Ao vivo na testnet do Tempo',
   'hero.note': 'Exemplo, não é uma transação real',
 
   'fact.fees': 'Taxa de cerca de 1% vs 2-5%*',
   'fact.speed': 'Liquida em segundos',
   'fact.recon': 'Conciliação automática',
-  'fact.footnote': '* Estimativas para uma transferência bancária. Demo na testnet.',
+  'fact.footnote': '* Estimativas para uma transferência bancária. Os pagamentos rodam na testnet.',
 
   'unlock.title': 'Acesso à demo',
   'unlock.desc': 'Esta é uma demo fechada. Por favor, insira a senha de acesso.',
@@ -590,7 +590,7 @@ const basePt: Record<keyof typeof base, string> = {
   'cta.title': 'Crie sua primeira ordem de pagamento',
   'cta.sub': 'Envie uma fatura e veja ela ser paga e conciliada sozinha na testnet. Nenhum dinheiro real se move.',
   'footer.nav': 'Explorar',
-  'footer.disclosure': 'Sobre esta demo',
+  'footer.disclosure': 'Sobre este projeto',
 
   'perk.fees.title': 'Menos taxas',
   'perk.fees.desc': 'Cerca de 1% contra 2-5% da transferência bancária (estimativas)',
@@ -675,7 +675,7 @@ const basePt: Record<keyof typeof base, string> = {
   'lp.law.l14286.name': 'Lei 14.286/2021',
   'lp.law.l14286.date': 'Mercado de câmbio · 29/12/2021',
   'lp.law.l14286.what': 'Dispõe sobre o mercado de câmbio brasileiro, o capital brasileiro no exterior e o capital estrangeiro no País (art. 1º), regulamentada pela Resolução BCB 277/2022.',
-  'lp.law.l14286.us': 'trocar reais por dólares é operação de câmbio: quem faz é instituição autorizada. Nesta demo esse passo é simulado.',
+  'lp.law.l14286.us': 'trocar reais por dólares é operação de câmbio: quem faz é instituição autorizada. Aqui esse passo é simulado.',
   'lp.law.r519.name': 'Resoluções BCB 519 e 520',
   'lp.law.r519.date': 'Publicadas em 10/11/2025 · vigência em 02/02/2026',
   'lp.law.r519.what': 'Disciplinam o processo de autorização e a constituição e o funcionamento das sociedades prestadoras de serviços de ativos virtuais (SPSAVs).',
@@ -688,9 +688,9 @@ const basePt: Record<keyof typeof base, string> = {
   'lp.law.r561.date': 'Publicada em 30/04/2026 · vigência em 01/10/2026',
   'lp.law.r561.what': 'Atualiza as regras do eFX (serviço de pagamento ou transferência internacional). O pagamento entre o prestador de eFX e sua contraparte no exterior deve ser feito por operação de câmbio ou conta em reais de não residente, sendo vedado o uso de ativos virtuais (art. 50).',
   'lp.law.r561.us': 'a rota com stablecoin não pode ser a liquidação de um prestador de eFX. Ela só funciona com parceiro autorizado e uma estrutura validada por advogados, e é por isso que a perna em reais é simulada hoje.',
-  'lp.law.real.title': 'Real nesta demo',
+  'lp.law.real.title': 'O que é real',
   'lp.law.real.body': 'Login e papéis, aprovação por uma segunda pessoa, carteiras de fornecedor versionadas, pagamentos com tokens de teste na testnet do Tempo e na devnet da Solana, conciliação contra a rede, a página pública de prova e a trilha de auditoria.',
-  'lp.law.sim.title': 'Simulado nesta demo',
+  'lp.law.sim.title': 'O que é simulado',
   'lp.law.sim.body': 'O câmbio de reais para dólares e o parceiro que faria essa operação. Nenhum dinheiro real se move, e nada aqui é parecer jurídico: os resumos acima são a nossa leitura dos textos oficiais.',
 
   'lp.biz.title': 'Um negócio *em cada pagamento.*',
@@ -809,7 +809,7 @@ const basePt: Record<keyof typeof base, string> = {
   'lp.code.nav': 'Código',
 
   'disclaimer.demo':
-    'Demo na testnet do Tempo e na devnet da Solana. A conversão de reais para dólar é simulada e nenhum dinheiro real é movimentado. Os valores são estimativas, não cotações, e tributos como o IOF não estão incluídos.',
+    'Rodando na testnet do Tempo e na devnet da Solana. A conversão de reais para dólar é simulada e nenhum dinheiro real é movimentado. Os valores são estimativas, não cotações, e tributos como o IOF não estão incluídos.',
   'footer.built': 'Feito para o hackathon Crypto World’s Fair da Colosseum.',
 
   'calc.title': 'Calculadora de economia',

@@ -8,7 +8,7 @@ import { SourceLink } from './SourceLink'
 
 /**
  * Chapter 07, on paper: the rules the route has to live within, each with what it sets, what it means for Seamoney
- * and a link to the official text. Then what is real and what is simulated in this demo.
+ * and a link to the official text. Then what is real and what is simulated.
  */
 export function Rules({ t }: { t: T }) {
   return (
