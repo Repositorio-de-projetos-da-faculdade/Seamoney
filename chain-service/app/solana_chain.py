@@ -29,7 +29,7 @@ from solders.system_program import CreateAccountParams, create_account
 from solders.token.associated import get_associated_token_address
 from solders.transaction import Transaction
 
-from .chain import ChainError, ChainNotConfigured, FoundTransfer, SentPayment, TxInfo
+from .chain import ChainError, ChainNotConfigured, FoundTransfer, PaymentNotSent, SentPayment, TxInfo
 from .memo import cents_to_units, encode_reference
 
 DEFAULT_RPC = "https://api.devnet.solana.com"
@@ -430,7 +430,8 @@ class SolanaService:
             except ChainError as exc:
                 last = exc
                 time.sleep(2 + attempt * 2)
-        raise ChainError(
+        # still before anything was sent: the payment did not happen
+        raise PaymentNotSent(
             f"The Solana devnet faucet did not fund {address} ({last}). "
             "Fund it by hand at https://faucet.solana.com and try again."
         )

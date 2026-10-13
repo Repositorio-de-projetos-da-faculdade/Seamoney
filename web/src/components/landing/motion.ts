@@ -14,6 +14,8 @@ let registered = false
 export function motion() {
   if (!registered && typeof window !== 'undefined') {
     gsap.registerPlugin(ScrollTrigger, SplitText, ScrambleTextPlugin)
+    // an animation over an empty selection animates nothing: do not fill the console with "target not found"
+    gsap.config({ nullTargetWarn: false })
     registered = true
   }
   return { gsap, ScrollTrigger, SplitText }
