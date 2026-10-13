@@ -1,8 +1,8 @@
 'use server'
 
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { safeCompare, signSession } from '@/lib/gate'
+import { cookieSecure, safeCompare, signSession } from '@/lib/gate'
 
 export async function unlock(formData: FormData) {
   const pwd = process.env.DEMO_ACCESS_PASSWORD
@@ -27,7 +27,7 @@ export async function unlock(formData: FormData) {
   cookieStore.set('seamoney_session', cookieVal, {
     httpOnly: true,
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    secure: cookieSecure((await headers()).get('x-forwarded-proto')),
     maxAge: 12 * 60 * 60, // 12 hours
     path: '/'
   })

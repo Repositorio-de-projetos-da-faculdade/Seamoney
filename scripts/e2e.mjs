@@ -130,7 +130,10 @@ const checks = rec.body.order.recon.checks
 if (!Object.values(checks).every(Boolean)) fail(`a reconciliation check failed: ${JSON.stringify(checks)}`)
 console.log('reconciled:  all 5 checks passed', JSON.stringify(checks))
 
-const proof = await anon.call(`/api/proof/${order.id}`)
+const bare = await anon.call(`/api/proof/${order.id}`)
+if (bare.status !== 404) fail(`the proof page opened with the bare order id (HTTP ${bare.status}); only the signed link may open it`)
+if (!order.proofId) fail('the order carries no proofId')
+const proof = await anon.call(`/api/proof/${encodeURIComponent(order.proofId)}`)
 if (proof.body.tx?.status !== 'success') fail(`proof page data is not verified on-chain: ${JSON.stringify(proof.body)}`)
 console.log('proof:       verified on-chain at', proof.body.tx.timestamp)
 

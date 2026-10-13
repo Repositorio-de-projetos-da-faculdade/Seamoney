@@ -15,6 +15,7 @@ const mk = (i, over) => {
   const bankCostCents = Math.round(amountCents * 0.03)
   const o = {
     id: `ord_${String(i).padStart(4, '0')}`,
+    proofId: `ord_${String(i).padStart(4, '0')}.mock-signature`,
     reference: over.invoiceNumber,
     supplierId: 'sup_1',
     supplierName: over.supplierName,
@@ -173,7 +174,7 @@ http
     }
     m = p.match(/^\/api\/proof\/([^/]+)$/)
     if (m) {
-      const o = orders.find((x) => x.id === m[1])
+      const o = orders.find((x) => x.proofId === m[1])
       if (!o || !o.txHash) return send(res, 404, { error: 'not found' })
       return send(res, 200, {
         order: { id: o.id, invoiceNumber: o.invoiceNumber, amountCents: o.amountCents, supplierName: o.supplierName, reference: o.reference, txHash: o.txHash, paidAt: o.paidAt },

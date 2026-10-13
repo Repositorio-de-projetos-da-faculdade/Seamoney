@@ -85,6 +85,8 @@ export interface Settlement {
   paidAt: string
   /** Order id in the Java rules API when the payment really went to the Tempo testnet. */
   liveOrderId?: string
+  /** What follows /proof/ on the public proof page: the order id plus a signature only the rules service can make. */
+  liveProofId?: string
 }
 
 export interface ReconChecks {

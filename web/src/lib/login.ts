@@ -5,13 +5,14 @@ import type { Key } from './i18n/dict'
 
 export type LoginResult = { token: string } | { error: Extract<Key, `login.${string}`>; status: number }
 
-export async function requestToken(email: string, password: string): Promise<LoginResult> {
+/** @param clientIp the visitor's address, forwarded so the rules service can count failed tries per source */
+export async function requestToken(email: string, password: string, clientIp?: string): Promise<LoginResult> {
   if (!email || !password) return { error: 'login.error', status: 400 }
   let res: Response
   try {
     res = await fetch(`${rulesUrl()}/api/auth/login`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...(clientIp ? { 'x-forwarded-for': clientIp } : {}) },
       body: JSON.stringify({ email, password }),
       cache: 'no-store',
     })

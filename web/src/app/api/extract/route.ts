@@ -7,6 +7,11 @@ export const maxDuration = 120
 
 export async function POST(req: Request) {
   try {
+    // the declared size is checked before the body is read; the exact one, below, once the file is in hand
+    const declared = Number(req.headers.get('content-length') ?? 0)
+    if (declared > MAX_UPLOAD_BYTES + 1024 * 1024) {
+      return NextResponse.json({ error: 'The file is larger than 10 MB.' }, { status: 413 })
+    }
     const form = await req.formData()
     const file = form.get('file')
     if (!(file instanceof File)) return NextResponse.json({ error: 'Attach a file.' }, { status: 400 })
