@@ -44,4 +44,6 @@ public record Order(
         String createdAt,
         String updatedAt,
         long bankCostCents,
-        long savingsCents) {}
+        long savingsCents,
+        /** What goes after /proof/ on the public proof page: the order id plus a signature nobody can guess. */
+        String proofId) {}

@@ -1,6 +1,7 @@
 package com.seamoney.rules.web;
 
 import com.seamoney.rules.security.JwtPrincipal;
+import com.seamoney.rules.service.AuthException;
 import com.seamoney.rules.service.AuthService;
 import com.seamoney.rules.store.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
@@ -31,9 +32,10 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest req, HttpServletRequest request) {
         try {
-            String token = authService.login(req.email(), req.password(), request.getRemoteAddr());
+            String token = authService.login(req.email(), req.password(), ClientIp.of(request));
             return ResponseEntity.ok(Map.of("token", token));
-        } catch (RuntimeException e) {
+        } catch (AuthException e) {
+            // only a refused sign-in carries a message for the person; any other failure is the generic 500
             return ResponseEntity.status(401).body(Map.of("error", e.getMessage()));
         }
     }
@@ -44,15 +46,20 @@ public class AuthController {
         String newOrgId = body.get("organizationId");
         if (newOrgId != null && !newOrgId.equals(principal.orgId())) {
             try {
-                String token = authService.switchOrganization(principal, newOrgId, request.getRemoteAddr());
+                String token = authService.switchOrganization(principal, newOrgId, ClientIp.of(request));
                 return ResponseEntity.ok(Map.of("token", token));
-            } catch (Exception e) {
+            } catch (AuthException e) {
                 return ResponseEntity.status(404).body(Map.of("error", "Organization not found"));
             }
         }
-        // If not switching org, refresh is just generating a new token with same claims
-        String token = authService.switchOrganization(principal, principal.orgId(), request.getRemoteAddr());
-        return ResponseEntity.ok(Map.of("token", token));
+        // Not switching company: a new token for the same one, with the role the person holds now. If the membership
+        // ended meanwhile there is nothing to refresh: sign in again.
+        try {
+            String token = authService.switchOrganization(principal, principal.orgId(), ClientIp.of(request));
+            return ResponseEntity.ok(Map.of("token", token));
+        } catch (AuthException e) {
+            return ResponseEntity.status(401).body(Map.of("error", "Your access to this company has ended"));
+        }
     }
 
     @GetMapping("/me")

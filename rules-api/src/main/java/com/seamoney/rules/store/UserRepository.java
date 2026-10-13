@@ -18,7 +18,7 @@ public class UserRepository {
     }
 
     public Optional<User> findByEmail(String email) {
-        return jdbc.query("SELECT * FROM users WHERE email = ?",
+        return jdbc.query("SELECT * FROM users WHERE LOWER(email) = LOWER(?)",
                 (rs, rowNum) -> new User(rs.getString("id"), rs.getString("email"), rs.getString("password_hash"), rs.getString("created_at")),
                 email).stream().findFirst();
     }
@@ -32,19 +32,19 @@ public class UserRepository {
 
     public List<Company> findCompanies(String userId) {
         return jdbc.query(
-                "SELECT o.id, o.name, m.role FROM memberships m JOIN organizations o ON o.id = m.organization_id WHERE m.user_id = ? ORDER BY o.name",
+                "SELECT o.id, o.name, m.role FROM memberships m JOIN organizations o ON o.id = m.organization_id WHERE m.user_id = ? AND UPPER(m.status) = 'ACTIVE' ORDER BY o.name",
                 (rs, i) -> new Company(rs.getString("id"), rs.getString("name"), rs.getString("role")),
                 userId);
     }
 
     public List<Membership> findMemberships(String userId) {
-        return jdbc.query("SELECT * FROM memberships WHERE user_id = ?",
+        return jdbc.query("SELECT * FROM memberships WHERE user_id = ? AND UPPER(status) = 'ACTIVE'",
                 (rs, rowNum) -> new Membership(rs.getString("user_id"), rs.getString("organization_id"), Role.valueOf(rs.getString("role").toUpperCase()), rs.getString("status")),
                 userId);
     }
 
     public Optional<Membership> findMembership(String userId, String organizationId) {
-        return jdbc.query("SELECT * FROM memberships WHERE user_id = ? AND organization_id = ?",
+        return jdbc.query("SELECT * FROM memberships WHERE user_id = ? AND organization_id = ? AND UPPER(status) = 'ACTIVE'",
                 (rs, rowNum) -> new Membership(rs.getString("user_id"), rs.getString("organization_id"), Role.valueOf(rs.getString("role").toUpperCase()), rs.getString("status")),
                 userId, organizationId).stream().findFirst();
     }

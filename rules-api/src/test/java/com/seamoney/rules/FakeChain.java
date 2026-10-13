@@ -69,6 +69,16 @@ public class FakeChain implements ChainClient {
         return sent;
     }
 
+    /** The chain service holds an unfinished attempt under this key that has not reached the chain. */
+    public void rememberPending(String idempotencyKey) {
+        statuses.put(idempotencyKey, "pending");
+    }
+
+    /** The chain service recorded the attempt under this key as failed. */
+    public void rememberFailed(String idempotencyKey) {
+        statuses.put(idempotencyKey, "failed");
+    }
+
     @Override
     public Optional<String> paymentStatus(String idempotencyKey) {
         return Optional.ofNullable(statuses.get(idempotencyKey));

@@ -13,6 +13,7 @@ function orderFor(state: DemoState, patch: Partial<LiveOrder> = {}): LiveOrder {
   const supplier = state.suppliers.find((s) => activeWallet(s, 'tempo'))!
   return {
     id: 'ORD-ABC123',
+    proofId: 'ORD-ABC123.c2lnbmF0dXJl',
     reference: 'SM-7K3QX9PA',
     status: 'pending_approval',
     supplierName: supplier.name,

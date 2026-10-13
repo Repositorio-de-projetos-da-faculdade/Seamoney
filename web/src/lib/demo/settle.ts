@@ -189,6 +189,7 @@ export async function sendOnTestnet(payment: Payment, supplier: { name: string; 
     confirmMs: paid.confirmMs ?? 0,
     paidAt: paid.paidAt ?? new Date().toISOString(),
     liveOrderId: paid.id,
+    liveProofId: paid.proofId,
   }
 }
 

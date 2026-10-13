@@ -25,6 +25,8 @@ services:
       # optional: without them the Solana devnet payer is derived from the Tempo testnet key
       SOLANA_PAYER_PRIVATE_KEY: ${SOLANA_PAYER_PRIVATE_KEY:-}
       SOLANA_RPC_URL: ${SOLANA_RPC_URL:-https://api.devnet.solana.com}
+      # an unconfirmed payment is not sent again before this many seconds (see .env.example)
+      PAYMENT_PENDING_GRACE_SECONDS: ${PAYMENT_PENDING_GRACE_SECONDS:-600}
     volumes:
       # the idempotency keys of sent payments; kept across restarts so a retry never pays twice
       - chain-data:/app/data
@@ -44,6 +46,8 @@ services:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-demo}
       SEED_DEMO: ${SEED_DEMO:-true}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env (a random string of 32+ characters)}
+      PROOF_SECRET: ${PROOF_SECRET:-}
+      RECOVERY_ENABLED: ${RECOVERY_ENABLED:-true}
     depends_on:
       postgres:
         condition: service_healthy
@@ -59,6 +63,7 @@ services:
       # optional password gate for a public demo; the secret signs its cookie (16+ characters)
       DEMO_ACCESS_PASSWORD: ${DEMO_ACCESS_PASSWORD:-}
       DEMO_SESSION_SECRET: ${DEMO_SESSION_SECRET:-}
+      COOKIE_SECURE: ${COOKIE_SECURE:-}
     ports:
       - "${WEB_PORT:-3000}:3000"
     depends_on:

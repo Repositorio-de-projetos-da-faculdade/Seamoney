@@ -2,6 +2,7 @@ package com.seamoney.rules.service;
 
 import com.seamoney.rules.AppProperties;
 import com.seamoney.rules.domain.Actor;
+import com.seamoney.rules.domain.Names;
 import com.seamoney.rules.domain.Network;
 import com.seamoney.rules.domain.SupplierView;
 import com.seamoney.rules.service.OrderException.Code;
@@ -48,7 +49,7 @@ public class SupplierService {
     /** A supplier arrives with its first wallet as a proposal: nobody can pay it until a second person approves. */
     @Transactional
     public SupplierView add(String orgId, Actor actor, NewSupplier in) {
-        String name = in.name() == null ? "" : in.name().trim();
+        String name = Names.normalize(in.name());
         if (name.isEmpty()) throw invalid("Supplier name is required.");
         if (in.wallet() == null) throw invalid("A first wallet is required.");
         Network network = network(in.wallet().network());
@@ -114,10 +115,10 @@ public class SupplierService {
             if (s.wallets() == null || s.wallets().isEmpty()) continue;
             SeedWallet first = s.wallets().get(0);
             Network firstNetwork = network(first.network());
-            String id = repo.idByName(orgId, s.name()).orElse(null);
+            String id = repo.idByName(orgId, Names.normalize(s.name())).orElse(null);
             if (id == null) {
                 id = "sup_" + randomHex(4);
-                repo.insertSupplier(orgId, id, s.name().trim(), blankToNull(s.country()), blankToNull(s.city()), blankToNull(s.port()), blankToNull(s.email()),
+                repo.insertSupplier(orgId, id, Names.normalize(s.name()), blankToNull(s.country()), blankToNull(s.city()), blankToNull(s.port()), blankToNull(s.email()),
                         address(firstNetwork, first.address()), firstNetwork, now);
             } else {
                 repo.updateProfile(orgId, id, blankToNull(s.country()), blankToNull(s.city()), blankToNull(s.port()), blankToNull(s.email()));

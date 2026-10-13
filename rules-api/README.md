@@ -7,7 +7,7 @@ The business rules of Seamoney. This service decides; it does not touch the bloc
 | Package | Responsibility |
 |---|---|
 | `domain/Pricing` | Pure money math in integer cents: route fee, bank-cost assumption, savings, USD cents to 6-decimal token units, simulated BRL. No framework code, fully unit-tested. |
-| `service/OrderService` | The order lifecycle: **create and quote**, **pay** (atomic claim `quoted -> sending` so a double click cannot pay twice), **reconcile** (see below), CSV report, leads. |
+| `service/OrderService` | The order lifecycle: **create and quote**, **pay** (atomic claim `quoted -> sending` so a double click cannot pay twice), **recover** (an order left in `sending` is settled from the chain, never by sending again), **reconcile** (see below), CSV report, leads. |
 | `store/OrderRepository` | All SQL (JdbcTemplate on SQLite). |
 | `chain/ChainClient` | The only thing the rules know about the blockchain: an interface. `HttpChainClient` calls the Python service; tests plug in `FakeChain`. |
 | `service/DemoSeeder` | Demo history flagged `is_demo`, disabled with `SEED_DEMO=false`. |

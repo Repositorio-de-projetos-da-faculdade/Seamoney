@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { verifySession, checkRateLimit } from './lib/gate'
+import { verifySession, checkRequestLimits, clientIpOf } from './lib/gate'
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -31,18 +31,9 @@ export function proxy(request: NextRequest) {
     }
   }
 
-  // 2. Rate Limiting for testnet payment routes and AI extraction
-  if (pathname.startsWith('/api/orders') || pathname.startsWith('/api/extract')) {
-    // only POST for orders and extract
-    if (request.method === 'POST') {
-      const ip = request.headers.get('x-forwarded-for') ?? 'unknown'
-      const key = ip.split(',')[0].trim()
-      
-      const allowed = checkRateLimit(key, 10, 60 * 1000) // 10 req/min
-      if (!allowed) {
-        return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
-      }
-    }
+  // 2. Rate limits: payments, AI extraction, sign-in and the unlock password (see checkRequestLimits)
+  if (!checkRequestLimits(pathname, request.method, clientIpOf(request.headers))) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
   }
 
   return NextResponse.next()

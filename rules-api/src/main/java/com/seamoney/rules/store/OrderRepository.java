@@ -12,6 +12,7 @@ import com.seamoney.rules.domain.Recon;
 import com.seamoney.rules.domain.Views.MonthPoint;
 import com.seamoney.rules.domain.Views.OrderEvent;
 import com.seamoney.rules.domain.Views.Stats;
+import com.seamoney.rules.security.ProofLinks;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
@@ -63,10 +64,12 @@ public class OrderRepository {
 
     private final JdbcTemplate jdbc;
     private final ObjectMapper mapper;
+    private final ProofLinks proofLinks;
 
-    public OrderRepository(JdbcTemplate jdbc, ObjectMapper mapper) {
+    public OrderRepository(JdbcTemplate jdbc, ObjectMapper mapper, ProofLinks proofLinks) {
         this.jdbc = jdbc;
         this.mapper = mapper;
+        this.proofLinks = proofLinks;
     }
 
     public List<Order> list(String orgId, int limit) {
@@ -97,6 +100,20 @@ public class OrderRepository {
     public boolean referenceExists(String reference) {
         Integer n = jdbc.queryForObject("SELECT COUNT(*) FROM orders WHERE reference = ?", Integer.class, reference);
         return n != null && n > 0;
+    }
+
+    /** Order ids are the primary key across every company. */
+    public boolean orderIdExists(String id) {
+        Integer n = jdbc.queryForObject("SELECT COUNT(*) FROM orders WHERE id = ?", Integer.class, id);
+        return n != null && n > 0;
+    }
+
+    /** Orders left in `sending` since before the cutoff (an ISO-8601 instant): a send that never finished. Across companies. */
+    public record Stuck(String orgId, String id) {}
+
+    public List<Stuck> findStuckSending(String cutoff) {
+        return jdbc.query("SELECT organization_id, id FROM orders WHERE status = 'sending' AND updated_at < ? ORDER BY updated_at",
+                (rs, i) -> new Stuck(rs.getString("organization_id"), rs.getString("id")), cutoff);
     }
 
     public long count(String orgId) {
@@ -161,13 +178,12 @@ public class OrderRepository {
         return out;
     }
 
-    public Optional<Supplier> findSupplierByName(String orgId, String name) {
+    /** Every supplier of the company with this name, ignoring case (the name is already normalised by the caller). */
+    public List<Supplier> findSuppliersByName(String orgId, String name) {
         return jdbc.query(
-                        "SELECT * FROM suppliers WHERE name = ? AND organization_id = ?",
-                        (rs, i) -> new Supplier(rs.getString("id"), rs.getString("organization_id"), rs.getString("name"), rs.getString("country"), rs.getString("wallet_address"), Network.fromValue(rs.getString("network"))),
-                        name, orgId)
-                .stream()
-                .findFirst();
+                "SELECT * FROM suppliers WHERE LOWER(name) = LOWER(?) AND organization_id = ? ORDER BY created_at",
+                (rs, i) -> new Supplier(rs.getString("id"), rs.getString("organization_id"), rs.getString("name"), rs.getString("country"), rs.getString("wallet_address"), Network.fromValue(rs.getString("network"))),
+                name, orgId);
     }
 
     public void insertSupplier(String orgId, String id, String name, String country, String wallet, Network network, String createdAt) {
@@ -220,9 +236,10 @@ public class OrderRepository {
         return jdbc.update("UPDATE orders SET status = 'sending', error = NULL, updated_at = ? WHERE id = ? AND status = 'approved' AND organization_id = ?", now, id, orgId) == 1;
     }
 
-    public void markSent(String orgId, String id, String txHash, long blockNumber, String memoHex, long confirmMs, String now) {
+    public void markSent(String orgId, String id, String txHash, long blockNumber, String memoHex, Long confirmMs, String now) {
+        // only from `sending`: a recovery that got there first, or a reconciliation, is never overwritten
         jdbc.update(
-                "UPDATE orders SET status = 'sent', tx_hash = ?, block_number = ?, memo_hex = ?, confirm_ms = ?, paid_at = ?, updated_at = ? WHERE id = ? AND organization_id = ?",
+                "UPDATE orders SET status = 'sent', tx_hash = ?, block_number = ?, memo_hex = ?, confirm_ms = ?, paid_at = ?, updated_at = ? WHERE id = ? AND organization_id = ? AND status = 'sending'",
                 txHash, blockNumber, memoHex, confirmMs, now, now, id, orgId);
     }
 
@@ -236,7 +253,7 @@ public class OrderRepository {
     }
 
     public void releaseClaim(String orgId, String id, String error, String now) {
-        jdbc.update("UPDATE orders SET status = 'approved', error = ?, updated_at = ? WHERE id = ? AND organization_id = ?", error, now, id, orgId);
+        jdbc.update("UPDATE orders SET status = 'approved', error = ?, updated_at = ? WHERE id = ? AND organization_id = ? AND status = 'sending'", error, now, id, orgId);
     }
 
     /**
@@ -290,7 +307,7 @@ public class OrderRepository {
                     nullableInt(rs, "log_index"), rs.getString("memo_hex"), nullableLong(rs, "confirm_ms"),
                     rs.getString("paid_at"), rs.getString("reconciled_at"), parseRecon(rs.getString("recon_json")),
                     rs.getString("error"), rs.getInt("is_demo") == 1, rs.getString("created_at"), rs.getString("updated_at"),
-                    bankCost, bankCost - fee);
+                    bankCost, bankCost - fee, proofLinks.forOrder(rs.getString("id")));
         };
     }
 

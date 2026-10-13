@@ -139,12 +139,12 @@ The script creates an order of US$ 80,000 as an operator (above the approval thr
 
 ### Sign in
 
-Sign in at `http://localhost:3000/app/login` (the old `/login` and `/dashboard` pages were removed; they redirect to `/app`). With the Docker stack running, a real sign-in comes first: it seats you as the workspace member with the same role and switches settlement to the Tempo Moderato and Solana devnet testnets. Below it is an offline demo, where you pick a person and settlement is simulated in the browser. The public supplier proof of a testnet payment is at `/proof/<order id>`. The demo accounts are fictitious, every one uses the password `demo123`, and they are created only when the database is empty and the `demo` profile is active (the docker compose default; `SEED_DEMO=false` turns it off):
+Sign in at `http://localhost:3000/app/login` (the old `/login` and `/dashboard` pages were removed; they redirect to `/app`). With the Docker stack running, a real sign-in comes first: it seats you as the workspace member with the same role and switches settlement to the Tempo Moderato and Solana devnet testnets. Below it is an offline demo, where you pick a person and settlement is simulated in the browser. The public supplier proof of a testnet payment is at `/proof/<proof id>`, a link signed by the rules service (an order id alone opens nothing). The demo accounts are fictitious, every one uses the password `demo123`, and they are created only when the database is empty and the `demo` profile is active (the docker compose default; `SEED_DEMO=false` turns it off):
 
 - Porto Claro Importadora: `porto.owner@example.com`, `porto.approver@example.com`, `porto.operator@example.com`, `porto.accountant@example.com`
 - Acme Corp: `acme.owner@example.com`, `acme.approver@example.com`, `acme.operator@example.com`, `acme.accountant@example.com`
 
-`JWT_SECRET` is required (32 characters or more); the rules-api does not start without a valid one. Sessions last one hour. For any deployment that other people can reach, also set `DEMO_ACCESS_PASSWORD` and `DEMO_SESSION_SECRET` to put a password gate in front of the app. See [docs/backend-api.md](docs/backend-api.md) for the roles.
+`JWT_SECRET` is required (32 characters or more); the rules-api does not start without a valid one. Sessions last one hour. For any deployment that other people can reach: set `DEMO_ACCESS_PASSWORD` (a strong one) and `DEMO_SESSION_SECRET` to put a password gate in front of the app, put HTTPS in front of it (the session cookies are Secure only when the request arrives as HTTPS, so a demo served over plain HTTP cannot sign in), change `CHAIN_SERVICE_TOKEN` and `DB_PASSWORD`, and never publish ports 8080 or 8000. See [docs/backend-api.md](docs/backend-api.md) for the roles.
 
 To work on the interface without the other services: `node web/scripts/mock-rules.mjs`, then `cd web && RULES_API_URL=http://localhost:8089 npm run dev`.
 

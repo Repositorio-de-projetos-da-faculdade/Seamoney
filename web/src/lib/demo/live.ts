@@ -19,6 +19,8 @@ export interface LiveDecision {
 /** The fields of a rules-service order this workspace reads (see rules-api domain/Order.java). */
 export interface LiveOrder {
   id: string
+  /** The signed link id of the public proof page (the order id alone does not open it). */
+  proofId?: string
   reference: string
   status: Exclude<PaymentStatus, 'in_review'>
   supplierName: string
@@ -69,6 +71,10 @@ const ACTIVITY: Partial<Record<PaymentStatus, ActivityType>> = {
 /** The local payment brought up to what the rules service says, without ever moving it backwards. */
 function advance(state: DemoState, p: Payment, o: LiveOrder): Payment {
   const next: Payment = { ...p, liveOrderId: o.id }
+  // a payment made before links were signed learns its proof link here
+  if (p.settlement?.mode === 'testnet' && o.proofId && p.settlement.liveProofId !== o.proofId) {
+    next.settlement = { ...p.settlement, liveProofId: o.proofId }
+  }
   // in_review and sending are decided here (a person, or a send in flight in this tab): the service does not overrule them
   if (p.status === 'in_review' || p.status === 'sending' || STAGE[o.status] < STAGE[p.status]) return next
   next.status = o.status
@@ -93,6 +99,7 @@ function advance(state: DemoState, p: Payment, o: LiveOrder): Payment {
       confirmMs: o.confirmMs ?? 0,
       paidAt: o.paidAt ?? o.createdAt,
       liveOrderId: o.id,
+      liveProofId: o.proofId,
     }
   }
   if (o.recon && !p.recon) next.recon = { matchedAt: o.recon.matchedAt, checks: o.recon.checks, expectedCents: o.recon.expectedCents, paidCents: o.recon.paidCents }

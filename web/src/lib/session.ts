@@ -1,7 +1,8 @@
 // The signed-in session with the Java rules API. The JWT lives only in an httpOnly cookie: the browser sends it
 // back to this app, and this app adds it as a Bearer token when it calls Java. Page scripts never see it.
 // Server-side only (Server Components, Route Handlers, Server Actions).
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
+import { cookieSecure } from './gate'
 
 export const SESSION_COOKIE = 'seamoney_api'
 
@@ -21,7 +22,7 @@ export async function storeSession(token: string) {
   ;(await cookies()).set(SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    secure: cookieSecure((await headers()).get('x-forwarded-proto')),
     maxAge: MAX_AGE_S,
     path: '/',
   })

@@ -69,9 +69,10 @@ public class InsightsController {
         return new CompareResponse(c.bankCents(), c.routeCents(), c.savingsCents(), c.savingsShare(), props.feeBps());
     }
 
-    @GetMapping("/proof/{id}")
-    public Proof proof(@PathVariable String id) {
-        return orders.proof(id);
+    /** The public proof page. {proofId} is the signed link id of an order, not the order id. */
+    @GetMapping("/proof/{proofId}")
+    public Proof proof(@PathVariable String proofId) {
+        return orders.proof(proofId);
     }
 
     @GetMapping("/reports/orders")

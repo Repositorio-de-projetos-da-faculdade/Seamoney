@@ -145,6 +145,7 @@ export const walletApprovers = (state: DemoState, wallet: Wallet): Member[] =>
  * the transaction on-chain and opens from any browser; a simulated one only has the slip kept in this browser.
  */
 export function proofHref(p: Payment): string {
-  const live = p.settlement?.mode === 'testnet' ? p.settlement.liveOrderId : undefined
+  // the public link carries the signed id; an order id alone opens nothing
+  const live = p.settlement?.mode === 'testnet' ? p.settlement.liveProofId : undefined
   return live ? `/proof/${encodeURIComponent(live)}` : `/app/proof/${p.id}`
 }
