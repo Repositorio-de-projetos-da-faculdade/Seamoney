@@ -57,7 +57,7 @@ export function Cta({
       {inner}
     </a>
   ) : (
-    <Link href={href} className={classes} {...externalProps(href)}>
+    <Link href={href} prefetch={false} className={classes} {...externalProps(href)}>
       {inner}
     </Link>
   )

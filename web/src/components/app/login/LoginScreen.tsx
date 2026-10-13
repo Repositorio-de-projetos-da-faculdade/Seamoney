@@ -88,6 +88,7 @@ export function LoginScreen() {
             <LangSwitch onNight />
             <Link
               href="/"
+              prefetch={false}
               className="text-[14px] font-medium text-foam underline decoration-foam/30 underline-offset-[4px] transition-colors hover:decoration-foam"
             >
               {t('app.nav.site')}
