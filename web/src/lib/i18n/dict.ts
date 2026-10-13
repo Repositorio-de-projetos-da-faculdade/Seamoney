@@ -291,6 +291,11 @@ const base = {
   'disclaimer.demo':
     'Running on the Tempo testnet and Solana devnet. The BRL-to-USD conversion is simulated and no real money moves. Figures are estimates, not quotes, and taxes such as IOF are not included.',
   'lp.footer.about': 'Running on the Tempo testnet and Solana devnet. Figures are estimates, not quotes, and taxes such as IOF are not included.',
+  'legal.terms': 'Terms of use',
+  'legal.privacy': 'Privacy policy',
+  'legal.updated': 'Last updated',
+  'legal.contents': 'Contents',
+  'legal.home': 'Back to the site',
   'footer.built': 'Built for the Colosseum Crypto World’s Fair hackathon.',
 
   'calc.title': 'Savings calculator',
@@ -800,6 +805,11 @@ const basePt: Record<keyof typeof base, string> = {
   'disclaimer.demo':
     'Rodando na testnet do Tempo e na devnet da Solana. A conversão de reais para dólar é simulada e nenhum dinheiro real é movimentado. Os valores são estimativas, não cotações, e tributos como o IOF não estão incluídos.',
   'lp.footer.about': 'Rodando na testnet do Tempo e na devnet da Solana. Os valores são estimativas, não cotações, e tributos como o IOF não estão incluídos.',
+  'legal.terms': 'Termos de uso',
+  'legal.privacy': 'Política de privacidade',
+  'legal.updated': 'Atualizado em',
+  'legal.contents': 'Sumário',
+  'legal.home': 'Voltar ao site',
   'footer.built': 'Feito para o hackathon Crypto World’s Fair da Colosseum.',
 
   'calc.title': 'Calculadora de economia',

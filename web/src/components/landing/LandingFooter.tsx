@@ -1,6 +1,7 @@
 import clsx from 'clsx'
 import Link from 'next/link'
 import type { T } from '@/lib/i18n/server'
+import { LEGAL_PATH } from '../legal/types'
 import { Logo } from '../ui'
 import { VoyageLine } from './footer/VoyageLine'
 import { SAMPLE_REFERENCE } from './sample'
@@ -47,7 +48,15 @@ export function LandingFooter({ t }: { t: T }) {
 
       <div className={clsx(label, 'mt-16 flex flex-wrap items-center justify-between gap-x-8 gap-y-3 border-t border-foam/10 py-6 text-foam/45')}>
         <p>{t('footer.built')}</p>
-        <p>Tempo Moderato · Chain 42431 · Solana devnet</p>
+        <p className="flex flex-wrap gap-x-6 gap-y-2">
+          <Link href={LEGAL_PATH.terms} className="transition-colors hover:text-white">
+            {t('legal.terms')}
+          </Link>
+          <Link href={LEGAL_PATH.privacy} className="transition-colors hover:text-white">
+            {t('legal.privacy')}
+          </Link>
+          <span>Tempo Moderato · Chain 42431 · Solana devnet</span>
+        </p>
       </div>
     </footer>
   )
