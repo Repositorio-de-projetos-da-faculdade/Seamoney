@@ -23,6 +23,12 @@ seamoney:
   max-amount-cents: 100000000
   approval-threshold-cents: ${APPROVAL_THRESHOLD_CENTS:1000000}
   jwt-secret: ${JWT_SECRET:}
+  # signs the public proof links; falls back to the JWT secret. Changing it breaks the links already shared.
+  proof-secret: ${PROOF_SECRET:}
+  recovery:
+    enabled: ${RECOVERY_ENABLED:true}
+    interval-ms: 60000
+    stuck-after-seconds: 90
 
 ---
 spring:

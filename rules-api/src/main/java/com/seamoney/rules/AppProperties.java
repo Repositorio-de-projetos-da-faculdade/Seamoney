@@ -13,4 +13,9 @@ public record AppProperties(
         double bankFeePct,
         long maxAmountCents,
         /** From this amount up an order needs a second person to approve it; below it the policy approves. */
-        long approvalThresholdCents) {}
+        long approvalThresholdCents,
+        Recovery recovery) {
+
+    /** Orders left in `sending` are settled from the chain in the background; see OrderService.recover. */
+    public record Recovery(boolean enabled, long intervalMs, long stuckAfterSeconds) {}
+}

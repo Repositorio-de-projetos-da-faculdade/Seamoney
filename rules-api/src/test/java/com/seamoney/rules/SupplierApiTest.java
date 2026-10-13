@@ -152,4 +152,47 @@ class SupplierApiTest {
         // another company sees none of it
         mvc.perform(get("/api/suppliers").header("Authorization", "Bearer " + approver)).andExpect(jsonPath("$.suppliers[?(@.name == 'Hong Kong Electronics')]").isEmpty());
     }
+
+    private void approveFirstWallet(JsonNode supplier) throws Exception {
+        send(approver, "/api/suppliers/" + supplier.path("id").asText() + "/wallets/" + supplier.path("wallets").get(0).path("id").asText() + "/approve", null)
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void aLookAlikeNameCannotRouteAPaymentToAnotherWallet() throws Exception {
+        JsonNode s = addSupplier("Qingdao Steel");
+        approveFirstWallet(s);
+
+        for (String lookalike : new String[] {"qingdao steel", "QINGDAO  STEEL", " Qingdao Steel ", "\uFF31ingdao Steel"}) {
+            order(lookalike, V2).andExpect(status().isBadRequest()); // it IS Qingdao Steel, and its approved wallet is V1
+            order(lookalike, V1)
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.order.supplierId").value(s.path("id").asText()))
+                    .andExpect(jsonPath("$.order.supplierWallet").value(V1));
+        }
+        Integer rows = jdbc.queryForObject("SELECT COUNT(*) FROM suppliers WHERE organization_id = 'org_s' AND LOWER(name) LIKE '%ingdao%steel%'", Integer.class);
+        org.junit.jupiter.api.Assertions.assertEquals(1, rows, "no look-alike supplier was created");
+    }
+
+    @Test
+    void aLookAlikeNameCannotBeAddedAsASecondSupplierToTheRegistry() throws Exception {
+        addSupplier("Wuhan Optics");
+        send(operator, "/api/suppliers", """
+                {"name":"wuhan  optics","country":"CN","city":"Wuhan","port":"CNWUH","wallet":{"network":"tempo","address":"%s"}}
+                """.formatted(V2)).andExpect(status().isConflict());
+    }
+
+    @Test
+    void anOrderToAnAddressOutsideTheRegistryAlwaysNeedsASecondPerson() throws Exception {
+        approveFirstWallet(addSupplier("Registry Anchor Co")); // the company now keeps a registry
+
+        String res = order("Brand New Trading", V2)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.order.status").value("pending_approval")) // below the threshold, but the address is not vetted
+                .andReturn().getResponse().getContentAsString();
+        String id = json.readTree(res).path("order").path("id").asText();
+
+        send(operator, "/api/orders/" + id + "/approve", null).andExpect(status().isForbidden()); // not an approver
+        send(approver, "/api/orders/" + id + "/approve", null).andExpect(status().isOk()).andExpect(jsonPath("$.order.status").value("approved"));
+    }
 }

@@ -150,4 +150,68 @@ class AuthApiTest {
         mvc.perform(post("/api/orders/" + orderId + "/pay").header("Authorization", "Bearer " + tokenB))
                 .andExpect(status().isNotFound());
     }
+
+    private org.springframework.test.web.servlet.ResultActions loginFrom(String ip, String email, String password) throws Exception {
+        return mvc.perform(post("/api/auth/login").header("X-Forwarded-For", ip).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"" + email + "\",\"password\":\"" + password + "\"}"));
+    }
+
+    private void addUser(String id, String email) {
+        jdbc.update("INSERT INTO users (id, email, password_hash, created_at) VALUES (?, ?, ?, '2026-10-10')", id, email, encoder.encode("password"));
+        jdbc.update("INSERT INTO memberships (user_id, organization_id, role, status) VALUES (?, 'org_A', 'OPERATOR', 'ACTIVE')", id);
+    }
+
+    @Test
+    void aFewWrongTriesLockOnlyThatSourceOutOfThatAccount() throws Exception {
+        addUser("usr_l1", "lock1@test.com");
+        for (int i = 0; i < 5; i++) loginFrom("198.51.100.1", "lock1@test.com", "wrong").andExpect(status().isUnauthorized());
+        loginFrom("198.51.100.1", "lock1@test.com", "password")
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("Account is temporarily locked due to too many failed attempts"));
+        // the real owner of the account, from another place, is not shut out by a stranger's guesses
+        loginFrom("198.51.100.2", "lock1@test.com", "password").andExpect(status().isOk());
+    }
+
+    @Test
+    void guessesSpreadOverManyAddressesStillLockTheAccount() throws Exception {
+        addUser("usr_l2", "lock2@test.com");
+        for (int i = 0; i < 20; i++) loginFrom("203.0.113." + i, "lock2@test.com", "wrong").andExpect(status().isUnauthorized());
+        loginFrom("203.0.113.200", "lock2@test.com", "password")
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("Account is temporarily locked due to too many failed attempts"));
+    }
+
+    @Test
+    void oneAddressGoingThroughManyAccountsGetsLockedOut() throws Exception {
+        addUser("usr_l3", "lock3@test.com");
+        for (int i = 0; i < 30; i++) loginFrom("192.0.2.9", "nobody" + i + "@test.com", "x").andExpect(status().isUnauthorized());
+        loginFrom("192.0.2.9", "lock3@test.com", "password").andExpect(status().isUnauthorized()).andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.containsString("locked")));
+        loginFrom("192.0.2.10", "lock3@test.com", "password").andExpect(status().isOk());
+    }
+
+    @Test
+    void emailsMatchIgnoringCaseAndAnUnknownOneLooksLikeAWrongPassword() throws Exception {
+        loginFrom("198.51.100.10", "OWNERA@TEST.COM", "password").andExpect(status().isOk());
+        String wrong = loginFrom("198.51.100.11", "ownerA@test.com", "nope").andExpect(status().isUnauthorized()).andReturn().getResponse().getContentAsString();
+        String unknown = loginFrom("198.51.100.12", "ghost@test.com", "nope").andExpect(status().isUnauthorized()).andReturn().getResponse().getContentAsString();
+        org.junit.jupiter.api.Assertions.assertEquals(wrong, unknown, "nothing tells a stranger which emails exist");
+    }
+
+    @Test
+    void aSuspendedMembershipCannotSignInOrRefresh() throws Exception {
+        jdbc.update("UPDATE memberships SET status = 'SUSPENDED' WHERE user_id = 'usr_3'");
+        loginFrom("198.51.100.20", "acctA@test.com", "password")
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("User has no active organizations"));
+        String token = jwt.createToken("usr_3", "org_A", "ACCOUNTANT"); // a token issued before the suspension
+        mvc.perform(post("/api/auth/refresh").header("Authorization", "Bearer " + token).contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isUnauthorized()); // not a 500: the person is told to sign in again
+    }
+
+    @Test
+    void theAuditTrailKeepsTheVisitorsAddressNotTheProxys() throws Exception {
+        loginFrom("198.51.100.30, 10.0.0.1", "ownerA@test.com", "password").andExpect(status().isOk());
+        String ip = jdbc.queryForObject("SELECT ip_address FROM audit_log WHERE action = 'LOGIN' ORDER BY id DESC LIMIT 1", String.class);
+        org.junit.jupiter.api.Assertions.assertEquals("198.51.100.30", ip);
+    }
 }

@@ -240,7 +240,7 @@ class OrderApiTest {
         Order b = service.create("org_test", new OrderService.NewOrderInput("Shenzhen Tech Co.", "CN", WALLET, "INV-B", 100_000, null, "manual", null));
         // pretend B was paid by the very same on-chain transfer
         repo.claimForSending("org_test", b.id(), "2026-10-10T00:00:00Z");
-        repo.markSent("org_test", b.id(), paidA.txHash(), paidA.blockNumber(), FakeChain.memoHex(b.reference()), 1200, "2026-10-10T00:00:00Z");
+        repo.markSent("org_test", b.id(), paidA.txHash(), paidA.blockNumber(), FakeChain.memoHex(b.reference()), 1200L, "2026-10-10T00:00:00Z");
         chain.transfers.add(new FoundTransfer(
                 paidA.txHash(), paidA.recon().logIndex(), paidA.blockNumber(), FakeChain.PARTNER, WALLET,
                 new BigInteger("1000000000"), FakeChain.memoHex(b.reference())));
@@ -279,13 +279,35 @@ class OrderApiTest {
 
     @Test
     void proofPageDataIsVerifiedAgainstTheChain() throws Exception {
-        String id = createOrder("INV-P", 100_000).get("id").asText();
-        mvc.perform(get("/api/proof/{id}", id).header("Authorization", "Bearer " + token)).andExpect(status().isNotFound()); // not paid yet
+        JsonNode order = createOrder("INV-P", 100_000);
+        String id = order.get("id").asText();
+        String proofId = order.get("proofId").asText();
+        assertTrue(proofId.startsWith(id + "."), "the link is the order id plus a signature");
+        mvc.perform(get("/api/proof/{p}", proofId)).andExpect(status().isNotFound()); // not paid yet
         mvc.perform(post("/api/orders/{id}/pay", id).header("Authorization", "Bearer " + token)).andExpect(status().isOk());
-        mvc.perform(get("/api/proof/{id}", id).header("Authorization", "Bearer " + token))
+        // public: no sign-in needed, as the supplier has none
+        mvc.perform(get("/api/proof/{p}", proofId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.order.invoiceNumber").value("INV-P"))
                 .andExpect(jsonPath("$.tx.status").value("success"));
+    }
+
+    @Test
+    void theProofPageOpensOnlyWithTheSignedLinkNotWithAGuessableOrderId() throws Exception {
+        JsonNode order = createOrder("INV-G", 100_000);
+        JsonNode other = createOrder("INV-H", 100_000);
+        String id = order.get("id").asText();
+        mvc.perform(post("/api/orders/{id}/pay", id).header("Authorization", "Bearer " + token)).andExpect(status().isOk());
+        mvc.perform(post("/api/orders/{id}/pay", other.get("id").asText()).header("Authorization", "Bearer " + token)).andExpect(status().isOk());
+
+        String proofId = order.get("proofId").asText();
+        mvc.perform(get("/api/proof/{p}", id)).andExpect(status().isNotFound()); // the bare order id opens nothing
+        mvc.perform(get("/api/proof/{p}", id + ".AAAAAAAAAAAAAAAAAAAAAA")).andExpect(status().isNotFound()); // a made-up signature
+        String stolenSignature = other.get("proofId").asText().substring(other.get("proofId").asText().indexOf('.'));
+        mvc.perform(get("/api/proof/{p}", id + stolenSignature)).andExpect(status().isNotFound()); // another order's signature
+        mvc.perform(get("/api/proof/{p}", proofId.substring(0, proofId.length() - 1) + "A".repeat(proofId.endsWith("A") ? 0 : 1)))
+                .andExpect(status().isNotFound()); // one character off
+        mvc.perform(get("/api/proof/{p}", proofId)).andExpect(status().isOk());
     }
 
     @Test

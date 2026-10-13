@@ -105,6 +105,15 @@ public class OrdersController {
         return Map.of("order", order);
     }
 
+    /** Settles an order stuck in `sending` from the chain; the background job does the same on its own. */
+    @PostMapping("/{id}/recover")
+    @PreAuthorize("hasAnyRole('OWNER', 'APPROVER')")
+    public Map<String, Order> recover(@AuthenticationPrincipal JwtPrincipal principal, @PathVariable String id) {
+        Order order = orders.recover(principal.orgId(), id);
+        audit.logWrite(principal.orgId(), principal.userId(), "ORDER_RECOVERY_CHECKED", "ORDER", id, "sending", order.status().value());
+        return Map.of("order", order);
+    }
+
     @PostMapping("/{id}/reconcile")
     @PreAuthorize("hasAnyRole('OWNER', 'APPROVER', 'OPERATOR', 'ACCOUNTANT')")
     public ReconcileResult reconcile(@AuthenticationPrincipal JwtPrincipal principal, @PathVariable String id) {

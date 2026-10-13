@@ -9,6 +9,7 @@ import com.seamoney.rules.chain.ChainClient.TxInfo;
 import com.seamoney.rules.chain.ChainException;
 import com.seamoney.rules.domain.Actor;
 import com.seamoney.rules.domain.Decision;
+import com.seamoney.rules.domain.Names;
 import com.seamoney.rules.domain.Network;
 import com.seamoney.rules.domain.Order;
 import com.seamoney.rules.domain.OrderStatus;
@@ -17,6 +18,7 @@ import com.seamoney.rules.domain.Recon;
 import com.seamoney.rules.domain.Views.OrderEvent;
 import com.seamoney.rules.domain.Views.ProofOrder;
 import com.seamoney.rules.domain.Views.StatsResponse;
+import com.seamoney.rules.security.ProofLinks;
 import com.seamoney.rules.service.OrderException.Code;
 import com.seamoney.rules.store.OrderRepository;
 import com.seamoney.rules.store.SupplierRepository;
@@ -26,10 +28,14 @@ import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.Pattern;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 
@@ -88,6 +94,7 @@ public class OrderService {
         }
     }
 
+    private static final Logger log = LoggerFactory.getLogger(OrderService.class);
     private static final SecureRandom RANDOM = new SecureRandom();
 
     /** Crockford base32 without the letters that read like digits (I, L, O, U); the same alphabet as the web demo. */
@@ -100,14 +107,17 @@ public class OrderService {
     private final ChainClient chain;
     private final AppProperties props;
     private final Clock clock;
+    private final ProofLinks proofLinks;
 
-    public OrderService(OrderRepository repo, SupplierRepository suppliers, SettingsService settings, ChainClient chain, AppProperties props, Clock clock) {
+    public OrderService(OrderRepository repo, SupplierRepository suppliers, SettingsService settings, ChainClient chain, AppProperties props, Clock clock,
+            ProofLinks proofLinks) {
         this.repo = repo;
         this.suppliers = suppliers;
         this.settings = settings;
         this.chain = chain;
         this.props = props;
         this.clock = clock;
+        this.proofLinks = proofLinks;
     }
 
     // ---------- reads ----------
@@ -131,7 +141,8 @@ public class OrderService {
     /** The supplier proof page: a trimmed order plus a live check of the transaction on-chain. */
     public record Proof(ProofOrder order, TxInfo tx) {}
 
-    public Proof proof(String id) {
+    public Proof proof(String proofId) {
+        String id = proofLinks.orderIdOf(proofId).orElseThrow(() -> new OrderException("Order not found.", Code.NOT_FOUND));
         Order o = repo.findForProof(id).orElseThrow(() -> new OrderException("Order not found.", Code.NOT_FOUND));
         if (o.txHash() == null) throw new OrderException("This order has no on-chain payment yet.", Code.NOT_FOUND);
         TxInfo tx;
@@ -160,7 +171,7 @@ public class OrderService {
      */
     public Order create(String orgId, Actor actor, NewOrderInput in) {
         String invoice = in.invoiceNumber() == null ? "" : in.invoiceNumber().trim();
-        String supplierName = in.supplierName() == null ? "" : in.supplierName().trim();
+        String supplierName = Names.normalize(in.supplierName());
         if (invoice.isEmpty()) throw invalid("Invoice number is required.");
         if (supplierName.isEmpty()) throw invalid("Supplier name is required.");
         if (in.amountCents() <= 0) throw invalid("Amount must be greater than zero.");
@@ -179,10 +190,14 @@ public class OrderService {
         String reference = reference(in.reference());
         String now = now();
 
-        Optional<Supplier> existing = repo.findSupplierByName(orgId, supplierName);
+        // A supplier is found by name ignoring case and spacing, so a look-alike spelling cannot slip past the wallet
+        // registry; one that is in the registry wins over a look-alike row that has no wallets.
+        List<Supplier> sameName = repo.findSuppliersByName(orgId, supplierName);
+        Optional<Supplier> existing = sameName.stream().filter(s -> suppliers.hasWallets(orgId, s.id())).findFirst().or(() -> sameName.stream().findFirst());
         String country = blankToNull(in.supplierCountry());
         String wallet;
         String supplierId;
+        boolean registryWallet = false;
         if (existing.isPresent() && suppliers.hasWallets(orgId, existing.get().id())) {
             // a supplier in the wallet registry is paid only at the address a second person approved on this network
             supplierId = existing.get().id();
@@ -191,6 +206,7 @@ public class OrderService {
             if (hasWallet && !network.sameAddress(in.supplierWallet(), wallet)) {
                 throw invalid("Payments to this supplier go only to its approved wallet on " + network.label() + ".");
             }
+            registryWallet = true;
         } else {
             // Supplier outside the registry: reuse by name. Without a wallet we create a throwaway demo address (public
             // part only); a wallet saved for another network is of no use here.
@@ -209,9 +225,12 @@ public class OrderService {
         int feeBps = props.feeBps();
         long fee = Pricing.feeCents(in.amountCents(), feeBps);
         long total = in.amountCents() + fee;
-        String id = "ORD-" + randomHex(3).toUpperCase();
+        String id = newOrderId();
         long threshold = settings.approvalThreshold(orgId);
-        boolean needsApproval = in.amountCents() >= threshold;
+        // Once a company keeps a wallet registry, a payment to an address that is not in it (a new supplier, or a name
+        // that matches none) is never approved by the policy alone: a second person looks at it, whatever the amount.
+        boolean unvetted = !registryWallet && suppliers.hasRegistry(orgId);
+        boolean needsApproval = in.amountCents() >= threshold || unvetted;
         Decision policy = needsApproval
                 ? null
                 : new Decision(null, null, now, approvalHash(in.amountCents(), network, wallet, reference), null, true);
@@ -224,7 +243,9 @@ public class OrderService {
         event(orgId, id, "created", "Invoice " + invoice + ", extraction: " + in.extractionSource() + ", network: " + network.label());
         event(orgId, id, "quoted", "Route fee " + feeBps / 100.0 + "%, simulated USD/BRL " + props.usdBrl());
         event(orgId, id, needsApproval ? "approval_requested" : "auto_approved",
-                needsApproval ? "Needs a second person from US$ " + threshold / 100 : "Below the approval threshold: approved by the policy");
+                !needsApproval ? "Below the approval threshold: approved by the policy"
+                        : in.amountCents() >= threshold ? "Needs a second person from US$ " + threshold / 100
+                        : "Needs a second person: this wallet is not in the approved supplier registry");
         return get(orgId, id);
     }
 
@@ -389,6 +410,67 @@ public class OrderService {
         return ReconcileResult.matched(get(orgId, id));
     }
 
+    // ---------- recovery ----------
+
+    public Order recover(String orgId, String id) {
+        return recover(orgId, id, Duration.ofSeconds(props.recovery().stuckAfterSeconds()));
+    }
+
+    /**
+     * An order left in `sending` (the service stopped, or something failed after the chain had the payment) is
+     * settled from the chain, never by sending again: if the transfer is there the order becomes sent; if the chain
+     * service says the payment failed, or never heard of it, the order goes back to approved; if it may still land,
+     * it waits and is looked at again.
+     *
+     * @param minAge how long the order must have been in `sending`, so a send that is still running is left alone
+     */
+    public Order recover(String orgId, String id, Duration minAge) {
+        Order order = get(orgId, id);
+        if (order.status() != OrderStatus.SENDING) {
+            throw new OrderException("Order is " + order.status().value() + "; only an order stuck in sending needs recovery.", Code.BAD_STATE);
+        }
+        if (Instant.parse(order.updatedAt()).plus(minAge).isAfter(clock.instant())) {
+            throw new OrderException("This payment is still being sent; give it a minute.", Code.BAD_STATE);
+        }
+        BigInteger expected = Pricing.centsToUnits(order.amountCents());
+        FoundTransfer paid;
+        Optional<String> status;
+        try {
+            paid = chain.findTransfers(order.network(), order.supplierWallet(), order.reference(), 0).stream()
+                    .filter(t -> t.amountUnits().equals(expected))
+                    .findFirst()
+                    .orElse(null);
+            String key = repo.idempotencyKey(orgId, id);
+            status = paid != null || key == null ? Optional.empty() : chain.paymentStatus(key);
+        } catch (ChainException e) {
+            throw new OrderException(e.getMessage(), Code.CHAIN);
+        }
+        if (paid != null) {
+            // no confirmation time is known for a payment found afterwards: leave it empty so it does not skew the average
+            repo.markSent(orgId, id, paid.txHash(), paid.blockNumber(), paid.memoHex(), null, now());
+            event(orgId, id, "payment_recovered", "Found tx " + paid.txHash() + " on " + order.network().label() + ": the payment had been made");
+        } else if (status.isEmpty() || "failed".equals(status.get())) {
+            repo.releaseClaim(orgId, id, "The payment did not reach the chain; it can be paid again.", now());
+            event(orgId, id, "payment_released", "No transfer on " + order.network().label() + " and the chain service has no live attempt: back to approved");
+        } else {
+            event(orgId, id, "recovery_waiting", "The payment may still be on its way; it is checked again shortly");
+        }
+        return get(orgId, id);
+    }
+
+    /** What the background job runs. Returns how many stuck orders it looked at; one failing never stops the others. */
+    public int recoverStuck(Duration olderThan) {
+        List<OrderRepository.Stuck> stuck = repo.findStuckSending(clock.instant().minus(olderThan).toString());
+        for (OrderRepository.Stuck s : stuck) {
+            try {
+                recover(s.orgId(), s.id(), olderThan);
+            } catch (RuntimeException e) {
+                log.warn("Could not recover order {}: {}", s.id(), e.getMessage());
+            }
+        }
+        return stuck.size();
+    }
+
     // ---------- reports and leads ----------
 
     public String ordersCsv(String orgId) {
@@ -479,6 +561,15 @@ public class OrderService {
         return s == null || s.isBlank() ? null : s;
     }
 
+    /** The order id is the primary key across companies, and short: draw until a free one comes up. */
+    private String newOrderId() {
+        for (int n = 0; n < 10; n++) {
+            String candidate = "ORD-" + randomHex(3).toUpperCase();
+            if (!repo.orderIdExists(candidate)) return candidate;
+        }
+        throw new IllegalStateException("Could not draw a free order id.");
+    }
+
     private static String randomHex(int bytes) {
         byte[] b = new byte[bytes];
         RANDOM.nextBytes(b);
@@ -489,8 +580,12 @@ public class OrderService {
         return "%d.%02d".formatted(cents / 100, Math.abs(cents % 100));
     }
 
+    /** A spreadsheet reads a cell that starts with one of these as a formula. */
+    private static final String FORMULA_STARTS = "=+-@\t\r";
+
     private static String csv(String v) {
         if (v == null) return "";
+        if (!v.isEmpty() && FORMULA_STARTS.indexOf(v.charAt(0)) >= 0) v = "'" + v; // the text stays, the formula does not run
         return v.matches(".*[\",\\n\\r].*") ? "\"" + v.replace("\"", "\"\"") + "\"" : v;
     }
 }
