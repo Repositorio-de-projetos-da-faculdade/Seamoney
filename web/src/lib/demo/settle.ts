@@ -53,8 +53,9 @@ export async function liveAvailable(): Promise<'ok' | 'signin' | 'no'> {
     const res = await fetch('/api/health', { cache: 'no-store', signal: AbortSignal.timeout(6_000) })
     const body = (await res.json()) as { checks?: Record<string, string> }
     if (body.checks?.rulesApi !== 'ok' || body.checks?.chainService !== 'ok') return 'no'
-    const session = await fetch('/api/session', { cache: 'no-store', signal: AbortSignal.timeout(6_000) })
-    return session.ok ? 'ok' : 'signin'
+    const session = await fetch('/api/session?probe=1', { cache: 'no-store', signal: AbortSignal.timeout(6_000) })
+    const who = (await session.json().catch(() => null)) as { signedIn?: boolean } | null
+    return session.ok && who?.signedIn !== false ? 'ok' : 'signin'
   } catch {
     return 'no'
   }

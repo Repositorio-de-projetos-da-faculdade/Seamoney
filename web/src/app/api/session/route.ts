@@ -6,9 +6,13 @@ import { clearSession, storeSession } from '@/lib/session'
 export const runtime = 'nodejs'
 
 /** Who is signed in with the Java service (email, company, role), or 401. The token itself never leaves the server. */
-export async function GET() {
+export async function GET(req: Request) {
   const session = await getSession()
-  if (!session) return Response.json({ error: 'Not signed in', code: 'unauthorized' }, { status: 401 })
+  if (!session) {
+    // a probe asks "is anybody signed in?": nobody is a normal answer, not an error
+    if (new URL(req.url).searchParams.get('probe') === '1') return Response.json({ signedIn: false })
+    return Response.json({ error: 'Not signed in', code: 'unauthorized' }, { status: 401 })
+  }
   return Response.json(session)
 }
 

@@ -45,6 +45,11 @@ class ChainError(Exception):
     """The chain rejected or failed to confirm something."""
 
 
+class PaymentNotSent(ChainError):
+    """Raised before anything was broadcast (no funds, wrong network): the payment certainly did not happen, so the
+    caller may try again at once, with the same key. Any other ChainError may have left a transaction on its way."""
+
+
 @dataclass(frozen=True)
 class SentPayment:
     tx_hash: str
@@ -209,7 +214,7 @@ class ChainService:
     def _tx_options(self) -> dict:
         chain_id = int(self.w3.eth.chain_id)
         if chain_id != CHAIN_ID:
-            raise ChainError(f"Expected Tempo Moderato testnet ({CHAIN_ID}), got {chain_id}")
+            raise PaymentNotSent(f"Expected Tempo Moderato testnet ({CHAIN_ID}), got {chain_id}")
         gas_price = self.w3.eth.gas_price
         return {
             "chain_id": chain_id,
@@ -221,13 +226,41 @@ class ChainService:
         }
 
     def _ensure_funds(self, needed_units: int) -> None:
-        """Testnet only: top the partner wallet up from the public faucet when it runs low."""
+        """Testnet only: top the partner wallet up from the public faucet when it runs low.
+
+        Every failure here happens before anything is sent, so it is a PaymentNotSent with a message a person can act
+        on (the public faucet is sometimes down: it has answered "request too large" to every address).
+        """
+        required = needed_units + FEE_BUFFER_UNITS
+        balance = 0
         for _ in range(3):
-            if self.balance_units(self._account.address) >= needed_units + FEE_BUFFER_UNITS:
+            try:
+                balance = self.balance_units(self._account.address)
+            except Exception as exc:
+                raise PaymentNotSent(f"Could not read the partner wallet balance: {_short(exc)}") from exc
+            if balance >= required:
                 return
-            self.w3.provider.make_request("tempo_fundAddress", [self._account.address])
+            try:
+                answer = self.w3.provider.make_request("tempo_fundAddress", [self._account.address])
+            except Exception as exc:
+                raise PaymentNotSent(self._underfunded(balance, required, f"the Tempo testnet faucet did not answer ({_short(exc)})")) from exc
+            if isinstance(answer, dict) and answer.get("error"):
+                raise PaymentNotSent(self._underfunded(balance, required, f"the Tempo testnet faucet refused ({_short(answer['error'])})"))
             time.sleep(3)
-        raise ChainError("The partner test wallet has insufficient funds and the faucet did not refill it")
+        raise PaymentNotSent(self._underfunded(balance, required, "the faucet did not refill it"))
+
+    def _underfunded(self, balance: int, required: int, why: str) -> str:
+        return (
+            f"The partner test wallet holds {balance / 1_000_000:,.2f} AlphaUSD, and this payment needs "
+            f"{required / 1_000_000:,.2f} (the amount plus a {FEE_BUFFER_UNITS / 1_000_000:g} AlphaUSD reserve for fees), but {why}. "
+            f"Use a smaller amount, or send test AlphaUSD to {self._account.address}."
+        )
+
+
+def _short(error) -> str:
+    """One readable line for an exception or an RPC error object."""
+    text = str(error).replace("\n", " ").strip()
+    return text if len(text) <= 160 else text[:157] + "..."
 
 
 def _hex(value) -> str:

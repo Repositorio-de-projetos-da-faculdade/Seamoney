@@ -20,7 +20,7 @@ from typing import Callable, Literal
 from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from .chain import ChainError, ChainNotConfigured, ChainService, DEFAULT_RPC
+from .chain import ChainError, ChainNotConfigured, ChainService, DEFAULT_RPC, PaymentNotSent
 from .idempotency import store
 from .memo import cents_to_units
 from .solana_chain import DEFAULT_RPC as SOLANA_DEFAULT_RPC
@@ -204,12 +204,24 @@ def create_payment(
     except ChainNotConfigured as exc:
         store.set(idempotency_key, "failed", body_dict, error_code=503, error_detail=str(exc))
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except PaymentNotSent as exc:
+        # failed before anything was broadcast (no funds, wrong network): certain, so a retry may start over at once
+        store.set(idempotency_key, "failed", body_dict, error_code=502, error_detail=str(exc))
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
     except ChainError as exc:
         # Only a payment known not to have happened is marked failed. Any other failure (a timeout waiting for the
         # receipt, an RPC error) leaves it pending: the transaction may still land, and _settle_pending decides later.
         if "reverted" in str(exc).lower() or "rejected" in str(exc).lower():
             store.set(idempotency_key, "failed", body_dict, error_code=502, error_detail=str(exc))
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except Exception as exc:
+        # Unknown: it may or may not have been broadcast, so the key stays pending (the chain decides later), but the
+        # caller gets a readable answer instead of a bare HTTP 500.
+        log.exception("Unexpected failure while sending a payment")
+        raise HTTPException(
+            status_code=502,
+            detail=f"The chain service failed unexpectedly while sending ({type(exc).__name__}); the payment is not repeated until it is checked on the chain",
+        ) from exc
 
 
 @app.get("/payments/{key}", dependencies=[Depends(require_token)])

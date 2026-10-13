@@ -27,7 +27,7 @@ export function LandingNav({ t }: { t: T }) {
   return (
     <NavShell>
       <div className="lp-fade relative mx-auto flex h-[72px] max-w-[1800px] items-center justify-between gap-6 px-5 md:px-10" style={fadeDelay(1)}>
-        <Link href="/" aria-label="Seamoney" className="shrink-0">
+        <Link href="/" prefetch={false} aria-label="Seamoney" className="shrink-0">
           <Logo height={26} />
         </Link>
 
@@ -39,7 +39,7 @@ export function LandingNav({ t }: { t: T }) {
                 {underline}
               </a>
             ) : (
-              <Link key={l.href} href={l.href} className={linkClass} {...externalProps(l.href)}>
+              <Link key={l.href} href={l.href} prefetch={false} className={linkClass} {...externalProps(l.href)}>
                 {l.label}
                 {underline}
               </Link>

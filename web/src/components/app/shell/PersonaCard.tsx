@@ -71,7 +71,7 @@ export function PersonaCard({ state, me }: { state: DemoState; me: Member }) {
               <Undo width={16} height={16} aria-hidden="true" />
               {t('app.persona.reset')}
             </button>
-            <Link href="/" className={ROW}>
+            <Link href="/" prefetch={false} className={ROW}>
               <OpenNewWindow width={16} height={16} aria-hidden="true" />
               {t('app.nav.site')}
             </Link>

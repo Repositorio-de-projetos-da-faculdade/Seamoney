@@ -27,7 +27,7 @@ export function LandingFooter({ t }: { t: T }) {
           <ul className="space-y-1">
             {links.map(([href, text]) => (
               <li key={href}>
-                <Link href={href} {...externalProps(href)} className="group inline-flex min-h-11 items-center gap-3 font-grotesk text-[1.6rem] tracking-[-0.03em] text-foam/80 transition-colors duration-300 hover:text-white">
+                <Link href={href} prefetch={false} {...externalProps(href)} className="group inline-flex min-h-11 items-center gap-3 font-grotesk text-[1.6rem] tracking-[-0.03em] text-foam/80 transition-colors duration-300 hover:text-white">
                   <span className="h-px w-0 bg-mint transition-[width] duration-500 ease-[cubic-bezier(0.19,1,0.22,1)] group-hover:w-6" aria-hidden="true" />
                   {text}
                 </Link>
