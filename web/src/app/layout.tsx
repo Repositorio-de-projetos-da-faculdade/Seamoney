@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.SITE_URL ?? 'http://localhost:3000'),
   title: 'Seamoney | International payments, simpler, cheaper, with automatic reconciliation',
   description:
-    'Pay import invoices to suppliers in Asia with lower fees, in seconds, with automatic reconciliation. Demo on the Tempo testnet.',
+    'Pay import invoices to suppliers in Asia with lower fees, in seconds, with automatic reconciliation. Running on the Tempo testnet.',
 }
 
 export const viewport: Viewport = {
